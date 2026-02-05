@@ -1,9 +1,12 @@
 export interface Person {
   id: string;
   email?: string;
+  mobile?: string;
   name: string;
   role: 'parent' | 'tutor' | 'observer' | 'student';
   dateOfBirth?: Date | any; // Firestore Timestamp
+  lastLogin?: Date | any; // Last time user logged in
+  lastActivity?: Date | any; // Last time user performed any action
 }
 
 export interface Homeschool {
@@ -12,9 +15,17 @@ export interface Homeschool {
   parentIds: string[];
   tutorIds: string[];
   observerIds: string[];
+  parentEmails?: string[];
+  tutorEmails?: string[];
+  observerEmails?: string[];
   studentIds: string[];
   createdBy: string;
   createdAt: Date;
+  dashboardSettings?: {
+    cycleSeconds: number;
+    startOfWeek: number;
+    timezone: string;
+  };
 }
 
 export interface Subject {
@@ -39,7 +50,7 @@ export interface Activity {
 
 export interface Goal {
   id: string;
-  studentId: string;
+  studentIds: string[];
   activityId: string;
   tutorOrParentId: string;
   startDate?: Date;

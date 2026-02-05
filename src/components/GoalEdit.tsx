@@ -6,12 +6,12 @@ import { Goal, Activity, Person } from '../types';
 interface GoalEditProps {
   goal: Goal;
   activity: Activity;
-  student: Person;
+  students: Person[];
   onClose: () => void;
   onUpdate: (updatedGoal: Goal) => void;
 }
 
-const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, student, onClose, onUpdate }) => {
+const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, onUpdate }) => {
   const [timesPerWeek, setTimesPerWeek] = useState<number | ''>(goal.timesPerWeek || '');
   const [minutesPerSession, setMinutesPerSession] = useState<number | ''>(goal.minutesPerSession || '');
   const [dailyPercentageIncrease, setDailyPercentageIncrease] = useState<number | ''>(goal.dailyPercentageIncrease || '');
@@ -99,7 +99,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, student, onClose, o
           borderRadius: '4px',
           marginBottom: '15px' 
         }}>
-          <strong>{student.name}</strong> is doing <strong>{activity.name}</strong>
+          <strong>{students.map(s => s.name).join(', ')}</strong> {students.length === 1 ? 'is' : 'are'} doing <strong>{activity.name}</strong>
         </div>
 
         <form onSubmit={handleSubmit}>

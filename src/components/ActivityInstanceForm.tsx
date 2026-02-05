@@ -2,12 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, query, where, getDocs, updateDoc, doc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ActivityInstance, Goal, Activity, Person } from '../types';
+import { updateStudentLastActivity, updateLastActivity } from '../utils/activityTracking';
 
 interface ActivityInstanceFormProps {
   goals: Goal[];
   activities: Activity[];
   students: Person[];
   userId: string;
+  preSelectedGoal?: string;
+  preSelectedStudent?: string;
+  existingInstance?: ActivityInstance;
+  timezone?: string;
   onClose: () => void;
   onActivityRecorded: () => void;
 }
@@ -17,12 +22,34 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
   activities,
   students,
   userId,
+  preSelectedGoal = '',
+  preSelectedStudent = '',
+  existingInstance,
+  timezone = 'America/New_York',
   onClose,
   onActivityRecorded
 }) => {
-  const [selectedGoal, setSelectedGoal] = useState('');
+  const [selectedGoal, setSelectedGoal] = useState(preSelectedGoal);
+  const [selectedStudent, setSelectedStudent] = useState(preSelectedStudent);
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => {
+    // Get current date in selected timezone properly
+    const now = new Date();
+    // Create a formatter for the selected timezone
+    const formatter = new Intl.DateTimeFormat('en-CA', { 
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    
+    const parts = formatter.formatToParts(now);
+    const year = parts.find(part => part.type === 'year')?.value;
+    const month = parts.find(part => part.type === 'month')?.value;
+    const day = parts.find(part => part.type === 'day')?.value;
+    
+    return `${year}-${month}-${day}`;
+  });
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
@@ -36,7 +63,8 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
 
   const selectedGoalData = goals.find(g => g.id === selectedGoal);
   const selectedActivity = selectedGoalData ? activities.find(a => a.id === selectedGoalData.activityId) : null;
-  const selectedStudent = selectedGoalData ? students.find(s => s.id === selectedGoalData.studentId) : null;
+  const goalStudents = selectedGoalData ? students.filter(s => selectedGoalData.studentIds?.includes(s.id)) : [];
+  const selectedStudentData = students.find(s => s.id === selectedStudent);
 
   // Auto-fill duration based on goal settings
   useEffect(() => {
@@ -44,6 +72,36 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       setDuration(selectedGoalData.minutesPerSession);
     }
   }, [selectedGoalData, selectedActivity]);
+
+  // Populate form fields when editing existing instance
+  useEffect(() => {
+    if (existingInstance) {
+      setSelectedGoal(existingInstance.goalId);
+      setSelectedStudent(existingInstance.studentId);
+      setDescription(existingInstance.description || '');
+      setDate(existingInstance.date instanceof Date 
+        ? existingInstance.date.toISOString().split('T')[0]
+        : new Date(existingInstance.date).toISOString().split('T')[0]);
+      setDuration(existingInstance.duration || '');
+      setStartingPercentage(existingInstance.startingPercentage || '');
+      setEndingPercentage(existingInstance.endingPercentage || '');
+      setCountComplete(existingInstance.countCompleted || '');
+      
+      // Convert times if they exist
+      if (existingInstance.startTime) {
+        const startTimeDate = existingInstance.startTime instanceof Date 
+          ? existingInstance.startTime
+          : new Date(existingInstance.startTime);
+        setStartTime(startTimeDate.toTimeString().slice(0, 5));
+      }
+      if (existingInstance.endTime) {
+        const endTimeDate = existingInstance.endTime instanceof Date 
+          ? existingInstance.endTime
+          : new Date(existingInstance.endTime);
+        setEndTime(endTimeDate.toTimeString().slice(0, 5));
+      }
+    }
+  }, [existingInstance]);
 
   // Timer functionality
   useEffect(() => {
@@ -90,7 +148,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
     setSaving(true);
 
     try {
-      if (!selectedGoalData || !selectedStudent) return;
+      if (!selectedGoalData || !selectedStudent || !selectedStudentData) return;
 
       // Calculate duration if start and end times are provided
       let calculatedDuration = duration;
@@ -103,9 +161,9 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       // Create activity instance
       const activityInstanceData: Omit<ActivityInstance, 'id'> = {
         goalId: selectedGoal,
-        studentId: selectedGoalData.studentId,
+        studentId: selectedStudent,
         description,
-        date: new Date(date),
+        date: new Date(date + 'T00:00:00'),
         createdBy: userId
       };
 
@@ -124,17 +182,27 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
         activityInstanceData.countCompleted = Number(countComplete);
       }
 
-      await addDoc(collection(db, 'activityInstances'), activityInstanceData);
+      if (existingInstance) {
+        // Update existing activity instance
+        await updateDoc(doc(db, 'activityInstances', existingInstance.id), activityInstanceData);
+      } else {
+        // Create new activity instance
+        await addDoc(collection(db, 'activityInstances'), activityInstanceData);
 
-      // Update goal progress
-      const updates: any = {};
-      if (selectedGoalData.timesDone !== undefined) {
-        updates.timesDone = increment(1);
+        // Update goal progress (only for new instances)
+        const updates: any = {};
+        if (selectedGoalData.timesDone !== undefined) {
+          updates.timesDone = increment(1);
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await updateDoc(doc(db, 'goals', selectedGoal), updates);
+        }
       }
 
-      if (Object.keys(updates).length > 0) {
-        await updateDoc(doc(db, 'goals', selectedGoal), updates);
-      }
+      // Update last activity timestamps
+      await updateStudentLastActivity(selectedStudent);
+      await updateLastActivity(userId);
 
       onActivityRecorded();
       onClose();
@@ -168,7 +236,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
         maxHeight: '80vh',
         overflow: 'auto'
       }}>
-        <h2>Record Activity</h2>
+        <h2>{existingInstance ? 'Edit Activity' : 'Record Activity'}</h2>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px' }}>
@@ -176,7 +244,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
             </label>
             <select
               value={selectedGoal}
-              onChange={(e) => setSelectedGoal(e.target.value)}
+              onChange={(e) => {
+                setSelectedGoal(e.target.value);
+                setSelectedStudent(''); // Clear student selection when goal changes
+              }}
               required
               style={{
                 width: '100%',
@@ -189,10 +260,11 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
               <option value="">Choose a goal...</option>
               {goals.map(goal => {
                 const activity = activities.find(a => a.id === goal.activityId);
-                const student = students.find(s => s.id === goal.studentId);
+                const goalStudents = students.filter(s => goal.studentIds?.includes(s.id));
+                const studentNames = goalStudents.map(s => s.name).join(', ') || 'Unknown students';
                 return (
                   <option key={goal.id} value={goal.id}>
-                    {student?.name} - {activity?.name}
+                    {studentNames} - {activity?.name}
                     {goal.timesPerWeek && ` (${goal.timesPerWeek}x/week)`}
                   </option>
                 );
@@ -200,7 +272,34 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
             </select>
           </div>
 
-          {selectedGoalData && selectedActivity && (
+          {selectedGoalData && goalStudents.length > 0 && (
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px' }}>
+                Select Student *
+              </label>
+              <select
+                value={selectedStudent}
+                onChange={(e) => setSelectedStudent(e.target.value)}
+                required
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  fontSize: '16px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px'
+                }}
+              >
+                <option value="">Choose which student...</option>
+                {goalStudents.map(student => (
+                  <option key={student.id} value={student.id}>
+                    {student.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {selectedGoalData && selectedActivity && selectedStudent && (
             <>
               <div style={{ 
                 backgroundColor: '#f0f0f0', 
@@ -208,7 +307,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                 borderRadius: '4px',
                 marginBottom: '15px' 
               }}>
-                <strong>{selectedStudent?.name}</strong> is doing <strong>{selectedActivity.name}</strong>
+                <strong>{selectedStudentData?.name || 'Select a student'}</strong> is doing <strong>{selectedActivity.name}</strong>
                 {selectedGoalData.minutesPerSession && (
                   <div style={{ fontSize: '14px', marginTop: '4px' }}>
                     Goal: {selectedGoalData.minutesPerSession} minutes per session
@@ -444,7 +543,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button
               type="submit"
-              disabled={saving || !selectedGoal}
+              disabled={saving || !selectedGoal || !selectedStudent}
               style={{
                 padding: '10px 20px',
                 fontSize: '16px',
@@ -453,10 +552,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                 border: 'none',
                 borderRadius: '4px',
                 cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving || !selectedGoal ? 0.6 : 1
+                opacity: saving || !selectedGoal || !selectedStudent ? 0.6 : 1
               }}
             >
-              {saving ? 'Recording...' : 'Record Activity'}
+              {saving ? (existingInstance ? 'Updating...' : 'Recording...') : (existingInstance ? 'Update Activity' : 'Record Activity')}
             </button>
             <button
               type="button"

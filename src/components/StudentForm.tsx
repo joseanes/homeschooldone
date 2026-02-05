@@ -1,18 +1,76 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, doc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Person } from '../types';
+import { Person, Homeschool } from '../types';
+import { checkEmailExists, sendStudentInvitation } from '../utils/invitations';
+import InvitationDialog from './InvitationDialog';
 
 interface StudentFormProps {
   homeschoolId: string;
+  homeschool: Homeschool;
+  inviterName: string;
   onClose: () => void;
   onStudentAdded: () => void;
 }
 
-const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, onClose, onStudentAdded }) => {
+const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inviterName, onClose, onStudentAdded }) => {
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [saving, setSaving] = useState(false);
+  const [emailExists, setEmailExists] = useState<boolean | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const [invitationSent, setInvitationSent] = useState(false);
+  const [showInvitationDialog, setShowInvitationDialog] = useState(false);
+  const [invitationDetails, setInvitationDetails] = useState<{
+    email: string;
+    subject: string;
+    body: string;
+  } | null>(null);
+
+  // Check if email exists when email changes
+  useEffect(() => {
+    const checkEmail = async () => {
+      if (email.trim() && email.includes('@')) {
+        setCheckingEmail(true);
+        const exists = await checkEmailExists(email.trim());
+        setEmailExists(exists);
+        setCheckingEmail(false);
+        setInvitationSent(false); // Reset invitation status when email changes
+      } else {
+        setEmailExists(null);
+        setInvitationSent(false);
+      }
+    };
+
+    const timeoutId = setTimeout(checkEmail, 500); // Debounce email checking
+    return () => clearTimeout(timeoutId);
+  }, [email]);
+
+  const handleSendInvitation = async () => {
+    if (!email.trim() || !name.trim()) return;
+    
+    try {
+      const result = await sendStudentInvitation(
+        email.trim(),
+        name.trim(),
+        homeschool.name,
+        inviterName
+      );
+      
+      if (result.success && result.invitationDetails) {
+        setInvitationSent(true);
+        setInvitationDetails(result.invitationDetails);
+        setShowInvitationDialog(true);
+      } else {
+        alert(result.message);
+      }
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      alert('Failed to send invitation. Please try again.');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +80,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, onClose, onStud
       // Create the student document
       const studentData: Omit<Person, 'id'> = {
         name,
+        email: email.trim() || undefined,
+        mobile: mobile.trim() || undefined,
         role: 'student',
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined
       };
@@ -87,6 +147,94 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, onClose, onStud
           
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px' }}>
+              Email Address (optional)
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+              placeholder="student@example.com"
+            />
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              If provided, student can log in to record their own activities
+            </div>
+            
+            {/* Email Status and Invitation */}
+            {email.trim() && email.includes('@') && (
+              <div style={{ marginTop: '8px' }}>
+                {checkingEmail ? (
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    🔍 Checking if account exists...
+                  </div>
+                ) : emailExists === true ? (
+                  <div style={{ fontSize: '12px', color: '#2e7d32' }}>
+                    ✅ Account already exists! Student can sign in with this email.
+                  </div>
+                ) : emailExists === false ? (
+                  <div style={{ fontSize: '12px' }}>
+                    <div style={{ color: '#ff6f00', marginBottom: '8px' }}>
+                      ⚠️ No account found with this email
+                    </div>
+                    {name.trim() && (
+                      <button
+                        type="button"
+                        onClick={handleSendInvitation}
+                        disabled={invitationSent}
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          backgroundColor: invitationSent ? '#4caf50' : '#ff9800',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: invitationSent ? 'default' : 'pointer'
+                        }}
+                      >
+                        {invitationSent ? '📧 Invitation Sent' : '📧 Send Invitation'}
+                      </button>
+                    )}
+                    {!name.trim() && (
+                      <div style={{ color: '#666', fontSize: '11px' }}>
+                        Enter student name first to send invitation
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Mobile Number (optional)
+            </label>
+            <input
+              type="tel"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+              placeholder="e.g., +1 (555) 123-4567"
+            />
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              For SMS notifications and emergency contact
+            </div>
+          </div>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
               Date of Birth (optional)
             </label>
             <input
@@ -139,6 +287,15 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, onClose, onStud
           </div>
         </form>
       </div>
+      
+      {showInvitationDialog && invitationDetails && (
+        <InvitationDialog
+          email={invitationDetails.email}
+          subject={invitationDetails.subject}
+          body={invitationDetails.body}
+          onClose={() => setShowInvitationDialog(false)}
+        />
+      )}
     </div>
   );
 };

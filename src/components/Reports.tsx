@@ -226,13 +226,13 @@ const Reports: React.FC<ReportsProps> = ({
           <h3>Weekly Goal Progress</h3>
           <div style={{ display: 'grid', gap: '10px' }}>
             {goals
-              .filter(goal => selectedStudent === 'all' || goal.studentId === selectedStudent)
+              .filter(goal => selectedStudent === 'all' || goal.studentIds?.includes(selectedStudent))
               .map(goal => {
                 const progress = getGoalProgress(goal.id);
                 const activity = activities.find(a => a.id === goal.activityId);
-                const student = students.find(s => s.id === goal.studentId);
+                const goalStudents = students.filter(s => goal.studentIds?.includes(s.id));
                 
-                if (!progress || !activity || !student) return null;
+                if (!progress || !activity || goalStudents.length === 0) return null;
                 
                 const percentage = progress.target > 0 ? 
                   Math.round((progress.thisWeek / progress.target) * 100) : 0;
@@ -246,7 +246,7 @@ const Reports: React.FC<ReportsProps> = ({
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                       <div>
-                        <strong>{student.name}</strong> - {activity.name}
+                        <strong>{goalStudents.map(s => s.name).join(', ')}</strong> - {activity.name}
                       </div>
                       <div>
                         {progress.thisWeek}/{progress.target} this week

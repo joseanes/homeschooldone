@@ -23,8 +23,13 @@ const Login: React.FC = () => {
       justifyContent: 'center', 
       minHeight: '100vh' 
     }}>
-      <h1>HomeschoolDone</h1>
-      <p>Track your homeschool progress</p>
+      <svg width="120" height="120" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '20px' }}>
+        <path d="M14 43L40 19L66 43V67C66 70.3137 63.3137 73 60 73H20C16.6863 73 14 70.3137 14 67V43Z" fill="#F59E0B"/>
+        <path d="M8 45L40 15L72 45" stroke="#D97706" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        <circle cx="40" cy="53" r="16" fill="white"/>
+        <path d="M32 53L38 59L50 47" stroke="#16A34A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      <p style={{ fontSize: '18px', color: '#666' }}>Track your homeschool progress</p>
       <button 
         onClick={handleGoogleSignIn}
         style={{

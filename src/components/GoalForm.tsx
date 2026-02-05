@@ -21,7 +21,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
   onGoalAdded 
 }) => {
   const [selectedActivity, setSelectedActivity] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [timesPerWeek, setTimesPerWeek] = useState<number | ''>('');
   const [minutesPerSession, setMinutesPerSession] = useState<number | ''>('');
   const [targetPercentage, setTargetPercentage] = useState<number | ''>('');
@@ -37,7 +37,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
 
     try {
       const goalData: any = {
-        studentId: selectedStudent,
+        studentIds: selectedStudents,
         activityId: selectedActivity,
         tutorOrParentId: userId,
         homeschoolId,
@@ -93,28 +93,44 @@ const GoalForm: React.FC<GoalFormProps> = ({
         <h2>Create Goal</h2>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Select Student *
+            <label style={{ display: 'block', marginBottom: '10px' }}>
+              Select Students * (Choose one or more)
             </label>
-            <select
-              value={selectedStudent}
-              onChange={(e) => setSelectedStudent(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: '8px',
-                fontSize: '16px',
-                border: '1px solid #ccc',
-                borderRadius: '4px'
-              }}
-            >
-              <option value="">Choose a student...</option>
+            <div style={{
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              padding: '10px',
+              maxHeight: '150px',
+              overflow: 'auto'
+            }}>
               {students.map(student => (
-                <option key={student.id} value={student.id}>
+                <label key={student.id} style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  marginBottom: '8px',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedStudents.includes(student.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedStudents([...selectedStudents, student.id]);
+                      } else {
+                        setSelectedStudents(selectedStudents.filter(id => id !== student.id));
+                      }
+                    }}
+                    style={{ marginRight: '8px' }}
+                  />
                   {student.name}
-                </option>
+                </label>
               ))}
-            </select>
+            </div>
+            {selectedStudents.length === 0 && (
+              <div style={{ color: '#dc3545', fontSize: '14px', marginTop: '5px' }}>
+                Please select at least one student
+              </div>
+            )}
           </div>
 
           <div style={{ marginBottom: '15px' }}>
@@ -276,7 +292,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button
               type="submit"
-              disabled={saving || !selectedStudent || !selectedActivity}
+              disabled={saving || selectedStudents.length === 0 || !selectedActivity}
               style={{
                 padding: '10px 20px',
                 fontSize: '16px',
@@ -285,7 +301,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
                 border: 'none',
                 borderRadius: '4px',
                 cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving || !selectedStudent || !selectedActivity ? 0.6 : 1
+                opacity: saving || selectedStudents.length === 0 || !selectedActivity ? 0.6 : 1
               }}
             >
               {saving ? 'Creating...' : 'Create Goal'}

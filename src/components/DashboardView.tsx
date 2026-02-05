@@ -13,6 +13,7 @@ interface DashboardViewProps {
   cycleSeconds?: number;
   startOfWeek?: number; // 0 = Sunday, 1 = Monday, etc.
   timezone?: string;
+  isPublic?: boolean; // Hide exit button for public dashboards
 }
 
 interface StudentProgress {
@@ -33,14 +34,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   onClose,
   cycleSeconds = 10,
   startOfWeek = 1, // Monday default
-  timezone = 'America/New_York' // EST default
+  timezone = 'America/New_York', // EST default
+  isPublic = false
 }) => {
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [studentsProgress, setStudentsProgress] = useState<StudentProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Handle ESC key
+  // Handle ESC key (disabled for public dashboards)
   useEffect(() => {
+    if (isPublic) return; // Don't allow ESC to close public dashboards
+    
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
@@ -274,42 +278,51 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           <div style={{ fontSize: '18px', opacity: 0.8 }}>
             Student {currentStudentIndex + 1} of {students.length} • Auto-cycling every {cycleSeconds}s
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              backgroundColor: '#ff5722',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            ✕ Exit Dashboard
-          </button>
+          {!isPublic && (
+            <button
+              onClick={onClose}
+              style={{
+                padding: '10px 20px',
+                fontSize: '16px',
+                backgroundColor: '#ff5722',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              ✕ Exit Dashboard
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Student Progress */}
+      {/* Student Progress - Horizontal Layout */}
       <div style={{
         flex: 1,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        alignItems: 'stretch',
+        gap: '40px',
+        height: 'calc(100vh - 160px)' // Account for header
       }}>
+        {/* Left Side - Student Name and Progress Circle */}
         <div style={{
           backgroundColor: '#16213e',
           borderRadius: '20px',
-          padding: '60px',
-          textAlign: 'center',
-          minWidth: '600px',
+          padding: '40px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minWidth: '400px',
+          maxWidth: '450px',
           boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
         }}>
           {/* Student Name */}
           <h2 style={{ 
-            margin: '0 0 40px 0', 
-            fontSize: '48px',
+            margin: '0 0 30px 0', 
+            fontSize: '42px',
+            textAlign: 'center',
             background: 'linear-gradient(45deg, #4caf50, #2196f3)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -319,21 +332,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </h2>
 
           {/* Progress Circle */}
-          <div style={{ marginBottom: '40px' }}>
+          <div style={{ marginBottom: '30px' }}>
             <div style={{
-              width: '200px',
-              height: '200px',
+              width: '220px',
+              height: '220px',
               borderRadius: '50%',
               background: `conic-gradient(#4caf50 ${progressPercentage * 3.6}deg, #333 ${progressPercentage * 3.6}deg)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto',
               position: 'relative'
             }}>
               <div style={{
-                width: '160px',
-                height: '160px',
+                width: '180px',
+                height: '180px',
                 borderRadius: '50%',
                 backgroundColor: '#1a1a2e',
                 display: 'flex',
@@ -341,101 +353,199 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 justifyContent: 'center',
                 flexDirection: 'column'
               }}>
-                <div style={{ fontSize: '36px', fontWeight: 'bold' }}>
+                <div style={{ fontSize: '40px', fontWeight: 'bold' }}>
                   {currentProgress.completedToday}/{currentProgress.totalGoals}
                 </div>
-                <div style={{ fontSize: '16px', opacity: 0.8 }}>Today</div>
+                <div style={{ fontSize: '18px', opacity: 0.8 }}>Today</div>
               </div>
             </div>
           </div>
 
-          {/* Today's Goals */}
-          <div style={{ marginBottom: '30px' }}>
-            <h3 style={{ fontSize: '24px', marginBottom: '20px' }}>Today's Goals</h3>
-            <div style={{ display: 'grid', gap: '15px' }}>
-              {currentProgress.todayGoals.slice(0, 5).map(goal => {
-                const activity = activities.find(a => a.id === goal.activityId);
-                const weeklyCount = currentProgress.weeklyProgress[goal.id] || 0;
-                const hasActivityToday = currentProgress.todayCompletedGoalIds.has(goal.id);
-                
-                // Check actual completion for time-based goals
-                let isActuallyCompleted = hasActivityToday;
-                const todayMinutesForGoal = currentProgress.todayMinutes[goal.id] || 0;
-                
-                if (hasActivityToday && goal.minutesPerSession) {
-                  // Check if today's minutes meet the goal requirement
-                  isActuallyCompleted = todayMinutesForGoal >= goal.minutesPerSession;
-                }
-                
-                // Determine status and colors based on actual completion
-                let backgroundColor, borderColor, statusIcon;
-                if (isActuallyCompleted && hasActivityToday) {
-                  // Green: actually completed today
-                  backgroundColor = '#2d5a2d';
-                  borderColor = '#4caf50';
-                  statusIcon = '✅';
-                } else if (hasActivityToday && !isActuallyCompleted) {
-                  // Yellow/Orange: has activity but not complete
-                  backgroundColor = '#4a3c00';
-                  borderColor = '#ffc107';
-                  statusIcon = '⏳';
-                } else if (goal.timesPerWeek && weeklyCount >= goal.timesPerWeek) {
-                  // Gray: weekly goal met but not done today
-                  backgroundColor = '#4a4a4a';
-                  borderColor = '#9e9e9e';
-                  statusIcon = '📅';
-                } else {
-                  // Default: pending
-                  backgroundColor = '#2d2d2d';
-                  borderColor = '#444';
-                  statusIcon = '⏳';
-                }
-                
-                return (
-                  <div
-                    key={goal.id}
-                    style={{
-                      padding: '15px 25px',
-                      backgroundColor,
-                      borderRadius: '10px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      border: `2px solid ${borderColor}`
-                    }}
-                  >
-                    <div style={{ fontSize: '18px' }}>
-                      {activity?.name} 
-                      {goal.timesPerWeek && ` (${goal.timesPerWeek}x/week)`}
-                    </div>
-                    <div style={{ 
-                      fontSize: '24px',
-                      color: 'white'
-                    }}>
-                      {statusIcon}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {currentProgress.todayGoals.length > 5 && (
-              <div style={{ 
-                marginTop: '15px', 
-                fontSize: '16px', 
-                opacity: 0.7 
-              }}>
-                ... and {currentProgress.todayGoals.length - 5} more goals
-              </div>
-            )}
+          {/* Progress Percentage */}
+          <div style={{ 
+            fontSize: '24px', 
+            opacity: 0.9,
+            textAlign: 'center',
+            marginBottom: '20px'
+          }}>
+            {Math.round(progressPercentage)}% Complete
           </div>
 
           {/* Last Activity */}
           {currentProgress.student.lastActivity && (
             <div style={{ 
               fontSize: '16px', 
-              opacity: 0.7 
+              opacity: 0.7,
+              textAlign: 'center'
             }}>
               Last activity: {formatLastActivity(currentProgress.student.lastActivity)}
+            </div>
+          )}
+        </div>
+
+        {/* Right Side - Today's Goals */}
+        <div style={{
+          backgroundColor: '#16213e',
+          borderRadius: '20px',
+          padding: '40px',
+          flex: 1,
+          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <h3 style={{ 
+            fontSize: '32px', 
+            marginBottom: '30px', 
+            textAlign: 'center',
+            background: 'linear-gradient(45deg, #4caf50, #2196f3)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            Today's Goals
+          </h3>
+          
+          <div style={{ 
+            display: 'grid', 
+            gap: '20px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            flex: 1,
+            alignContent: 'start',
+            overflow: 'auto',
+            maxHeight: 'calc(100% - 80px)' // Account for header
+          }}>
+            {/* Sort goals: completed at bottom, rest alphabetically */}
+            {[...currentProgress.todayGoals].sort((a, b) => {
+              const activityA = activities.find(act => act.id === a.activityId);
+              const activityB = activities.find(act => act.id === b.activityId);
+              
+              // Check if goals are actually completed today
+              const hasActivityA = currentProgress.todayCompletedGoalIds.has(a.id);
+              const hasActivityB = currentProgress.todayCompletedGoalIds.has(b.id);
+              const todayMinutesA = currentProgress.todayMinutes[a.id] || 0;
+              const todayMinutesB = currentProgress.todayMinutes[b.id] || 0;
+              
+              let isActuallyCompletedA = hasActivityA;
+              let isActuallyCompletedB = hasActivityB;
+              
+              if (hasActivityA && a.minutesPerSession) {
+                isActuallyCompletedA = todayMinutesA >= a.minutesPerSession;
+              }
+              if (hasActivityB && b.minutesPerSession) {
+                isActuallyCompletedB = todayMinutesB >= b.minutesPerSession;
+              }
+              
+              // Completed tasks go to bottom
+              if (isActuallyCompletedA && !isActuallyCompletedB) return 1;
+              if (!isActuallyCompletedA && isActuallyCompletedB) return -1;
+              
+              // For non-completed or both completed, sort alphabetically by activity name
+              return (activityA?.name || '').localeCompare(activityB?.name || '');
+            }).map(goal => {
+              const activity = activities.find(a => a.id === goal.activityId);
+              const weeklyCount = currentProgress.weeklyProgress[goal.id] || 0;
+              const hasActivityToday = currentProgress.todayCompletedGoalIds.has(goal.id);
+              
+              // Check actual completion for time-based goals
+              let isActuallyCompleted = hasActivityToday;
+              const todayMinutesForGoal = currentProgress.todayMinutes[goal.id] || 0;
+              
+              if (hasActivityToday && goal.minutesPerSession) {
+                // Check if today's minutes meet the goal requirement
+                isActuallyCompleted = todayMinutesForGoal >= goal.minutesPerSession;
+              }
+              
+              // Determine status and colors based on actual completion
+              let backgroundColor, borderColor, statusIcon, statusText;
+              if (isActuallyCompleted && hasActivityToday) {
+                // Green: actually completed today
+                backgroundColor = '#2d5a2d';
+                borderColor = '#4caf50';
+                statusIcon = '✅';
+                statusText = 'Complete';
+              } else if (hasActivityToday && !isActuallyCompleted) {
+                // Yellow/Orange: has activity but not complete
+                backgroundColor = '#4a3c00';
+                borderColor = '#ffc107';
+                statusIcon = '⏳';
+                statusText = goal.minutesPerSession ? 
+                  `${todayMinutesForGoal}/${goal.minutesPerSession}min` : 
+                  'In Progress';
+              } else if (goal.timesPerWeek && weeklyCount >= goal.timesPerWeek) {
+                // Gray: weekly goal met but not done today
+                backgroundColor = '#4a4a4a';
+                borderColor = '#9e9e9e';
+                statusIcon = '📅';
+                statusText = 'Week Complete';
+              } else {
+                // Default: pending
+                backgroundColor = '#2d2d2d';
+                borderColor = '#444';
+                statusIcon = '⏳';
+                statusText = 'Pending';
+              }
+              
+              return (
+                <div
+                  key={goal.id}
+                  style={{
+                    padding: '20px',
+                    backgroundColor,
+                    borderRadius: '15px',
+                    border: `3px solid ${borderColor}`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    minHeight: '120px',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <div style={{ 
+                    fontSize: '36px',
+                    marginBottom: '10px'
+                  }}>
+                    {statusIcon}
+                  </div>
+                  <div style={{ 
+                    fontSize: '18px', 
+                    fontWeight: 'bold',
+                    marginBottom: '8px'
+                  }}>
+                    {activity?.name}
+                  </div>
+                  <div style={{ 
+                    fontSize: '14px',
+                    opacity: 0.8,
+                    marginBottom: '8px'
+                  }}>
+                    {goal.timesPerWeek && `${goal.timesPerWeek}x/week`}
+                    {goal.minutesPerSession && ` • ${goal.minutesPerSession} min`}
+                  </div>
+                  <div style={{ 
+                    fontSize: '16px',
+                    color: borderColor,
+                    fontWeight: 'bold'
+                  }}>
+                    {statusText}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {currentProgress.todayGoals.length === 0 && (
+            <div style={{ 
+              textAlign: 'center',
+              fontSize: '24px',
+              opacity: 0.6,
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              No goals assigned for today
             </div>
           )}
         </div>

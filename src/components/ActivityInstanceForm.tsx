@@ -3,6 +3,7 @@ import { collection, addDoc, query, where, getDocs, updateDoc, doc, increment } 
 import { db } from '../firebase';
 import { ActivityInstance, Goal, Activity, Person } from '../types';
 import { updateStudentLastActivity, updateLastActivity } from '../utils/activityTracking';
+import { playAlarmSound } from '../utils/alarmSound';
 
 interface ActivityInstanceFormProps {
   goals: Goal[];
@@ -13,6 +14,7 @@ interface ActivityInstanceFormProps {
   preSelectedStudent?: string;
   existingInstance?: ActivityInstance;
   timezone?: string;
+  timerAlarmEnabled?: boolean;
   onClose: () => void;
   onActivityRecorded: () => void;
 }
@@ -26,6 +28,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
   preSelectedStudent = '',
   existingInstance,
   timezone = 'America/New_York',
+  timerAlarmEnabled = false,
   onClose,
   onActivityRecorded
 }) => {
@@ -109,12 +112,21 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
     
     if (timerRunning && timerStartTime) {
       interval = setInterval(() => {
-        setElapsedTime(Math.floor((new Date().getTime() - timerStartTime.getTime()) / 1000));
+        const elapsed = Math.floor((new Date().getTime() - timerStartTime.getTime()) / 1000);
+        setElapsedTime(elapsed);
+        
+        // Check if we've reached the goal duration and should play alarm
+        if (timerAlarmEnabled && selectedGoalData?.minutesPerSession) {
+          const goalSeconds = selectedGoalData.minutesPerSession * 60;
+          if (elapsed === goalSeconds) {
+            playAlarmSound();
+          }
+        }
       }, 1000);
     }
     
     return () => clearInterval(interval);
-  }, [timerRunning, timerStartTime]);
+  }, [timerRunning, timerStartTime, timerAlarmEnabled, selectedGoalData]);
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -345,12 +357,18 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                     marginBottom: '15px',
                     textAlign: 'center',
                     padding: '20px',
-                    backgroundColor: '#f0f0f0',
-                    borderRadius: '8px'
+                    backgroundColor: selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 ? '#d4edda' : '#f0f0f0',
+                    borderRadius: '8px',
+                    border: selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 ? '2px solid #28a745' : 'none'
                   }}>
                     <div style={{ fontSize: '32px', fontFamily: 'monospace', marginBottom: '10px' }}>
                       {formatTime(elapsedTime)}
                     </div>
+                    {selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 && (
+                      <div style={{ color: '#28a745', fontSize: '16px', fontWeight: 'bold', marginBottom: '10px' }}>
+                        🎉 Goal Reached!
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={handleTimerToggle}

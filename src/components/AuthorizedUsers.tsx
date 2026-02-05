@@ -11,6 +11,7 @@ interface AuthorizedUsersProps {
   homeschool: Homeschool;
   currentUserId: string;
   currentUserInfo: { name?: string; email?: string };
+  currentUserRole: string;
   onClose: () => void;
   onUpdate: (updatedHomeschool: Homeschool) => void;
 }
@@ -23,6 +24,7 @@ const AuthorizedUsers: React.FC<AuthorizedUsersProps> = ({
   homeschool, 
   currentUserId,
   currentUserInfo,
+  currentUserRole,
   onClose, 
   onUpdate 
 }) => {
@@ -326,21 +328,23 @@ The HomeschoolDone Team`;
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2>Authorized Users</h2>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button
-              onClick={() => setShowCleanup(true)}
-              style={{
-                padding: '6px 12px',
-                fontSize: '14px',
-                backgroundColor: '#ffc107',
-                color: '#000',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-              title="Remove duplicate email entries for users who are already in the system"
-            >
-              Clean Up Duplicates
-            </button>
+            {currentUserRole === 'parent' && (
+              <button
+                onClick={() => setShowCleanup(true)}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '14px',
+                  backgroundColor: '#ffc107',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+                title="Remove duplicate email entries for users who are already in the system"
+              >
+                Clean Up Duplicates
+              </button>
+            )}
             <button
               onClick={onClose}
               style={{
@@ -460,8 +464,8 @@ The HomeschoolDone Team`;
                       </button>
                     )}
                     
-                    {/* Revoke access button - show for everyone except current user and only parent */}
-                    {!isCurrentUser && (!isOnlyParent || homeschool.parentEmails?.length) && (
+                    {/* Revoke access button - only show for parents */}
+                    {currentUserRole === 'parent' && !isCurrentUser && (!isOnlyParent || homeschool.parentEmails?.length) && (
                       <button
                         onClick={() => setDeleteConfirmation({
                           userId: user.id,
@@ -516,8 +520,13 @@ The HomeschoolDone Team`;
           fontSize: '13px',
           color: '#666'
         }}>
-          <strong>Note:</strong> To add new users, use the "Invite" function in the main settings panel. 
-          You cannot remove yourself or the last parent from the homeschool.
+          <strong>Note:</strong> 
+          {currentUserRole === 'parent' ? (
+            <>To add new users, use the "Invite" function in the main settings panel. 
+            You cannot remove yourself or the last parent from the homeschool.</>
+          ) : (
+            <>You have view-only access to the users list. Only parents can invite new users or manage access.</>
+          )}
         </div>
       </div>
 

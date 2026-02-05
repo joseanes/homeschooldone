@@ -29,7 +29,16 @@ const Login: React.FC = () => {
         <circle cx="40" cy="53" r="16" fill="white"/>
         <path d="M32 53L38 59L50 47" stroke="#16A34A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
-      <p style={{ fontSize: '18px', color: '#666' }}>Track your homeschool progress</p>
+      <h1 style={{ 
+        fontSize: '36px', 
+        fontWeight: '700',
+        margin: '0 0 10px 0',
+        fontFamily: 'Trebuchet MS, sans-serif'
+      }}>
+        <span style={{ color: '#92400E' }}>Homeschool</span>{' '}
+        <span style={{ color: '#16A34A' }}>Done</span>
+      </h1>
+      <p style={{ fontSize: '18px', color: '#666', marginBottom: '30px' }}>Track your homeschool progress</p>
       <button 
         onClick={handleGoogleSignIn}
         style={{

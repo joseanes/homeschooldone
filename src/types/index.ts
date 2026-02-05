@@ -26,6 +26,8 @@ export interface Homeschool {
     startOfWeek: number;
     timezone: string;
   };
+  timerAlarmEnabled?: boolean;
+  publicDashboardId?: string;
 }
 
 export interface Subject {

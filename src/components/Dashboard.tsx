@@ -18,13 +18,15 @@ import HomeschoolSwitcher from './HomeschoolSwitcher';
 import HomeschoolDelete from './HomeschoolDelete';
 import AuthorizedUsers from './AuthorizedUsers';
 import DashboardView from './DashboardView';
-import { formatLastActivity } from '../utils/activityTracking';
+import StudentDashboard from './StudentDashboard';
+import SettingsModal from './SettingsModal';
 
 interface DashboardProps {
   user: User;
+  onSignOut: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   const [homeschool, setHomeschool] = useState<Homeschool | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -49,7 +51,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [editingStudent, setEditingStudent] = useState<Person | null>(null);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [editingGoal, setEditingGoal] = useState<{ goal: Goal; activity: Activity; students: Person[] } | null>(null);
-  const [showManagement, setShowManagement] = useState(false);
   const [todayInstances, setTodayInstances] = useState<ActivityInstance[]>([]);
   const [weekInstances, setWeekInstances] = useState<ActivityInstance[]>([]);
   const [showInvite, setShowInvite] = useState(false);
@@ -57,18 +58,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
   const [showDeleteHomeschool, setShowDeleteHomeschool] = useState(false);
   const [showAuthorizedUsers, setShowAuthorizedUsers] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [dashboardSettings, setDashboardSettings] = useState({
     cycleSeconds: 10,
     startOfWeek: 1, // 1 = Monday
     timezone: 'America/New_York' // EST/EDT
   });
+  const [timerAlarmEnabled, setTimerAlarmEnabled] = useState(false);
+  const [publicDashboardId, setPublicDashboardId] = useState<string | null>(null);
+  const [currentStudent, setCurrentStudent] = useState<Person | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Load dashboard settings from homeschool document
+  // Load dashboard settings, timer alarm, and public dashboard from homeschool document
   useEffect(() => {
     if (homeschool?.dashboardSettings) {
       setDashboardSettings(homeschool.dashboardSettings);
     }
+    if (homeschool?.timerAlarmEnabled !== undefined) {
+      setTimerAlarmEnabled(homeschool.timerAlarmEnabled);
+    }
+    if (homeschool?.publicDashboardId !== undefined) {
+      setPublicDashboardId(homeschool.publicDashboardId || null);
+    }
   }, [homeschool]);
+
+  // Set students array for student users
+  useEffect(() => {
+    if (userRole === 'student' && currentStudent) {
+      setStudents([currentStudent]);
+    }
+  }, [userRole, currentStudent]);
 
   // Save dashboard settings to Firebase
   const saveDashboardSettings = async (newSettings: typeof dashboardSettings) => {
@@ -81,6 +100,42 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
       setDashboardSettings(newSettings);
     } catch (error) {
       console.error('Error saving dashboard settings:', error);
+    }
+  };
+
+  const saveTimerAlarmSetting = async (enabled: boolean) => {
+    if (!homeschool?.id) return;
+    
+    try {
+      await updateDoc(doc(db, 'homeschools', homeschool.id), {
+        timerAlarmEnabled: enabled
+      });
+      setTimerAlarmEnabled(enabled);
+    } catch (error) {
+      console.error('Error saving timer alarm setting:', error);
+    }
+  };
+
+  // Save public dashboard setting to Firebase
+  const savePublicDashboardSetting = async (dashboardId: string | null) => {
+    if (!homeschool?.id) return;
+    
+    try {
+      console.log('Dashboard: Saving publicDashboardId:', dashboardId, 'to homeschool:', homeschool.id);
+      const updates: any = {};
+      if (dashboardId) {
+        updates.publicDashboardId = dashboardId;
+      } else {
+        updates.publicDashboardId = null;
+      }
+      
+      console.log('Dashboard: About to update Firestore document with:', updates);
+      await updateDoc(doc(db, 'homeschools', homeschool.id), updates);
+      console.log('Dashboard: Successfully updated Firestore document');
+      setPublicDashboardId(dashboardId);
+      console.log('Dashboard: Set local state publicDashboardId to:', dashboardId);
+    } catch (error) {
+      console.error('Error saving public dashboard setting:', error);
     }
   };
 
@@ -170,14 +225,107 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         ];
         
         let homeschoolData = null;
-        for (const { query: q, role } of queries) {
-          console.log(`Checking ${role} access...`);
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            const data = querySnapshot.docs[0].data() as Homeschool;
-            homeschoolData = { ...data, id: querySnapshot.docs[0].id };
-            console.log(`Found homeschool access as ${role}: ${homeschoolData.id}`);
-            break;
+        let userRole = null;
+        
+        // First check if user is a student by looking in people collection
+        console.log('Checking if user is a student...');
+        console.log('User email:', user.email);
+        
+        // Debug: Check all people in collection to see if email matches
+        console.log('=== DEBUGGING: Checking all people records ===');
+        const allPeopleQuery = query(collection(db, 'people'));
+        const allPeopleSnapshot = await getDocs(allPeopleQuery);
+        console.log(`Total people in database: ${allPeopleSnapshot.docs.length}`);
+        allPeopleSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          console.log(`Person ${doc.id}: email="${data.email}", role="${data.role}", name="${data.name}"`);
+          if (data.email === user.email) {
+            console.log('*** MATCH FOUND ***');
+          }
+        });
+        console.log('=== END DEBUG ===');
+        
+        const studentQuery = query(collection(db, 'people'), where('email', '==', user.email || ''));
+        const studentSnapshot = await getDocs(studentQuery);
+        
+        console.log(`Found ${studentSnapshot.docs.length} people with email ${user.email}`);
+        
+        if (!studentSnapshot.empty) {
+          // If multiple records exist, prioritize student role
+          let studentRecord: { data: any; id: string } | null = null;
+          for (const doc of studentSnapshot.docs) {
+            const data = doc.data();
+            console.log('Checking record:', doc.id, 'role:', data.role, 'name:', data.name);
+            if (data.role === 'student') {
+              studentRecord = { data, id: doc.id };
+              console.log('Found student role record:', doc.id);
+              break;
+            }
+          }
+          
+          // If no student role found, use first record
+          if (!studentRecord) {
+            studentRecord = { data: studentSnapshot.docs[0].data(), id: studentSnapshot.docs[0].id };
+            console.log('No student role found, using first record:', studentRecord.id);
+          }
+          
+          if (studentRecord) {
+            const studentData = studentRecord.data;
+            console.log('Using record:', studentRecord.id, 'with role:', studentData.role);
+            
+            if (studentData.role === 'student') {
+              console.log(`User is a student: ${studentRecord.id}`);
+              // Find homeschool that contains this student
+              const homeschoolQuery = query(collection(db, 'homeschools'), where('studentIds', 'array-contains', studentRecord.id));
+              const homeschoolSnapshot = await getDocs(homeschoolQuery);
+              
+              console.log(`Found ${homeschoolSnapshot.docs.length} homeschools containing student ${studentRecord.id}`);
+              
+              // Debug: Check all homeschools to see student assignments
+              console.log('=== DEBUGGING: Checking all homeschool student assignments ===');
+              const allHomeschoolsQuery = query(collection(db, 'homeschools'));
+              const allHomeschoolsSnapshot = await getDocs(allHomeschoolsQuery);
+              allHomeschoolsSnapshot.docs.forEach(doc => {
+                const data = doc.data();
+                console.log(`Homeschool ${doc.id} (${data.name}): studentIds=`, data.studentIds);
+                if (data.studentIds && studentRecord && data.studentIds.includes(studentRecord.id)) {
+                  console.log(`*** STUDENT IS ASSIGNED TO THIS HOMESCHOOL ***`);
+                }
+              });
+              console.log('=== END HOMESCHOOL DEBUG ===');
+              
+              if (!homeschoolSnapshot.empty) {
+                const data = homeschoolSnapshot.docs[0].data() as Homeschool;
+                homeschoolData = { ...data, id: homeschoolSnapshot.docs[0].id };
+                userRole = 'student';
+                console.log(`Found homeschool access as student: ${homeschoolData.id}`);
+                console.log('Homeschool data:', homeschoolData);
+                
+                // Set the current student info
+                setCurrentStudent({ ...studentData, id: studentRecord.id } as Person);
+              } else {
+                console.log('No homeschool found containing this student ID');
+              }
+            } else {
+              console.log(`User role is not student, it is: ${studentData.role}`);
+            }
+          }
+        } else {
+          console.log('No student found with this email in people collection');
+        }
+        
+        // If not a student, check parent/tutor/observer roles
+        if (!homeschoolData) {
+          for (const { query: q, role } of queries) {
+            console.log(`Checking ${role} access...`);
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+              const data = querySnapshot.docs[0].data() as Homeschool;
+              homeschoolData = { ...data, id: querySnapshot.docs[0].id };
+              userRole = role;
+              console.log(`Found homeschool access as ${role}: ${homeschoolData.id}`);
+              break;
+            }
           }
         }
         
@@ -187,9 +335,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         
         if (homeschoolData) {
           setHomeschool(homeschoolData);
+          setUserRole(userRole);
           
           // Fetch students
-          if (homeschoolData.studentIds && homeschoolData.studentIds.length > 0) {
+          if (userRole === 'student') {
+            // If user is a student, they should already be set in currentStudent
+            // We'll set students array later after currentStudent state is updated
+          } else if (homeschoolData.studentIds && homeschoolData.studentIds.length > 0) {
+            // If user is parent/tutor/observer, show all students
             const studentPromises = homeschoolData.studentIds.map(async (studentId) => {
               const studentDoc = await getDoc(doc(db, 'people', studentId));
               if (studentDoc.exists()) {
@@ -509,7 +662,61 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: '20px'
+      }}>
+        <div style={{ fontSize: '18px' }}>Loading HomeschoolDone...</div>
+        <div style={{ fontSize: '14px', color: '#666' }}>
+          Please wait while we set up your dashboard
+        </div>
+      </div>
+    );
+  }
+
+  // Handle student who can't access their data
+  if (userRole === 'student' && !homeschool) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column',
+        gap: '20px',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <h2 style={{ color: '#dc3545' }}>Student Access Issue</h2>
+        <p style={{ color: '#666', maxWidth: '500px' }}>
+          We found your student account ({user.email}), but you don't seem to be assigned to any homeschool.
+          Please contact your teacher or parent to make sure you've been properly added to the homeschool system.
+        </p>
+        <button
+          onClick={onSignOut}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: 'pointer'
+          }}
+        >
+          Sign Out
+        </button>
+        <div style={{ fontSize: '12px', color: '#999', marginTop: '20px' }}>
+          Debug info: Found student record but no homeschool assignment
+        </div>
+      </div>
+    );
+  }
 
   if (!homeschool) {
     return (
@@ -590,6 +797,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
     );
   }
 
+  // If user is a student, show student dashboard
+  if (userRole === 'student' && currentStudent && homeschool) {
+    console.log('Dashboard: Rendering StudentDashboard for:', currentStudent.name, 'in homeschool:', homeschool.name);
+    return (
+      <StudentDashboard
+        student={currentStudent}
+        homeschool={homeschool}
+        onSignOut={onSignOut}
+      />
+    );
+  }
+
+  // Debug logging for student access issues
+  if (userRole === 'student') {
+    console.log('Dashboard: Student role detected but missing data:');
+    console.log('- currentStudent:', currentStudent);
+    console.log('- homeschool:', homeschool);
+  }
+
   return (
     <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
       {/* Header */}
@@ -643,18 +869,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={() => setShowManagement(!showManagement)}
+            onClick={() => setShowSettings(true)}
             style={{
               padding: '10px 20px',
               fontSize: '16px',
-              backgroundColor: showManagement ? '#666' : '#007bff',
+              backgroundColor: '#6c757d',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer'
             }}
           >
-{showManagement ? 'Close Settings' : 'Settings'}
+            ⚙️ Settings
           </button>
           <button
             onClick={() => setShowReports(true)}
@@ -740,6 +966,26 @@ Set up students, activities and goals first using the "Settings" menu
               const totalGoals = studentGoals.length;
               const allCompleted = completedGoals === totalGoals;
               
+              // Sort goals: completed at bottom, rest alphabetically by activity name
+              const sortedGoals = [...studentGoals].sort((a, b) => {
+                const progressA = getGoalProgress(a.id, student.id);
+                const progressB = getGoalProgress(b.id, student.id);
+                const statusA = getGoalStatus(a, student.id);
+                const statusB = getGoalStatus(b, student.id);
+                const activityA = activities.find(act => act.id === a.activityId);
+                const activityB = activities.find(act => act.id === b.activityId);
+                
+                // Completed tasks go to bottom
+                const isCompletedA = statusA.status === 'completed-today';
+                const isCompletedB = statusB.status === 'completed-today';
+                
+                if (isCompletedA && !isCompletedB) return 1;
+                if (!isCompletedA && isCompletedB) return -1;
+                
+                // For non-completed or both completed, sort alphabetically by activity name
+                return (activityA?.name || '').localeCompare(activityB?.name || '');
+              });
+              
               return (
                 <div key={student.id} style={{
                   border: '2px solid #e0e0e0',
@@ -778,7 +1024,7 @@ Set up students, activities and goals first using the "Settings" menu
                   </div>
                   
                   <div style={{ display: 'grid', gap: '8px' }}>
-                    {studentGoals.map(goal => {
+                    {sortedGoals.map(goal => {
                       const activity = activities.find(a => a.id === goal.activityId);
                       const progress = getGoalProgress(goal.id, student.id);
                       const status = getGoalStatus(goal, student.id);
@@ -846,438 +1092,6 @@ Set up students, activities and goals first using the "Settings" menu
         )}
       </div>
 
-      {/* Management Panel - Collapsible */}
-      {showManagement && (
-        <div style={{ 
-          padding: '20px',
-          backgroundColor: '#f1f3f4',
-          borderRadius: '8px',
-          marginBottom: '20px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-<h3 style={{ margin: 0 }}>Settings</h3>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={() => setEditingHomeschool(homeschool)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: '14px',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Edit Homeschool Name
-              </button>
-              <button
-                onClick={() => setShowInvite(true)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: '14px',
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                👥 Invite
-              </button>
-              <button
-                onClick={() => setShowAuthorizedUsers(true)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: '14px',
-                  backgroundColor: '#17a2b8',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                🔐 Users
-              </button>
-              <button
-                onClick={() => setShowDeleteHomeschool(true)}
-                style={{
-                  padding: '6px 12px',
-                  fontSize: '14px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                🗑️ Delete Homeschool
-              </button>
-            </div>
-          </div>
-
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            gap: '20px'
-          }}>
-            {/* Students Management */}
-            <div style={{
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              padding: '20px',
-              backgroundColor: 'white'
-            }}>
-              <h4>Students</h4>
-              {students.length === 0 ? (
-                <p>No students yet</p>
-              ) : (
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  {students.map((student) => (
-                    <li key={student.id} style={{ 
-                      marginBottom: '8px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      fontSize: '14px'
-                    }}>
-                      <div>
-                        <div>{student.name}</div>
-                        {student.email && (
-                          <div style={{ color: '#007bff', fontSize: '12px' }}>
-                            📧 {student.email}
-                          </div>
-                        )}
-                        {student.mobile && (
-                          <div style={{ color: '#4caf50', fontSize: '12px' }}>
-                            📱 {student.mobile}
-                          </div>
-                        )}
-                        {student.dateOfBirth && (
-                          <div style={{ color: '#666', fontSize: '12px' }}>
-                            📅 {new Date(student.dateOfBirth.seconds ? student.dateOfBirth.seconds * 1000 : student.dateOfBirth).toLocaleDateString()}
-                          </div>
-                        )}
-                        {student.lastActivity && (
-                          <div style={{ color: '#999', fontSize: '11px', fontStyle: 'italic' }}>
-                            Last active: {formatLastActivity(student.lastActivity)}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', gap: '5px' }}>
-                        <button
-                          onClick={() => setEditingStudent(student)}
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            backgroundColor: '#007bff',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmation({
-                            type: 'student',
-                            id: student.id,
-                            name: student.name
-                          })}
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '12px',
-                            backgroundColor: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <button 
-                onClick={() => setShowStudentForm(true)}
-                style={{
-                  marginTop: '10px',
-                  padding: '8px 16px',
-                  backgroundColor: '#4285f4',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Add Student
-              </button>
-            </div>
-
-            {/* Activities & Goals Management */}
-            <div style={{
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              padding: '20px',
-              backgroundColor: 'white'
-            }}>
-              <h4>Activities & Goals</h4>
-              {activities.length === 0 ? (
-                <p>No activities yet</p>
-              ) : (
-                <div style={{ maxHeight: '300px', overflow: 'auto' }}>
-                  {activities.map((activity) => {
-                    const activityGoals = goals.filter(g => g.activityId === activity.id);
-                    return (
-                      <div key={activity.id} style={{ marginBottom: '16px', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{activity.name}</div>
-                            <div style={{ fontSize: '12px', color: '#666' }}>
-                              {activity.subjectId}
-                            </div>
-                            {activityGoals.length > 0 && (
-                              <div style={{ marginTop: '8px' }}>
-                                {activityGoals.map(goal => {
-                                  const goalStudents = students.filter(s => goal.studentIds?.includes(s.id));
-                                  return (
-                                    <div key={goal.id} style={{ 
-                                      fontSize: '11px', 
-                                      marginLeft: '12px',
-                                      marginBottom: '4px',
-                                      display: 'flex',
-                                      justifyContent: 'space-between',
-                                      alignItems: 'center'
-                                    }}>
-                                      <div>
-                                        • {goalStudents.map(s => s.name).join(', ') || 'Unknown students'}
-                                        {goal.timesPerWeek && ` - ${goal.timesPerWeek}x/week`}
-                                      </div>
-                                      <div style={{ display: 'flex', gap: '3px' }}>
-                                        <button
-                                          onClick={() => goalStudents.length > 0 && setEditingGoal({ goal, activity, students: goalStudents })}
-                                          style={{
-                                            padding: '2px 6px',
-                                            fontSize: '10px',
-                                            backgroundColor: '#007bff',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '3px',
-                                            cursor: 'pointer'
-                                          }}
-                                        >
-                                          Edit
-                                        </button>
-                                        <button
-                                          onClick={() => setDeleteConfirmation({
-                                            type: 'goal',
-                                            id: goal.id,
-                                            name: `${goalStudents.map(s => s.name).join(', ')}'s ${activity.name} goal`
-                                          })}
-                                          style={{
-                                            padding: '2px 6px',
-                                            fontSize: '10px',
-                                            backgroundColor: '#dc3545',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '3px',
-                                            cursor: 'pointer'
-                                          }}
-                                        >
-                                          Delete
-                                        </button>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                          <div style={{ display: 'flex', gap: '5px', marginLeft: '8px' }}>
-                            <button
-                              onClick={() => setEditingActivity(activity)}
-                              style={{
-                                padding: '4px 8px',
-                                fontSize: '12px',
-                                backgroundColor: '#007bff',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmation({
-                                type: 'activity',
-                                id: activity.id,
-                                name: activity.name
-                              })}
-                              style={{
-                                padding: '4px 8px',
-                                fontSize: '12px',
-                                backgroundColor: '#dc3545',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
-                <button 
-                  onClick={() => setShowActivityForm(true)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#4285f4',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px'
-                  }}
-                >
-                  Create Activity
-                </button>
-                {activities.length > 0 && students.length > 0 && (
-                  <button 
-                    onClick={() => setShowGoalForm(true)}
-                    style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#28a745',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '14px'
-                    }}
-                  >
-                    Assign Goals
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Dashboard Settings */}
-            <div style={{
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              padding: '20px',
-              backgroundColor: 'white',
-              marginTop: '20px'
-            }}>
-              <h4>📺 Dashboard Settings</h4>
-              <p style={{ fontSize: '14px', color: '#666', margin: '0 0 15px 0' }}>
-                Configure the full-screen dashboard for display on TVs or monitors.
-              </p>
-              
-              <div style={{ display: 'grid', gap: '15px', gridTemplateColumns: '1fr 1fr 1fr' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
-                    Cycle Time (seconds per student)
-                  </label>
-                  <input
-                    type="number"
-                    min="3"
-                    max="60"
-                    value={dashboardSettings.cycleSeconds}
-                    onChange={(e) => {
-                      const newSettings = {
-                        ...dashboardSettings,
-                        cycleSeconds: parseInt(e.target.value) || 10
-                      };
-                      saveDashboardSettings(newSettings);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '14px'
-                    }}
-                  />
-                </div>
-                
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
-                    Start of Week
-                  </label>
-                  <select
-                    value={dashboardSettings.startOfWeek}
-                    onChange={(e) => {
-                      const newSettings = {
-                        ...dashboardSettings,
-                        startOfWeek: parseInt(e.target.value)
-                      };
-                      saveDashboardSettings(newSettings);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '14px'
-                    }}
-                  >
-                    <option value={0}>Sunday</option>
-                    <option value={1}>Monday</option>
-                    <option value={2}>Tuesday</option>
-                    <option value={3}>Wednesday</option>
-                    <option value={4}>Thursday</option>
-                    <option value={5}>Friday</option>
-                    <option value={6}>Saturday</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
-                    Timezone
-                  </label>
-                  <select
-                    value={dashboardSettings.timezone}
-                    onChange={(e) => {
-                      const newSettings = {
-                        ...dashboardSettings,
-                        timezone: e.target.value
-                      };
-                      saveDashboardSettings(newSettings);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      fontSize: '14px'
-                    }}
-                  >
-                    <option value="America/New_York">Eastern (EST/EDT)</option>
-                    <option value="America/Chicago">Central (CST/CDT)</option>
-                    <option value="America/Denver">Mountain (MST/MDT)</option>
-                    <option value="America/Los_Angeles">Pacific (PST/PDT)</option>
-                    <option value="America/Phoenix">Arizona (MST)</option>
-                    <option value="America/Anchorage">Alaska (AKST/AKDT)</option>
-                    <option value="Pacific/Honolulu">Hawaii (HST)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Forms and Modals */}
       {showStudentForm && homeschool && (
         <StudentForm
@@ -1344,6 +1158,7 @@ Set up students, activities and goals first using the "Settings" menu
           preSelectedStudent={preSelectedStudent}
           existingInstance={editingActivityInstance || undefined}
           timezone={dashboardSettings.timezone}
+          timerAlarmEnabled={timerAlarmEnabled}
           onClose={() => {
             setShowActivityInstanceForm(false);
             setPreSelectedGoal('');
@@ -1448,6 +1263,7 @@ Set up students, activities and goals first using the "Settings" menu
           homeschool={homeschool}
           currentUserId={user.uid}
           currentUserInfo={{ name: user.displayName || undefined, email: user.email || undefined }}
+          currentUserRole={userRole || 'observer'}
           onClose={() => setShowAuthorizedUsers(false)}
           onUpdate={(updatedHomeschool) => {
             setHomeschool(updatedHomeschool);
@@ -1474,6 +1290,36 @@ Set up students, activities and goals first using the "Settings" menu
           startOfWeek={dashboardSettings.startOfWeek}
           timezone={dashboardSettings.timezone}
           onClose={() => setShowDashboard(false)}
+        />
+      )}
+
+      {showSettings && homeschool && (
+        <SettingsModal
+          homeschool={homeschool}
+          students={students}
+          activities={activities}
+          goals={goals}
+          userRole={userRole}
+          currentUserId={user.uid}
+          currentUserInfo={{ name: user.displayName || undefined, email: user.email || undefined }}
+          dashboardSettings={dashboardSettings}
+          timerAlarmEnabled={timerAlarmEnabled}
+          publicDashboardId={publicDashboardId}
+          onSaveSettings={saveDashboardSettings}
+          onSaveTimerAlarm={saveTimerAlarmSetting}
+          onSavePublicDashboard={savePublicDashboardSetting}
+          onShowStudentForm={() => setShowStudentForm(true)}
+          onShowActivityForm={() => setShowActivityForm(true)}
+          onShowGoalForm={() => setShowGoalForm(true)}
+          onShowInvite={() => setShowInvite(true)}
+          onShowAuthorizedUsers={() => setShowAuthorizedUsers(true)}
+          onEditHomeschool={() => setEditingHomeschool(homeschool)}
+          onDeleteHomeschool={() => setShowDeleteHomeschool(true)}
+          onEditStudent={(student) => setEditingStudent(student)}
+          onEditActivity={(activity) => setEditingActivity(activity)}
+          onEditGoal={(goal, activity, students) => setEditingGoal({ goal, activity, students })}
+          onDeleteConfirmation={(type, id, name) => setDeleteConfirmation({ type, id, name })}
+          onClose={() => setShowSettings(false)}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc, arrayRemove } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, arrayRemove, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool, Person, Activity, Goal } from '../types';
 import { formatLastActivity } from '../utils/activityTracking';
@@ -24,6 +24,7 @@ interface SettingsModalProps {
   };
   timerAlarmEnabled: boolean;
   publicDashboardId: string | null;
+  allowMultipleRecordsPerDay: boolean;
   activeTab?: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users';
   onTabChange?: (tab: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users') => void;
   onSaveSettings: (settings: {
@@ -33,6 +34,7 @@ interface SettingsModalProps {
   }) => void;
   onSaveTimerAlarm: (enabled: boolean) => void;
   onSavePublicDashboard: (dashboardId: string | null) => void;
+  onSaveMultipleRecords: (enabled: boolean) => void;
   onShowStudentForm: () => void;
   onShowActivityForm: () => void;
   onShowGoalForm: () => void;
@@ -45,6 +47,7 @@ interface SettingsModalProps {
   onEditGoal: (goal: Goal, activity: Activity, students: Person[]) => void;
   onDeleteConfirmation: (type: 'student' | 'activity' | 'goal', id: string, name: string) => void;
   onClose: () => void;
+  onHomeschoolUpdate?: () => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -58,11 +61,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   dashboardSettings,
   timerAlarmEnabled,
   publicDashboardId,
+  allowMultipleRecordsPerDay,
   activeTab: initialActiveTab,
   onTabChange,
   onSaveSettings,
   onSaveTimerAlarm,
   onSavePublicDashboard,
+  onSaveMultipleRecords,
   onShowStudentForm,
   onShowActivityForm,
   onShowGoalForm,
@@ -74,7 +79,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onEditActivity,
   onEditGoal,
   onDeleteConfirmation,
-  onClose
+  onClose,
+  onHomeschoolUpdate
 }) => {
   const [activeTab, setActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users'>(initialActiveTab || 'general');
   const [cycleSeconds, setCycleSeconds] = useState(dashboardSettings.cycleSeconds);
@@ -86,6 +92,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [expandedWorkload, setExpandedWorkload] = useState<string | null>(null);
   const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [userToRemove, setUserToRemove] = useState<{ userId: string; email: string; name: string; role: string } | null>(null);
+  const [confirmationText, setConfirmationText] = useState('');
+  const [editingUserAccess, setEditingUserAccess] = useState<{ userId: string; currentRole: string } | null>(null);
+  const [multipleRecords, setMultipleRecords] = useState(allowMultipleRecordsPerDay || false);
 
   const weekDays = [
     { value: 0, label: 'Sunday' },
@@ -225,14 +235,17 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     }
   };
 
-  const handleRemoveUser = async (userId: string, userEmail: string, userRole: string) => {
+  const handleRemoveUser = (userId: string, userEmail: string, userRole: string) => {
     const userName = users.find(u => u.id === userId)?.name || userEmail;
-    const isInvited = userId.startsWith('invited-');
-    const actionText = isInvited ? 'revoke the invitation for' : 'remove';
+    setUserToRemove({ userId, email: userEmail, name: userName, role: userRole });
+  };
+
+  const confirmRemoveUser = async () => {
+    if (!userToRemove) return;
     
-    if (!window.confirm(`Are you sure you want to ${actionText} ${userName}?`)) {
-      return;
-    }
+    const { userId, email: userEmail, name: userName, role: userRole } = userToRemove;
+    const isInvited = userId.startsWith('invited-');
+    const actionText = isInvited ? 'revoked invitation for' : 'removed';
 
     setRemovingUserId(userId);
 
@@ -242,27 +255,50 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       
       const updates: any = {};
       
-      // Remove from appropriate arrays
+      // Get current arrays
+      const currentParentIds = [...(homeschool.parentIds || [])];
+      const currentTutorIds = [...(homeschool.tutorIds || [])];
+      const currentObserverIds = [...(homeschool.observerIds || [])];
+      const currentParentEmails = [...(homeschool.parentEmails || [])];
+      const currentTutorEmails = [...(homeschool.tutorEmails || [])];
+      const currentObserverEmails = [...(homeschool.observerEmails || [])];
+      
+      // Remove from appropriate arrays - rebuild them instead of using arrayRemove
+      console.log('Before filtering:', {
+        currentParentIds,
+        currentTutorIds, 
+        currentObserverIds,
+        currentParentEmails,
+        currentTutorEmails,
+        currentObserverEmails
+      });
+      
       if (userRole === 'parent') {
         if (userId && !userId.startsWith('invited-')) {
-          updates.parentIds = arrayRemove(userId);
+          updates.parentIds = currentParentIds.filter(id => id !== userId);
+          console.log('Filtering parentIds:', currentParentIds, '→', updates.parentIds);
         }
         if (userEmail) {
-          updates.parentEmails = arrayRemove(userEmail);
+          updates.parentEmails = currentParentEmails.filter(email => email !== userEmail);
+          console.log('Filtering parentEmails:', currentParentEmails, '→', updates.parentEmails);
         }
       } else if (userRole === 'tutor') {
         if (userId && !userId.startsWith('invited-')) {
-          updates.tutorIds = arrayRemove(userId);
+          updates.tutorIds = currentTutorIds.filter(id => id !== userId);
+          console.log('Filtering tutorIds:', currentTutorIds, '→', updates.tutorIds);
         }
         if (userEmail) {
-          updates.tutorEmails = arrayRemove(userEmail);
+          updates.tutorEmails = currentTutorEmails.filter(email => email !== userEmail);
+          console.log('Filtering tutorEmails:', currentTutorEmails, '→', updates.tutorEmails);
         }
       } else if (userRole === 'observer') {
         if (userId && !userId.startsWith('invited-')) {
-          updates.observerIds = arrayRemove(userId);
+          updates.observerIds = currentObserverIds.filter(id => id !== userId);
+          console.log('Filtering observerIds:', currentObserverIds, '→', updates.observerIds);
         }
         if (userEmail) {
-          updates.observerEmails = arrayRemove(userEmail);
+          updates.observerEmails = currentObserverEmails.filter(email => email !== userEmail);
+          console.log('Filtering observerEmails:', currentObserverEmails, '→', updates.observerEmails);
         }
       }
       
@@ -270,22 +306,143 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       if (Object.keys(updates).length === 0) {
         alert('No changes needed - user may already be removed.');
         setRemovingUserId(null);
+        setUserToRemove(null);
         return;
       }
       
       console.log('Applying updates to homeschool document:', updates);
-      await updateDoc(doc(db, 'homeschools', homeschool.id), updates);
+      console.log('Homeschool document path:', `homeschools/${homeschool.id}`);
+      
+      const homeschoolRef = doc(db, 'homeschools', homeschool.id);
+      await updateDoc(homeschoolRef, updates);
+      
+      console.log('Update completed, verifying...');
+      const updatedDoc = await getDoc(homeschoolRef);
+      console.log('Updated document data:', updatedDoc.data());
       
       // Show success message
-      alert(`Successfully ${isInvited ? 'revoked invitation for' : 'removed'} ${userName}`);
+      alert(`Successfully ${actionText} ${userName}`);
       
       // Refresh users list
       await fetchUsers();
+      
+      // Notify parent to refresh homeschool data
+      if (onHomeschoolUpdate) {
+        console.log('Calling onHomeschoolUpdate to refresh parent data');
+        onHomeschoolUpdate();
+      }
+      
+      console.log('User removal completed successfully');
     } catch (error: any) {
       console.error('Error removing user:', error);
       alert(`Failed to ${actionText} ${userName}: ${error.message || 'Unknown error'}`);
     } finally {
       setRemovingUserId(null);
+      setUserToRemove(null);
+      setConfirmationText('');
+    }
+  };
+
+  const handleChangeUserRole = async (userId: string, userEmail: string, oldRole: string, newRole: string) => {
+    console.log('handleChangeUserRole called with:', { userId, userEmail, oldRole, newRole });
+    
+    if (oldRole === newRole) {
+      console.log('No role change needed, closing modal');
+      setEditingUserAccess(null);
+      return;
+    }
+    
+    try {
+      console.log('Changing role from', oldRole, 'to', newRole, 'for user:', { userId, userEmail });
+      
+      // Get current arrays and rebuild them correctly
+      let parentIds = [...(homeschool.parentIds || [])];
+      let tutorIds = [...(homeschool.tutorIds || [])];
+      let observerIds = [...(homeschool.observerIds || [])];
+      let parentEmails = [...(homeschool.parentEmails || [])];
+      let tutorEmails = [...(homeschool.tutorEmails || [])];
+      let observerEmails = [...(homeschool.observerEmails || [])];
+      
+      console.log('Before change:', { 
+        parentIds: parentIds, 
+        tutorIds: tutorIds, 
+        observerIds: observerIds, 
+        parentEmails: parentEmails, 
+        tutorEmails: tutorEmails, 
+        observerEmails: observerEmails,
+        userIdToChange: userId,
+        userEmailToChange: userEmail
+      });
+      
+      // Remove user from all arrays first
+      if (userId && !userId.startsWith('invited-')) {
+        parentIds = parentIds.filter(id => id !== userId);
+        tutorIds = tutorIds.filter(id => id !== userId);
+        observerIds = observerIds.filter(id => id !== userId);
+      }
+      
+      if (userEmail) {
+        parentEmails = parentEmails.filter(email => email !== userEmail);
+        tutorEmails = tutorEmails.filter(email => email !== userEmail);
+        observerEmails = observerEmails.filter(email => email !== userEmail);
+      }
+      
+      // Add to the correct new arrays
+      if (newRole === 'parent') {
+        if (userId && !userId.startsWith('invited-')) {
+          parentIds.push(userId);
+        }
+        if (userEmail) {
+          parentEmails.push(userEmail);
+        }
+      } else if (newRole === 'tutor') {
+        if (userId && !userId.startsWith('invited-')) {
+          tutorIds.push(userId);
+        }
+        if (userEmail) {
+          tutorEmails.push(userEmail);
+        }
+      } else if (newRole === 'observer') {
+        if (userId && !userId.startsWith('invited-')) {
+          observerIds.push(userId);
+        }
+        if (userEmail) {
+          observerEmails.push(userEmail);
+        }
+      }
+      
+      console.log('After change:', { parentIds, tutorIds, observerIds, parentEmails, tutorEmails, observerEmails });
+      
+      const updates = {
+        parentIds,
+        tutorIds, 
+        observerIds,
+        parentEmails,
+        tutorEmails,
+        observerEmails
+      };
+      
+      console.log('Applying role change updates:', updates);
+      await updateDoc(doc(db, 'homeschools', homeschool.id), updates);
+      
+      // Also update the user's role in the people collection
+      if (userId && !userId.startsWith('invited-')) {
+        console.log('Updating role in people collection for user:', userId);
+        await updateDoc(doc(db, 'people', userId), { role: newRole });
+      }
+      
+      alert(`Successfully changed role to ${newRole}`);
+      await fetchUsers();
+      setEditingUserAccess(null);
+      
+      // Notify parent to refresh homeschool data
+      if (onHomeschoolUpdate) {
+        onHomeschoolUpdate();
+      }
+    } catch (error: any) {
+      console.error('Error changing user role:', error);
+      alert(`Failed to change role: ${error.message || 'Unknown error'}`);
+      setEditingUserAccess(null);
     }
   };
 
@@ -299,6 +456,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onSaveTimerAlarm(timerAlarm);
     console.log('SettingsModal: About to call onSavePublicDashboard with:', publicDashboard);
     onSavePublicDashboard(publicDashboard);
+    onSaveMultipleRecords(multipleRecords);
     onClose();
   };
 
@@ -388,6 +546,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 }
               </p>
             </div>
+            
+            {userRole === 'parent' && (
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                padding: '20px',
+                marginTop: '20px'
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: '15px' }}>⚙️ Activity Recording Settings</h3>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={multipleRecords}
+                      onChange={(e) => {
+                        setMultipleRecords(e.target.checked);
+                        onSaveMultipleRecords(e.target.checked);
+                      }}
+                      style={{ marginRight: '10px' }}
+                    />
+                    <span style={{ fontSize: '16px' }}>Multiple Records on a Day</span>
+                  </label>
+                  <p style={{ fontSize: '14px', color: '#666', marginLeft: '25px', marginTop: '5px', marginBottom: 0 }}>
+                    When enabled, allows recording the same activity multiple times per student per day. 
+                    When disabled, recording an activity that was already done today will edit the existing record.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         );
         
@@ -775,6 +962,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                           <span style={{ fontWeight: '500' }}>{user.name || user.email}</span>
                           <span
+                            onClick={() => {
+                              console.log('Role badge clicked:', { 
+                                userRole, 
+                                userId: user.id, 
+                                currentUserId, 
+                                canEdit: userRole === 'parent' && user.id !== currentUserId 
+                              });
+                              if (userRole === 'parent' && user.id !== currentUserId) {
+                                console.log('Opening role change modal for user:', user);
+                                setEditingUserAccess({ userId: user.id, currentRole: user.role });
+                              }
+                            }}
+                            title={userRole === 'parent' && user.id !== currentUserId ? 'Click to change role' : ''}
                             style={{
                               padding: '2px 8px',
                               borderRadius: '12px',
@@ -787,10 +987,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               color:
                                 user.role === 'parent' ? '#1976d2' :
                                 user.role === 'tutor' ? '#7b1fa2' :
-                                '#388e3c'
+                                '#388e3c',
+                              cursor: userRole === 'parent' && user.id !== currentUserId ? 'pointer' : 'default',
+                              userSelect: 'none',
+                              border: userRole === 'parent' && user.id !== currentUserId ? '1px dashed #999' : '1px solid transparent',
+                              transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              if (userRole === 'parent' && user.id !== currentUserId) {
+                                e.currentTarget.style.opacity = '0.8';
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = '1';
+                              e.currentTarget.style.transform = 'scale(1)';
                             }}
                           >
                             {user.role}
+                            {userRole === 'parent' && user.id !== currentUserId && (
+                              <span style={{ marginLeft: '4px', fontSize: '10px' }}>✏️</span>
+                            )}
                           </span>
                           {user.status === 'invited' && (
                             <span
@@ -850,7 +1067,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         >
                           {removingUserId === user.id 
                             ? 'Processing...' 
-                            : user.status === 'invited' ? 'Revoke' : 'Remove'}
+                            : user.status === 'invited' ? 'Revoke' : 'Delete'}
                         </button>
                       )}
                     </div>
@@ -1272,6 +1489,230 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
         </div>
       </div>
+      
+      {/* User Removal Confirmation Dialog */}
+      {userToRemove && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px',
+            borderRadius: '8px',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <h2 style={{ color: '#dc3545' }}>
+              {userToRemove.userId.startsWith('invited-') ? 'Revoke Invitation' : 'Remove User'}
+            </h2>
+            
+            <p style={{ marginBottom: '20px' }}>
+              Are you sure you want to {userToRemove.userId.startsWith('invited-') ? 'revoke the invitation for' : 'remove'} <strong>{userToRemove.name}</strong>?
+              This action cannot be undone.
+            </p>
+            
+            <p style={{ marginBottom: '10px', fontSize: '14px' }}>
+              Type <strong>{userToRemove.name}</strong> to confirm:
+            </p>
+            
+            <input
+              type="text"
+              value={confirmationText}
+              onChange={(e) => setConfirmationText(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '14px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                marginBottom: '20px'
+              }}
+              placeholder={`Type "${userToRemove.name}" to confirm`}
+              autoFocus
+              disabled={removingUserId === userToRemove.userId}
+            />
+            
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setUserToRemove(null);
+                  setConfirmationText('');
+                }}
+                disabled={removingUserId === userToRemove.userId}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#666',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: removingUserId === userToRemove.userId ? 'not-allowed' : 'pointer',
+                  opacity: removingUserId === userToRemove.userId ? 0.6 : 1
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (confirmationText === userToRemove.name) {
+                    confirmRemoveUser();
+                    setConfirmationText('');
+                  }
+                }}
+                disabled={removingUserId === userToRemove.userId || confirmationText !== userToRemove.name}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: confirmationText === userToRemove.name ? '#dc3545' : '#999',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: (removingUserId === userToRemove.userId || confirmationText !== userToRemove.name) ? 'not-allowed' : 'pointer',
+                  opacity: (removingUserId === userToRemove.userId || confirmationText !== userToRemove.name) ? 0.6 : 1
+                }}
+              >
+                {removingUserId === userToRemove.userId 
+                  ? 'Processing...' 
+                  : userToRemove.userId.startsWith('invited-') ? 'Revoke' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Role Change Modal - Completely Rewritten */}
+      {editingUserAccess && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+        >
+          <div 
+            style={{
+              backgroundColor: 'white',
+              padding: '30px',
+              borderRadius: '8px',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Change User Role</h3>
+            <p style={{ marginBottom: '20px', fontSize: '14px' }}>
+              Select the new role for this user:
+            </p>
+            
+            {/* Simple Button Selection */}
+            <div style={{ marginBottom: '30px' }}>
+              {['parent', 'tutor', 'observer'].map(role => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => {
+                    console.log('Role button clicked:', role);
+                    setEditingUserAccess(prev => prev ? { ...prev, currentRole: role } : null);
+                  }}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    marginBottom: '10px',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    border: editingUserAccess.currentRole === role ? '2px solid #007bff' : '1px solid #ddd',
+                    borderRadius: '6px',
+                    backgroundColor: editingUserAccess.currentRole === role ? '#e3f2fd' : 'white',
+                    color: editingUserAccess.currentRole === role ? '#1976d2' : '#333',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontWeight: editingUserAccess.currentRole === role ? '600' : 'normal'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ textTransform: 'capitalize' }}>{role}</span>
+                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                        {role === 'parent' && 'Full access to all settings and data'}
+                        {role === 'tutor' && 'Can assign goals and track progress'}  
+                        {role === 'observer' && 'Read-only access to view progress'}
+                      </div>
+                    </div>
+                    {editingUserAccess.currentRole === role && (
+                      <div style={{ color: '#007bff', fontWeight: 'bold' }}>✓</div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  console.log('Cancel clicked');
+                  setEditingUserAccess(null);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#666',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  console.log('Save Role clicked');
+                  const user = users.find(u => u.id === editingUserAccess.userId);
+                  if (user) {
+                    console.log('Calling handleChangeUserRole with:', {
+                      userId: editingUserAccess.userId,
+                      email: user.email,
+                      oldRole: user.role,
+                      newRole: editingUserAccess.currentRole
+                    });
+                    handleChangeUserRole(
+                      editingUserAccess.userId, 
+                      user.email || '', 
+                      user.role, 
+                      editingUserAccess.currentRole
+                    );
+                  }
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Save Role
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

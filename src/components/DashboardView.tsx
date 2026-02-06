@@ -41,6 +41,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [studentsProgress, setStudentsProgress] = useState<StudentProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper function to check if a goal should be shown based on start date and student completion
+  const isGoalActiveForStudent = (goal: Goal, studentId: string, currentDate: Date = new Date()) => {
+    // Check start date
+    if (goal.startDate) {
+      const startDate = goal.startDate instanceof Date ? goal.startDate : new Date(goal.startDate);
+      if (currentDate < startDate) return false;
+    }
+    
+    // Check student completion date
+    if (goal.studentCompletions?.[studentId]?.completionDate) {
+      const completion = goal.studentCompletions[studentId].completionDate;
+      const completionDate = completion instanceof Date 
+        ? completion 
+        : new Date(completion!);
+      if (currentDate > completionDate) return false;
+    }
+    
+    return true;
+  };
+
   // Handle ESC key (disabled for public dashboards)
   useEffect(() => {
     if (isPublic) return; // Don't allow ESC to close public dashboards
@@ -123,8 +143,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         tomorrow.setDate(today.getDate() + 1);
 
         const progressPromises = students.map(async (student) => {
-          // Get goals for this student
-          const studentGoals = goals.filter(goal => goal.studentIds?.includes(student.id));
+          // Get goals for this student that are active (considering start date and completion date)
+          const studentGoals = goals.filter(goal => goal.studentIds?.includes(student.id) && isGoalActiveForStudent(goal, student.id));
           
           // Get today's activity instances for this student
           const instancesQuery = query(
@@ -161,16 +181,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             weeklyProgress[goalId] = (weeklyProgress[goalId] || 0) + 1;
           });
 
+          // Calculate weekly completion for each goal
+          const completedThisWeek = studentGoals.filter(goal => {
+            const weeklyCount = weeklyProgress[goal.id] || 0;
+            if (goal.timesPerWeek && weeklyCount >= goal.timesPerWeek) {
+              return true; // Weekly requirement met
+            }
+            return false;
+          }).length;
+
+          // Filter out goals that are completed for the week - only show pending
+          const pendingGoals = studentGoals.filter(goal => {
+            const weeklyCount = weeklyProgress[goal.id] || 0;
+            if (goal.timesPerWeek && weeklyCount >= goal.timesPerWeek) {
+              return false; // Don't show weekly complete goals
+            }
+            return true; // Show pending goals
+          });
+
           return {
             student,
-            todayGoals: studentGoals,
-            completedToday: studentGoals.filter(goal => {
-              if (!todayGoalIds.has(goal.id)) return false;
-              if (goal.minutesPerSession) {
-                return (todayMinutes[goal.id] || 0) >= goal.minutesPerSession;
-              }
-              return true; // Non-time based goals count as complete if they have activity
-            }).length,
+            todayGoals: pendingGoals, // Now contains only pending goals
+            completedToday: completedThisWeek, // Now represents weekly completion
             totalGoals: studentGoals.length,
             weeklyProgress,
             todayCompletedGoalIds: todayGoalIds,
@@ -356,7 +388,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 <div style={{ fontSize: '40px', fontWeight: 'bold' }}>
                   {currentProgress.completedToday}/{currentProgress.totalGoals}
                 </div>
-                <div style={{ fontSize: '18px', opacity: 0.8 }}>Today</div>
+                <div style={{ fontSize: '18px', opacity: 0.8 }}>This Week</div>
               </div>
             </div>
           </div>
@@ -403,7 +435,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text'
           }}>
-            Today's Goals
+            Pending Tasks and Goals
           </h3>
           
           <div style={{ 
@@ -520,7 +552,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     opacity: 0.8,
                     marginBottom: '8px'
                   }}>
-                    {goal.timesPerWeek && `${goal.timesPerWeek}x/week`}
+                    {goal.timesPerWeek && `${weeklyCount} of ${goal.timesPerWeek}/week`}
                     {goal.minutesPerSession && ` • ${goal.minutesPerSession} min`}
                   </div>
                   <div style={{ 
@@ -539,13 +571,17 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             <div style={{ 
               textAlign: 'center',
               fontSize: '24px',
-              opacity: 0.6,
               flex: 1,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              gap: '20px'
             }}>
-              No goals assigned for today
+              <div style={{ fontSize: '80px' }}>🏆</div>
+              <div style={{ color: '#4caf50', fontWeight: 'bold' }}>
+                All done for the week!
+              </div>
             </div>
           )}
         </div>

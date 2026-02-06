@@ -71,6 +71,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   const [currentStudent, setCurrentStudent] = useState<Person | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
 
+  // Helper function to check if a goal should be shown based on start date and student completion
+  const isGoalActiveForStudent = (goal: Goal, studentId: string, currentDate: Date = new Date()) => {
+    // Check start date
+    if (goal.startDate) {
+      const startDate = goal.startDate instanceof Date ? goal.startDate : new Date(goal.startDate);
+      if (currentDate < startDate) return false;
+    }
+    
+    // Check student completion date
+    if (goal.studentCompletions?.[studentId]?.completionDate) {
+      const completion = goal.studentCompletions[studentId].completionDate;
+      const completionDate = completion instanceof Date 
+        ? completion 
+        : new Date(completion!);
+      if (currentDate > completionDate) return false;
+    }
+    
+    return true;
+  };
+
   // Load dashboard settings, timer alarm, and public dashboard from homeschool document
   useEffect(() => {
     if (homeschool?.dashboardSettings) {
@@ -138,6 +158,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       console.log('Dashboard: Set local state publicDashboardId to:', dashboardId);
     } catch (error) {
       console.error('Error saving public dashboard setting:', error);
+    }
+  };
+
+  // Save multiple records per day setting to Firebase
+  const saveMultipleRecordsSetting = async (enabled: boolean) => {
+    if (!homeschool?.id) return;
+    
+    try {
+      await updateDoc(doc(db, 'homeschools', homeschool.id), {
+        allowMultipleRecordsPerDay: enabled
+      });
+      setHomeschool(prev => prev ? { ...prev, allowMultipleRecordsPerDay: enabled } : null);
+    } catch (error) {
+      console.error('Error saving multiple records setting:', error);
     }
   };
 
@@ -425,6 +459,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
 
     checkHomeschool();
   }, [user.uid]);
+
+  // Function to refresh homeschool data
+  const refreshHomeschoolData = async () => {
+    if (!homeschool?.id) return;
+    
+    try {
+      const homeschoolDoc = await getDoc(doc(db, 'homeschools', homeschool.id));
+      if (homeschoolDoc.exists()) {
+        const updatedData = { ...homeschoolDoc.data(), id: homeschoolDoc.id } as Homeschool;
+        setHomeschool(updatedData);
+      }
+    } catch (error) {
+      console.error('Error refreshing homeschool data:', error);
+    }
+  };
 
   useEffect(() => {
     if (goals.length > 0) {
@@ -1044,7 +1093,7 @@ Set up students, activities and goals first using the "Settings" menu
         ) : (
           <div style={{ display: 'grid', gap: '20px' }}>
             {students.map(student => {
-              const studentGoals = goals.filter(g => g.studentIds?.includes(student.id));
+              const studentGoals = goals.filter(g => g.studentIds?.includes(student.id) && isGoalActiveForStudent(g, student.id));
               if (studentGoals.length === 0) return null;
               
               const completedGoals = studentGoals.filter(goal => getGoalProgress(goal.id, student.id).today > 0).length;
@@ -1060,10 +1109,17 @@ Set up students, activities and goals first using the "Settings" menu
                 const activityA = activities.find(act => act.id === a.activityId);
                 const activityB = activities.find(act => act.id === b.activityId);
                 
-                // Completed tasks go to bottom
+                // Weekly complete tasks go to bottom, then completed tasks
+                const isWeeklyCompleteA = statusA.status === 'weekly-complete';
+                const isWeeklyCompleteB = statusB.status === 'weekly-complete';
                 const isCompletedA = statusA.status === 'completed-today';
                 const isCompletedB = statusB.status === 'completed-today';
                 
+                // Weekly complete goes to bottom first
+                if (isWeeklyCompleteA && !isWeeklyCompleteB) return 1;
+                if (!isWeeklyCompleteA && isWeeklyCompleteB) return -1;
+                
+                // Then completed today goes to bottom
                 if (isCompletedA && !isCompletedB) return 1;
                 if (!isCompletedA && isCompletedB) return -1;
                 
@@ -1104,7 +1160,7 @@ Set up students, activities and goals first using the "Settings" menu
                       fontSize: '14px',
                       fontWeight: 'bold'
                     }}>
-                      {completedGoals}/{totalGoals} Complete
+                      {completedGoals}/{totalGoals} Weekly Goals Complete
                     </div>
                   </div>
                   
@@ -1113,6 +1169,12 @@ Set up students, activities and goals first using the "Settings" menu
                       const activity = activities.find(a => a.id === goal.activityId);
                       const progress = getGoalProgress(goal.id, student.id);
                       const status = getGoalStatus(goal, student.id);
+                      
+                      // Calculate weekly count for this goal and student
+                      const weeklyCount = weekInstances.filter(i => 
+                        i.goalId === goal.id && 
+                        i.studentId === student.id
+                      ).length;
                       
                       if (!activity) return null;
                       
@@ -1144,7 +1206,7 @@ Set up students, activities and goals first using the "Settings" menu
                             <span style={{ fontWeight: '500' }}>{activity.name}</span>
                             {goal.timesPerWeek && (
                               <span style={{ color: status.textColor, opacity: 0.7, fontSize: '13px', marginLeft: '8px' }}>
-                                ({goal.timesPerWeek}x/week)
+                                ({weeklyCount} of {goal.timesPerWeek}/week)
                               </span>
                             )}
                           </div>
@@ -1278,6 +1340,7 @@ Set up students, activities and goals first using the "Settings" menu
           existingInstance={editingActivityInstance || undefined}
           timezone={dashboardSettings.timezone}
           timerAlarmEnabled={timerAlarmEnabled}
+          allowMultipleRecordsPerDay={homeschool?.allowMultipleRecordsPerDay || false}
           onClose={() => {
             setShowActivityInstanceForm(false);
             setPreSelectedGoal('');
@@ -1460,11 +1523,13 @@ Set up students, activities and goals first using the "Settings" menu
           dashboardSettings={dashboardSettings}
           timerAlarmEnabled={timerAlarmEnabled}
           publicDashboardId={publicDashboardId}
+          allowMultipleRecordsPerDay={homeschool.allowMultipleRecordsPerDay || false}
           activeTab={settingsActiveTab}
           onTabChange={setSettingsActiveTab}
           onSaveSettings={saveDashboardSettings}
           onSaveTimerAlarm={saveTimerAlarmSetting}
           onSavePublicDashboard={savePublicDashboardSetting}
+          onSaveMultipleRecords={saveMultipleRecordsSetting}
           onShowStudentForm={() => {
             setSettingsActiveTab('students');
             setReturnToSettings(true);
@@ -1526,6 +1591,7 @@ Set up students, activities and goals first using the "Settings" menu
             setDeleteConfirmation({ type, id, name });
           }}
           onClose={() => setShowSettings(false)}
+          onHomeschoolUpdate={refreshHomeschoolData}
         />
       )}
     </div>

@@ -26,6 +26,26 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [editingInstance, setEditingInstance] = useState<ActivityInstance | null>(null);
 
+  // Helper function to check if a goal should be shown based on start date and student completion
+  const isGoalActiveForStudent = (goal: Goal, studentId: string, currentDate: Date = new Date()) => {
+    // Check start date
+    if (goal.startDate) {
+      const startDate = goal.startDate instanceof Date ? goal.startDate : new Date(goal.startDate);
+      if (currentDate < startDate) return false;
+    }
+    
+    // Check student completion date
+    if (goal.studentCompletions?.[studentId]?.completionDate) {
+      const completion = goal.studentCompletions[studentId].completionDate;
+      const completionDate = completion instanceof Date 
+        ? completion 
+        : new Date(completion!);
+      if (currentDate > completionDate) return false;
+    }
+    
+    return true;
+  };
+
   // Get date helpers
   const getToday = () => {
     const today = new Date();
@@ -78,11 +98,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         console.log('StudentDashboard: Found', allGoals.length, 'total goals in homeschool');
         console.log('StudentDashboard: All goals:', allGoals);
         
-        // Filter goals assigned to this student
+        // Filter goals assigned to this student and that are active
         const studentGoals = allGoals.filter(goal => {
           const isAssigned = goal.studentIds?.includes(student.id);
-          console.log(`Goal ${goal.id} (${goal.activityId}) assigned to student? ${isAssigned}. StudentIds:`, goal.studentIds);
-          return isAssigned;
+          const isActive = isGoalActiveForStudent(goal, student.id);
+          console.log(`Goal ${goal.id} (${goal.activityId}) assigned to student? ${isAssigned}, active? ${isActive}. StudentIds:`, goal.studentIds);
+          return isAssigned && isActive;
         });
         
         console.log('StudentDashboard: Student has', studentGoals.length, 'assigned goals');
@@ -434,7 +455,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     color: '#999'
                   }}>
                     <div>
-                      {goal.timesPerWeek && `${goal.timesPerWeek}x per week`}
+                      {goal.timesPerWeek && `${getGoalProgress(goal.id).weekCount} of ${goal.timesPerWeek}/week`}
                       {goal.minutesPerSession && ` • ${goal.minutesPerSession} minutes`}
                     </div>
                     <div>
@@ -471,6 +492,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
           preSelectedStudent={student.id}
           existingInstance={editingInstance || undefined}
           timezone="America/New_York" // Default timezone
+          allowMultipleRecordsPerDay={homeschool.allowMultipleRecordsPerDay || false}
           onClose={handleActivityFormClose}
           onActivityRecorded={handleActivityFormClose}
         />

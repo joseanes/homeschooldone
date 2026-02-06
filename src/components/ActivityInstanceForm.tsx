@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, query, where, getDocs, updateDoc, doc, increment } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, updateDoc, doc, increment, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ActivityInstance, Goal, Activity, Person } from '../types';
 import { updateStudentLastActivity, updateLastActivity } from '../utils/activityTracking';
@@ -15,6 +15,7 @@ interface ActivityInstanceFormProps {
   existingInstance?: ActivityInstance;
   timezone?: string;
   timerAlarmEnabled?: boolean;
+  allowMultipleRecordsPerDay?: boolean;
   onClose: () => void;
   onActivityRecorded: () => void;
 }
@@ -29,6 +30,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
   existingInstance,
   timezone = 'America/New_York',
   timerAlarmEnabled = false,
+  allowMultipleRecordsPerDay = true,
   onClose,
   onActivityRecorded
 }) => {
@@ -63,6 +65,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerStartTime, setTimerStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [loadedExistingInstance, setLoadedExistingInstance] = useState<ActivityInstance | null>(null);
 
   const selectedGoalData = goals.find(g => g.id === selectedGoal);
   const selectedActivity = selectedGoalData ? activities.find(a => a.id === selectedGoalData.activityId) : null;
@@ -105,6 +108,115 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       }
     }
   }, [existingInstance]);
+
+  // Check for existing instance when multiple records per day is disabled
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkExistingInstance = async () => {
+      console.log('ActivityInstanceForm: Checking for existing instances', {
+        allowMultipleRecordsPerDay,
+        selectedGoal,
+        selectedStudent,
+        date,
+        existingInstance: !!existingInstance
+      });
+      
+      if (!allowMultipleRecordsPerDay && selectedGoal && selectedStudent && date && !existingInstance) {
+        console.log('ActivityInstanceForm: Searching for existing instance for', { selectedGoal, selectedStudent, date });
+        try {
+          // Parse the date to get start and end of day
+          const dateObj = new Date(date + 'T00:00:00');
+          const startOfDay = new Date(dateObj);
+          startOfDay.setHours(0, 0, 0, 0);
+          const endOfDay = new Date(dateObj);
+          endOfDay.setHours(23, 59, 59, 999);
+
+          // Query for existing instances
+          // Convert to Firestore Timestamps for proper comparison
+          const q = query(
+            collection(db, 'activityInstances'),
+            where('goalId', '==', selectedGoal),
+            where('studentId', '==', selectedStudent),
+            where('date', '>=', Timestamp.fromDate(startOfDay)),
+            where('date', '<=', Timestamp.fromDate(endOfDay))
+          );
+
+          const querySnapshot = await getDocs(q);
+          console.log('ActivityInstanceForm: Found', querySnapshot.docs.length, 'existing instances');
+          
+          // Check if this effect has been cancelled
+          if (cancelled) return;
+
+          if (!querySnapshot.empty) {
+            // Load the first (and should be only) instance
+            const doc = querySnapshot.docs[0];
+            const data = doc.data();
+            console.log('ActivityInstanceForm: Loading existing instance', data);
+            
+            // Convert Firestore Timestamps to JavaScript Dates
+            const instance: ActivityInstance = {
+              ...data,
+              id: doc.id,
+              date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
+              startTime: data.startTime?.toDate ? data.startTime.toDate() : data.startTime,
+              endTime: data.endTime?.toDate ? data.endTime.toDate() : data.endTime
+            } as ActivityInstance;
+            
+            
+            // Populate form with existing data
+            setDescription(instance.description || '');
+            setDuration(instance.duration || '');
+            setStartingPercentage(instance.startingPercentage || '');
+            setEndingPercentage(instance.endingPercentage || '');
+            setCountComplete(instance.countCompleted || '');
+            
+            // Convert times if they exist
+            if (instance.startTime) {
+              const startTimeDate = instance.startTime instanceof Date 
+                ? instance.startTime
+                : new Date(instance.startTime);
+              setStartTime(startTimeDate.toTimeString().slice(0, 5));
+            }
+            if (instance.endTime) {
+              const endTimeDate = instance.endTime instanceof Date 
+                ? instance.endTime
+                : new Date(instance.endTime);
+              setEndTime(endTimeDate.toTimeString().slice(0, 5));
+            }
+            
+            // Store the instance for updating
+            setLoadedExistingInstance(instance);
+          } else {
+            // Clear any previously loaded instance when no match found
+            setLoadedExistingInstance(null);
+            // Clear form fields when no existing instance
+            if (!existingInstance) {
+              setDescription('');
+              setDuration('');
+              setStartingPercentage('');
+              setEndingPercentage('');
+              setCountComplete('');
+              setStartTime('');
+              setEndTime('');
+            }
+          }
+        } catch (error) {
+          console.error('Error checking for existing instance:', error);
+        }
+      } else {
+        // Clear loaded instance if conditions are not met
+        setLoadedExistingInstance(null);
+      }
+    };
+
+    checkExistingInstance();
+
+    // Cleanup function to cancel the effect if dependencies change
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedGoal, selectedStudent, date, allowMultipleRecordsPerDay, existingInstance]);
 
   // Timer functionality
   useEffect(() => {
@@ -171,16 +283,17 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       }
 
       // Create activity instance
-      const activityInstanceData: Omit<ActivityInstance, 'id'> = {
+      // Note: We use any type here because Firestore expects Timestamp objects but our type defines Date
+      const activityInstanceData: any = {
         goalId: selectedGoal,
         studentId: selectedStudent,
         description,
-        date: new Date(date + 'T00:00:00'),
+        date: Timestamp.fromDate(new Date(date + 'T00:00:00')),
         createdBy: userId
       };
 
-      if (startTime) activityInstanceData.startTime = new Date(`${date} ${startTime}`);
-      if (endTime) activityInstanceData.endTime = new Date(`${date} ${endTime}`);
+      if (startTime) activityInstanceData.startTime = Timestamp.fromDate(new Date(`${date} ${startTime}`));
+      if (endTime) activityInstanceData.endTime = Timestamp.fromDate(new Date(`${date} ${endTime}`));
       if (calculatedDuration) activityInstanceData.duration = Number(calculatedDuration);
       
       // Add percentage tracking
@@ -194,11 +307,22 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
         activityInstanceData.countCompleted = Number(countComplete);
       }
 
-      if (existingInstance) {
+      const instanceToUpdate = existingInstance || loadedExistingInstance;
+      console.log('ActivityInstanceForm: Saving activity', {
+        allowMultipleRecordsPerDay,
+        existingInstance: !!existingInstance,
+        loadedExistingInstance: !!loadedExistingInstance,
+        willUpdate: !!instanceToUpdate,
+        instanceId: instanceToUpdate?.id
+      });
+      
+      if (instanceToUpdate) {
         // Update existing activity instance
-        await updateDoc(doc(db, 'activityInstances', existingInstance.id), activityInstanceData);
+        console.log('ActivityInstanceForm: Updating existing instance', instanceToUpdate.id);
+        await updateDoc(doc(db, 'activityInstances', instanceToUpdate.id), activityInstanceData);
       } else {
         // Create new activity instance
+        console.log('ActivityInstanceForm: Creating new instance');
         await addDoc(collection(db, 'activityInstances'), activityInstanceData);
 
         // Update goal progress (only for new instances)
@@ -248,7 +372,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
         maxHeight: '80vh',
         overflow: 'auto'
       }}>
-        <h2>{existingInstance ? 'Edit Activity' : 'Record Activity'}</h2>
+        <h2>{existingInstance || loadedExistingInstance ? 'Edit Activity' : 'Record Activity'}</h2>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px' }}>
@@ -573,7 +697,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                 opacity: saving || !selectedGoal || !selectedStudent ? 0.6 : 1
               }}
             >
-              {saving ? (existingInstance ? 'Updating...' : 'Recording...') : (existingInstance ? 'Update Activity' : 'Record Activity')}
+              {saving ? (existingInstance || loadedExistingInstance ? 'Updating...' : 'Recording...') : (existingInstance || loadedExistingInstance ? 'Update Activity' : 'Record Activity')}
             </button>
             <button
               type="button"

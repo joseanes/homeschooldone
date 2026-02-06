@@ -12,16 +12,39 @@ interface GoalEditProps {
 }
 
 const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, onUpdate }) => {
+  const [goalName, setGoalName] = useState(goal.name || '');
   const [timesPerWeek, setTimesPerWeek] = useState<number | ''>(goal.timesPerWeek || '');
   const [minutesPerSession, setMinutesPerSession] = useState<number | ''>(goal.minutesPerSession || '');
   const [dailyPercentageIncrease, setDailyPercentageIncrease] = useState<number | ''>(goal.dailyPercentageIncrease || '');
   const [targetCount, setTargetCount] = useState<number | ''>(goal.progressCount || '');
+  const [startDate, setStartDate] = useState(
+    goal.startDate ? 
+      (goal.startDate instanceof Date ? 
+        goal.startDate.toISOString().split('T')[0] : 
+        new Date((goal.startDate as any).seconds * 1000).toISOString().split('T')[0]) : 
+      ''
+  );
   const [deadline, setDeadline] = useState(
     goal.deadline ? 
       (goal.deadline instanceof Date ? 
         goal.deadline.toISOString().split('T')[0] : 
         new Date((goal.deadline as any).seconds * 1000).toISOString().split('T')[0]) : 
       ''
+  );
+  const [studentCompletions, setStudentCompletions] = useState<{[studentId: string]: {completionDate?: string; grade?: string}}>(
+    goal.studentCompletions ? Object.fromEntries(
+      Object.entries(goal.studentCompletions).map(([studentId, completion]) => [
+        studentId, 
+        {
+          completionDate: completion.completionDate ? 
+            (completion.completionDate instanceof Date ? 
+              completion.completionDate.toISOString().split('T')[0] : 
+              new Date((completion.completionDate as any).seconds * 1000).toISOString().split('T')[0]) : 
+            '',
+          grade: completion.grade || ''
+        }
+      ])
+    ) : {}
   );
   const [saving, setSaving] = useState(false);
 
@@ -31,6 +54,9 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
 
     try {
       const updates: any = {};
+
+      // Save name
+      if (goalName) updates.name = goalName;
 
       if (timesPerWeek) updates.timesPerWeek = Number(timesPerWeek);
       
@@ -45,6 +71,14 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
       if (activity.progressReportingStyle.progressCount && targetCount) {
         updates.progressCount = Number(targetCount);
       }
+      
+      // Save start date
+      if (startDate) {
+        updates.startDate = new Date(startDate);
+      } else if (goal.startDate) {
+        updates.startDate = null;
+      }
+      
       if (deadline) {
         updates.deadline = new Date(deadline);
       } else if (goal.deadline) {
@@ -52,15 +86,35 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
         updates.deadline = null;
       }
 
+      // Save student completions
+      const formattedCompletions: {[studentId: string]: {completionDate?: Date; grade?: string}} = {};
+      Object.entries(studentCompletions).forEach(([studentId, completion]) => {
+        if (completion.completionDate || completion.grade) {
+          formattedCompletions[studentId] = {
+            ...(completion.completionDate && { completionDate: new Date(completion.completionDate) }),
+            ...(completion.grade && { grade: completion.grade })
+          };
+        }
+      });
+      
+      if (Object.keys(formattedCompletions).length > 0) {
+        updates.studentCompletions = formattedCompletions;
+      } else if (goal.studentCompletions) {
+        updates.studentCompletions = null;
+      }
+
       await updateDoc(doc(db, 'goals', goal.id), updates);
 
       const updatedGoal = { 
         ...goal,
+        name: goalName,
         timesPerWeek: timesPerWeek ? Number(timesPerWeek) : undefined,
         minutesPerSession: minutesPerSession ? Number(minutesPerSession) : undefined,
         dailyPercentageIncrease: dailyPercentageIncrease ? Number(dailyPercentageIncrease) : undefined,
         progressCount: targetCount ? Number(targetCount) : undefined,
-        deadline: deadline ? new Date(deadline) : undefined
+        startDate: startDate ? new Date(startDate) : undefined,
+        deadline: deadline ? new Date(deadline) : undefined,
+        studentCompletions: formattedCompletions
       };
       
       onUpdate(updatedGoal);
@@ -106,6 +160,25 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
         </div>
 
         <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Goal Name
+            </label>
+            <input
+              type="text"
+              value={goalName}
+              onChange={(e) => setGoalName(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+              placeholder="e.g., Chemistry 101 - First Semester"
+            />
+          </div>
+
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px' }}>
               Times per Week
@@ -199,6 +272,27 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
 
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px' }}>
+              Start Date (optional)
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+            />
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              Goals will not appear on dashboards before this date
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
               Deadline (optional)
             </label>
             <input
@@ -213,6 +307,76 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                 borderRadius: '4px'
               }}
             />
+          </div>
+
+          {/* Student Completion Tracking */}
+          <div style={{ 
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            padding: '20px',
+            marginBottom: '15px'
+          }}>
+            <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Student Completion Tracking</h3>
+            {students.map(student => (
+              <div key={student.id} style={{
+                backgroundColor: 'white',
+                borderRadius: '6px',
+                padding: '15px',
+                marginBottom: '10px',
+                border: '1px solid #ddd'
+              }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>{student.name}</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                      Completion Date
+                    </label>
+                    <input
+                      type="date"
+                      value={studentCompletions[student.id]?.completionDate || ''}
+                      onChange={(e) => setStudentCompletions(prev => ({
+                        ...prev,
+                        [student.id]: {
+                          ...prev[student.id],
+                          completionDate: e.target.value
+                        }
+                      }))}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        fontSize: '14px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                      Grade/Score
+                    </label>
+                    <input
+                      type="text"
+                      value={studentCompletions[student.id]?.grade || ''}
+                      onChange={(e) => setStudentCompletions(prev => ({
+                        ...prev,
+                        [student.id]: {
+                          ...prev[student.id],
+                          grade: e.target.value
+                        }
+                      }))}
+                      placeholder="e.g., A+, 95%, Pass"
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        fontSize: '14px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>

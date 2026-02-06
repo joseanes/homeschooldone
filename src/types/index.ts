@@ -30,6 +30,7 @@ export interface Homeschool {
   };
   timerAlarmEnabled?: boolean;
   publicDashboardId?: string;
+  allowMultipleRecordsPerDay?: boolean;
 }
 
 export interface Subject {
@@ -57,6 +58,7 @@ export interface Activity {
 
 export interface Goal {
   id: string;
+  name: string;
   studentIds: string[];
   activityId: string;
   tutorOrParentId: string;
@@ -70,6 +72,7 @@ export interface Goal {
   dailyPercentageIncrease?: number;
   homeschoolId: string;
   createdAt?: Date;
+  studentCompletions?: { [studentId: string]: { completionDate?: Date; grade?: string } };
 }
 
 export interface ActivityInstance {

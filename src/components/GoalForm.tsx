@@ -20,16 +20,31 @@ const GoalForm: React.FC<GoalFormProps> = ({
   onClose, 
   onGoalAdded 
 }) => {
+  const [goalName, setGoalName] = useState('');
   const [selectedActivity, setSelectedActivity] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [timesPerWeek, setTimesPerWeek] = useState<number | ''>('');
   const [minutesPerSession, setMinutesPerSession] = useState<number | ''>('');
   const [targetPercentage, setTargetPercentage] = useState<number | ''>('');
   const [targetCount, setTargetCount] = useState<number | ''>('');
+  const [startDate, setStartDate] = useState('');
   const [deadline, setDeadline] = useState('');
   const [saving, setSaving] = useState(false);
 
   const selectedActivityData = activities.find(a => a.id === selectedActivity);
+
+  const generateDefaultGoalName = () => {
+    const activity = selectedActivityData;
+    const studentNames = selectedStudents.map(id => {
+      const student = students.find(s => s.id === id);
+      return student ? student.name : '';
+    }).filter(name => name).join(', ');
+    
+    if (activity && studentNames) {
+      return `${activity.name} - ${studentNames}`;
+    }
+    return activity ? activity.name : 'New Goal';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +52,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
 
     try {
       const goalData: any = {
+        name: goalName || generateDefaultGoalName(),
         studentIds: selectedStudents,
         activityId: selectedActivity,
         tutorOrParentId: userId,
@@ -58,6 +74,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
       if (selectedActivityData?.progressReportingStyle.progressCount && targetCount) {
         goalData.progressCount = Number(targetCount);
       }
+      if (startDate) goalData.startDate = new Date(startDate);
       if (deadline) goalData.deadline = new Date(deadline);
 
       await addDoc(collection(db, 'goals'), goalData);
@@ -95,6 +112,28 @@ const GoalForm: React.FC<GoalFormProps> = ({
       }}>
         <h2>Create Goal</h2>
         <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Goal Name *
+            </label>
+            <input
+              type="text"
+              value={goalName}
+              onChange={(e) => setGoalName(e.target.value)}
+              placeholder={selectedActivityData && selectedStudents.length > 0 ? generateDefaultGoalName() : 'e.g., Chemistry 101 - First Semester'}
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+            />
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              {goalName ? '' : `Will default to: ${selectedActivityData && selectedStudents.length > 0 ? generateDefaultGoalName() : 'Activity Name - Student Names'}`}
+            </div>
+          </div>
+
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '10px' }}>
               Select Students * (Choose one or more)
@@ -273,6 +312,27 @@ const GoalForm: React.FC<GoalFormProps> = ({
                   />
                 </div>
               )}
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px' }}>
+                  Start Date (optional)
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    fontSize: '16px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px'
+                  }}
+                />
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  Goals will not appear on dashboards before this date
+                </div>
+              </div>
 
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '5px' }}>

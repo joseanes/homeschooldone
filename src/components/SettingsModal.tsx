@@ -24,6 +24,8 @@ interface SettingsModalProps {
   };
   timerAlarmEnabled: boolean;
   publicDashboardId: string | null;
+  activeTab?: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users';
+  onTabChange?: (tab: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users') => void;
   onSaveSettings: (settings: {
     cycleSeconds: number;
     startOfWeek: number;
@@ -56,6 +58,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   dashboardSettings,
   timerAlarmEnabled,
   publicDashboardId,
+  activeTab: initialActiveTab,
+  onTabChange,
   onSaveSettings,
   onSaveTimerAlarm,
   onSavePublicDashboard,
@@ -72,7 +76,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onDeleteConfirmation,
   onClose
 }) => {
-  const [activeTab, setActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users'>(initialActiveTab || 'general');
   const [cycleSeconds, setCycleSeconds] = useState(dashboardSettings.cycleSeconds);
   const [startOfWeek, setStartOfWeek] = useState(dashboardSettings.startOfWeek);
   const [timezone, setTimezone] = useState(dashboardSettings.timezone);
@@ -80,6 +84,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [publicDashboard, setPublicDashboard] = useState(publicDashboardId);
   const [users, setUsers] = useState<UserWithStatus[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [expandedWorkload, setExpandedWorkload] = useState<string | null>(null);
 
   const weekDays = [
     { value: 0, label: 'Sunday' },
@@ -101,6 +106,46 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     { value: 'Pacific/Honolulu', label: 'Hawaii (HST)' },
     { value: 'UTC', label: 'UTC' }
   ];
+
+  // Calculate workload for a student
+  const calculateStudentWorkload = (studentId: string) => {
+    const studentGoals = goals.filter(g => g.studentIds?.includes(studentId));
+    let totalMinutesPerWeek = 0;
+    let goalsWithTime = [];
+    
+    for (const goal of studentGoals) {
+      // Only count if both minutesPerSession AND timesPerWeek are set
+      if (goal.minutesPerSession && goal.timesPerWeek) {
+        const weeklyMinutes = goal.minutesPerSession * goal.timesPerWeek;
+        totalMinutesPerWeek += weeklyMinutes;
+        
+        const activity = activities.find(a => a.id === goal.activityId);
+        goalsWithTime.push({
+          activityName: activity?.name || 'Unknown',
+          minutesPerSession: goal.minutesPerSession,
+          timesPerWeek: goal.timesPerWeek,
+          weeklyMinutes
+        });
+      }
+    }
+    
+    return { totalMinutesPerWeek, goalsWithTime };
+  };
+
+  // Get workload status and color
+  const getWorkloadStatus = (actualMinutes: number, expectedMinutes: number) => {
+    if (!expectedMinutes) return { status: 'No target set', color: '#666', icon: '❓' };
+    
+    const percentage = (actualMinutes / expectedMinutes) * 100;
+    
+    if (percentage < 80) {
+      return { status: 'Underworked', color: '#ff9800', icon: '⚠️' };
+    } else if (percentage > 120) {
+      return { status: 'Overworked', color: '#dc3545', icon: '🔥' };
+    } else {
+      return { status: 'Balanced Workload', color: '#28a745', icon: '✅' };
+    }
+  };
 
   // Fetch users when modal opens or when on users tab
   useEffect(() => {
@@ -335,61 +380,137 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               {students.length === 0 ? (
                 <p style={{ color: '#666', fontStyle: 'italic' }}>No students added yet</p>
               ) : (
-                <div style={{ maxHeight: '300px', overflow: 'auto' }}>
-                  {students.map((student) => (
-                    <div
-                      key={student.id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '10px',
-                        marginBottom: '8px',
-                        backgroundColor: 'white',
-                        borderRadius: '4px',
-                        border: '1px solid #ddd'
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: '500' }}>{student.name}</div>
-                        {student.email && (
-                          <div style={{ fontSize: '12px', color: '#007bff' }}>📧 {student.email}</div>
-                        )}
-                      </div>
-                      {userRole === 'parent' && (
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <button
-                            onClick={() => { onEditStudent(student); onClose(); }}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: '#007bff',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '3px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => { onDeleteConfirmation('student', student.id, student.name); onClose(); }}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: '#dc3545',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '3px',
-                              cursor: 'pointer',
-                              fontSize: '12px'
-                            }}
-                          >
-                            Delete
-                          </button>
+                <div style={{ maxHeight: '400px', overflow: 'auto' }}>
+                  {students.map((student) => {
+                    const workload = calculateStudentWorkload(student.id);
+                    const expectedMinutesPerWeek = student.dailyWorkHoursGoal ? student.dailyWorkHoursGoal * 60 * 7 : 0;
+                    const workloadStatus = getWorkloadStatus(workload.totalMinutesPerWeek, expectedMinutesPerWeek);
+                    const hoursPerWeek = Math.round(workload.totalMinutesPerWeek / 60 * 10) / 10;
+                    const expectedHoursPerWeek = Math.round(expectedMinutesPerWeek / 60 * 10) / 10;
+                    
+                    return (
+                      <div
+                        key={student.id}
+                        style={{
+                          padding: '12px',
+                          marginBottom: '10px',
+                          backgroundColor: 'white',
+                          borderRadius: '6px',
+                          border: '1px solid #ddd'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <div style={{ fontWeight: '600', fontSize: '16px' }}>{student.name}</div>
+                              <div style={{
+                                padding: '2px 8px',
+                                backgroundColor: workloadStatus.color + '20',
+                                color: workloadStatus.color,
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                fontWeight: '500',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                {workloadStatus.icon} {workloadStatus.status}
+                                <span
+                                  onClick={() => setExpandedWorkload(expandedWorkload === student.id ? null : student.id)}
+                                  style={{
+                                    cursor: 'pointer',
+                                    marginLeft: '4px',
+                                    fontSize: '10px',
+                                    opacity: 0.7
+                                  }}
+                                  title="Click to view workload details"
+                                >
+                                  {expandedWorkload === student.id ? '🔼' : '🔽'}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {student.email && (
+                              <div style={{ fontSize: '12px', color: '#007bff', marginBottom: '4px' }}>
+                                📧 {student.email}
+                              </div>
+                            )}
+                            
+                            {expandedWorkload === student.id && (
+                              <div style={{ 
+                                fontSize: '13px', 
+                                color: '#666',
+                                marginTop: '8px',
+                                padding: '8px',
+                                backgroundColor: '#f8f9fa',
+                                borderRadius: '4px'
+                              }}>
+                                <div style={{ marginBottom: '4px' }}>
+                                  <strong>Expected:</strong> {student.dailyWorkHoursGoal || 0} hrs/day = {expectedHoursPerWeek} hrs/week
+                                </div>
+                                <div style={{ marginBottom: '4px' }}>
+                                  <strong>Actual:</strong> {hoursPerWeek} hrs/week ({workload.totalMinutesPerWeek} min)
+                                </div>
+                                {expectedMinutesPerWeek > 0 && (
+                                  <div style={{ marginBottom: '4px' }}>
+                                    <strong>Load:</strong> {Math.round((workload.totalMinutesPerWeek / expectedMinutesPerWeek) * 100)}%
+                                  </div>
+                                )}
+                                
+                                {workload.goalsWithTime.length > 0 && (
+                                  <div style={{ marginTop: '8px' }}>
+                                    <div style={{ fontSize: '12px', color: '#007bff', marginBottom: '4px' }}>
+                                      Activity Breakdown ({workload.goalsWithTime.length} activities):
+                                    </div>
+                                    <div style={{ marginLeft: '8px', fontSize: '11px' }}>
+                                      {workload.goalsWithTime.sort((a, b) => a.activityName.localeCompare(b.activityName)).map((goal, idx) => (
+                                        <div key={idx} style={{ marginBottom: '2px' }}>
+                                          • {goal.activityName}: {goal.timesPerWeek}x × {goal.minutesPerSession}min = {goal.weeklyMinutes}min/week
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {userRole === 'parent' && (
+                            <div style={{ display: 'flex', gap: '5px', marginLeft: '12px' }}>
+                              <button
+                                onClick={() => { onEditStudent(student); onClose(); }}
+                                style={{
+                                  padding: '4px 8px',
+                                  backgroundColor: '#007bff',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '3px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px'
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => { onDeleteConfirmation('student', student.id, student.name); onClose(); }}
+                                style={{
+                                  padding: '4px 8px',
+                                  backgroundColor: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '3px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px'
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -445,7 +566,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <p style={{ color: '#666', fontStyle: 'italic' }}>No activities created yet</p>
               ) : (
                 <div style={{ maxHeight: '300px', overflow: 'auto' }}>
-                  {activities.map((activity) => {
+                  {activities.sort((a, b) => a.name.localeCompare(b.name)).map((activity) => {
                     const activityGoals = goals.filter(g => g.activityId === activity.id);
                     return (
                       <div
@@ -1043,7 +1164,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => {
+                const newTab = tab.id as any;
+                setActiveTab(newTab);
+                onTabChange?.(newTab);
+              }}
               style={{
                 padding: '10px 16px',
                 border: 'none',

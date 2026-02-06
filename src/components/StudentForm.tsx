@@ -18,6 +18,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [dailyWorkHoursGoal, setDailyWorkHoursGoal] = useState('');
   const [saving, setSaving] = useState(false);
   const [emailExists, setEmailExists] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
@@ -78,13 +79,27 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
 
     try {
       // Create the student document
-      const studentData: Omit<Person, 'id'> = {
+      const studentData: any = {
         name,
-        email: email.trim() || undefined,
-        mobile: mobile.trim() || undefined,
-        role: 'student',
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined
+        role: 'student'
       };
+      
+      // Only add optional fields if they have values
+      if (email.trim()) {
+        studentData.email = email.trim();
+      }
+      
+      if (mobile.trim()) {
+        studentData.mobile = mobile.trim();
+      }
+      
+      if (dateOfBirth) {
+        studentData.dateOfBirth = new Date(dateOfBirth);
+      }
+      
+      if (dailyWorkHoursGoal) {
+        studentData.dailyWorkHoursGoal = parseFloat(dailyWorkHoursGoal);
+      }
 
       const studentRef = await addDoc(collection(db, 'people'), studentData);
       
@@ -249,6 +264,31 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
                 borderRadius: '4px'
               }}
             />
+          </div>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Daily Work Hours Goal (optional)
+            </label>
+            <input
+              type="number"
+              value={dailyWorkHoursGoal}
+              onChange={(e) => setDailyWorkHoursGoal(e.target.value)}
+              min="0"
+              max="24"
+              step="0.5"
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+              placeholder="e.g., 4.5"
+            />
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              Students of different ages and abilities do different daily hours of education
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>

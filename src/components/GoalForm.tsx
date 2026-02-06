@@ -46,9 +46,12 @@ const GoalForm: React.FC<GoalFormProps> = ({
 
       // Add optional fields based on activity type and user input
       if (timesPerWeek) goalData.timesPerWeek = Number(timesPerWeek);
-      if (selectedActivityData?.progressReportingStyle.timesTotal && minutesPerSession) {
+      
+      // Always save minutes per session if provided
+      if (minutesPerSession) {
         goalData.minutesPerSession = Number(minutesPerSession);
       }
+      
       if (selectedActivityData?.progressReportingStyle.percentageCompletion && targetPercentage) {
         goalData.dailyPercentageIncrease = Number(targetPercentage);
       }
@@ -150,7 +153,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
               }}
             >
               <option value="">Choose an activity...</option>
-              {activities.map(activity => (
+              {activities.sort((a, b) => a.name.localeCompare(b.name)).map(activity => (
                 <option key={activity.id} value={activity.id}>
                   {activity.name} ({activity.subjectId})
                 </option>
@@ -198,27 +201,29 @@ const GoalForm: React.FC<GoalFormProps> = ({
                 />
               </div>
 
-              {selectedActivityData.progressReportingStyle.timesTotal && (
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>
-                    Minutes per Session
-                  </label>
-                  <input
-                    type="number"
-                    value={minutesPerSession}
-                    onChange={(e) => setMinutesPerSession(e.target.value ? Number(e.target.value) : '')}
-                    min="1"
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      fontSize: '16px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px'
-                    }}
-                    placeholder="e.g., 45"
-                  />
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px' }}>
+                  Minutes per Session {(selectedActivityData.requiresTimeTracking || selectedActivityData.progressReportingStyle.timesTotal) ? '*' : '(optional)'}
+                </label>
+                <input
+                  type="number"
+                  value={minutesPerSession}
+                  onChange={(e) => setMinutesPerSession(e.target.value ? Number(e.target.value) : '')}
+                  min="1"
+                  required={selectedActivityData.requiresTimeTracking || selectedActivityData.progressReportingStyle.timesTotal}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    fontSize: '16px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px'
+                  }}
+                  placeholder="e.g., 45"
+                />
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  Expected duration of each session in minutes
                 </div>
-              )}
+              </div>
 
               {selectedActivityData.progressReportingStyle.percentageCompletion && (
                 <div style={{ marginBottom: '15px' }}>

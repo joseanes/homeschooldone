@@ -59,6 +59,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   const [showAuthorizedUsers, setShowAuthorizedUsers] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [returnToSettings, setReturnToSettings] = useState(false);
+  const [settingsActiveTab, setSettingsActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users'>('general');
   const [dashboardSettings, setDashboardSettings] = useState({
     cycleSeconds: 10,
     startOfWeek: 1, // 1 = Monday
@@ -333,6 +335,47 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           console.log('No homeschool access found for user');
         }
         
+        // Check if we have a saved homeschool preference
+        const savedHomeschoolId = localStorage.getItem('selectedHomeschoolId');
+        
+        // If not a student, check parent/tutor/observer roles and look for all homeschools
+        if (!homeschoolData) {
+          const allHomeschools: Array<{ data: Homeschool; role: string }> = [];
+          
+          for (const { query: q, role } of queries) {
+            console.log(`Checking ${role} access...`);
+            const querySnapshot = await getDocs(q);
+            querySnapshot.docs.forEach(doc => {
+              const data = doc.data() as Homeschool;
+              allHomeschools.push({ data: { ...data, id: doc.id }, role });
+              console.log(`Found homeschool access as ${role}: ${doc.id} (${data.name})`);
+            });
+          }
+          
+          if (allHomeschools.length > 0) {
+            // If we have a saved preference and it's in the list, use it
+            if (savedHomeschoolId) {
+              const savedHomeschool = allHomeschools.find(h => h.data.id === savedHomeschoolId);
+              if (savedHomeschool) {
+                homeschoolData = savedHomeschool.data;
+                userRole = savedHomeschool.role;
+                console.log(`Using saved homeschool preference: ${homeschoolData.id}`);
+              }
+            }
+            
+            // Otherwise use the first one
+            if (!homeschoolData) {
+              homeschoolData = allHomeschools[0].data;
+              userRole = allHomeschools[0].role;
+              console.log(`Using first available homeschool: ${homeschoolData.id}`);
+            }
+          }
+        }
+        
+        if (!homeschoolData) {
+          console.log('No homeschool access found for user');
+        }
+        
         if (homeschoolData) {
           setHomeschool(homeschoolData);
           setUserRole(userRole);
@@ -361,7 +404,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           const activitiesList = activitiesSnapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id
-          } as Activity));
+          } as Activity)).sort((a, b) => a.name.localeCompare(b.name));
           setActivities(activitiesList);
 
           // Fetch goals
@@ -622,6 +665,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       }
 
       setDeleteConfirmation(null);
+      // Return to settings if we came from there
+      if (returnToSettings) {
+        setReturnToSettings(false);
+        setShowSettings(true);
+      }
     } catch (error) {
       console.error('Error deleting:', error);
       alert('Error deleting. Please try again.');
@@ -850,7 +898,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                 <HomeschoolSwitcher
                   user={user}
                   currentHomeschool={homeschool}
-                  onHomeschoolChange={(newHomeschool) => {
+                  onHomeschoolChange={async (newHomeschool) => {
+                    // Save selected homeschool ID to localStorage
+                    localStorage.setItem('selectedHomeschoolId', newHomeschool.id);
                     setHomeschool(newHomeschool);
                     setShowHomeschoolSwitcher(false);
                     // Reset all data when switching homeschool
@@ -858,8 +908,43 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                     setActivities([]);
                     setGoals([]);
                     setTodayInstances([]);
-                    // Trigger data refresh for new homeschool
-                    window.location.reload();
+                    setWeekInstances([]);
+                    
+                    // Fetch data for the new homeschool
+                    try {
+                      // Fetch students
+                      if (newHomeschool.studentIds && newHomeschool.studentIds.length > 0) {
+                        const studentPromises = newHomeschool.studentIds.map(async (studentId) => {
+                          const studentDoc = await getDoc(doc(db, 'people', studentId));
+                          if (studentDoc.exists()) {
+                            return { ...studentDoc.data(), id: studentDoc.id } as Person;
+                          }
+                          return null;
+                        });
+                        const studentResults = await Promise.all(studentPromises);
+                        setStudents(studentResults.filter(s => s !== null) as Person[]);
+                      }
+
+                      // Fetch activities
+                      const activitiesQuery = query(collection(db, 'activities'), where('homeschoolId', '==', newHomeschool.id));
+                      const activitiesSnapshot = await getDocs(activitiesQuery);
+                      const activitiesList = activitiesSnapshot.docs.map(doc => ({
+                        ...doc.data(),
+                        id: doc.id
+                      } as Activity)).sort((a, b) => a.name.localeCompare(b.name));
+                      setActivities(activitiesList);
+
+                      // Fetch goals
+                      const goalsQuery = query(collection(db, 'goals'), where('homeschoolId', '==', newHomeschool.id));
+                      const goalsSnapshot = await getDocs(goalsQuery);
+                      const goalsList = goalsSnapshot.docs.map(doc => ({
+                        ...doc.data(),
+                        id: doc.id
+                      } as Goal));
+                      setGoals(goalsList);
+                    } catch (error) {
+                      console.error('Error loading new homeschool data:', error);
+                    }
                   }}
                   onClose={() => setShowHomeschoolSwitcher(false)}
                 />
@@ -1098,7 +1183,13 @@ Set up students, activities and goals first using the "Settings" menu
           homeschoolId={homeschool.id}
           homeschool={homeschool}
           inviterName={user.displayName || user.email || 'Parent'}
-          onClose={() => setShowStudentForm(false)}
+          onClose={() => {
+            setShowStudentForm(false);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
+          }}
           onStudentAdded={async () => {
             // Refresh the homeschool data to get updated studentIds
             const homeschoolDoc = await getDoc(doc(db, 'homeschools', homeschool.id));
@@ -1107,6 +1198,11 @@ Set up students, activities and goals first using the "Settings" menu
               setHomeschool(updatedHomeschool);
               await refreshStudents(updatedHomeschool.studentIds);
             }
+            setShowStudentForm(false);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
           }}
         />
       )}
@@ -1114,7 +1210,14 @@ Set up students, activities and goals first using the "Settings" menu
       {showActivityForm && homeschool && (
         <ActivityForm
           homeschoolId={homeschool.id}
-          onClose={() => setShowActivityForm(false)}
+          activities={activities}
+          onClose={() => {
+            setShowActivityForm(false);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
+          }}
           onActivityAdded={async () => {
             // Refresh activities list
             const activitiesQuery = query(collection(db, 'activities'), where('homeschoolId', '==', homeschool.id));
@@ -1122,8 +1225,13 @@ Set up students, activities and goals first using the "Settings" menu
             const activitiesList = activitiesSnapshot.docs.map(doc => ({
               ...doc.data(),
               id: doc.id
-            } as Activity));
+            } as Activity)).sort((a, b) => a.name.localeCompare(b.name));
             setActivities(activitiesList);
+            setShowActivityForm(false);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
           }}
         />
       )}
@@ -1134,7 +1242,13 @@ Set up students, activities and goals first using the "Settings" menu
           students={students}
           userId={user.uid}
           homeschoolId={homeschool.id}
-          onClose={() => setShowGoalForm(false)}
+          onClose={() => {
+            setShowGoalForm(false);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
+          }}
           onGoalAdded={async () => {
             // Refresh goals list
             const goalsQuery = query(collection(db, 'goals'), where('homeschoolId', '==', homeschool.id));
@@ -1144,6 +1258,11 @@ Set up students, activities and goals first using the "Settings" menu
               id: doc.id
             } as Goal));
             setGoals(goalsList);
+            setShowGoalForm(false);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
           }}
         />
       )}
@@ -1203,10 +1322,20 @@ Set up students, activities and goals first using the "Settings" menu
           student={editingStudent}
           homeschool={homeschool}
           inviterName={user.displayName || user.email || 'Parent'}
-          onClose={() => setEditingStudent(null)}
+          onClose={() => {
+            setEditingStudent(null);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
+          }}
           onUpdate={(updatedStudent) => {
             setStudents(students.map(s => s.id === updatedStudent.id ? updatedStudent : s));
             setEditingStudent(null);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
           }}
         />
       )}
@@ -1214,10 +1343,20 @@ Set up students, activities and goals first using the "Settings" menu
       {editingActivity && (
         <ActivityEdit
           activity={editingActivity}
-          onClose={() => setEditingActivity(null)}
+          onClose={() => {
+            setEditingActivity(null);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
+          }}
           onUpdate={(updatedActivity) => {
             setActivities(activities.map(a => a.id === updatedActivity.id ? updatedActivity : a));
             setEditingActivity(null);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
           }}
         />
       )}
@@ -1227,10 +1366,20 @@ Set up students, activities and goals first using the "Settings" menu
           goal={editingGoal.goal}
           activity={editingGoal.activity}
           students={editingGoal.students}
-          onClose={() => setEditingGoal(null)}
+          onClose={() => {
+            setEditingGoal(null);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
+          }}
           onUpdate={(updatedGoal) => {
             setGoals(goals.map(g => g.id === updatedGoal.id ? updatedGoal : g));
             setEditingGoal(null);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
           }}
         />
       )}
@@ -1276,7 +1425,13 @@ Set up students, activities and goals first using the "Settings" menu
           entityType={deleteConfirmation.type}
           entityName={deleteConfirmation.name}
           onConfirm={handleDelete}
-          onCancel={() => setDeleteConfirmation(null)}
+          onCancel={() => {
+            setDeleteConfirmation(null);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
+          }}
         />
       )}
 
@@ -1305,20 +1460,71 @@ Set up students, activities and goals first using the "Settings" menu
           dashboardSettings={dashboardSettings}
           timerAlarmEnabled={timerAlarmEnabled}
           publicDashboardId={publicDashboardId}
+          activeTab={settingsActiveTab}
+          onTabChange={setSettingsActiveTab}
           onSaveSettings={saveDashboardSettings}
           onSaveTimerAlarm={saveTimerAlarmSetting}
           onSavePublicDashboard={savePublicDashboardSetting}
-          onShowStudentForm={() => setShowStudentForm(true)}
-          onShowActivityForm={() => setShowActivityForm(true)}
-          onShowGoalForm={() => setShowGoalForm(true)}
-          onShowInvite={() => setShowInvite(true)}
-          onShowAuthorizedUsers={() => setShowAuthorizedUsers(true)}
-          onEditHomeschool={() => setEditingHomeschool(homeschool)}
-          onDeleteHomeschool={() => setShowDeleteHomeschool(true)}
-          onEditStudent={(student) => setEditingStudent(student)}
-          onEditActivity={(activity) => setEditingActivity(activity)}
-          onEditGoal={(goal, activity, students) => setEditingGoal({ goal, activity, students })}
-          onDeleteConfirmation={(type, id, name) => setDeleteConfirmation({ type, id, name })}
+          onShowStudentForm={() => {
+            setSettingsActiveTab('students');
+            setReturnToSettings(true);
+            setShowStudentForm(true);
+          }}
+          onShowActivityForm={() => {
+            setSettingsActiveTab('activities');
+            setReturnToSettings(true);
+            setShowActivityForm(true);
+          }}
+          onShowGoalForm={() => {
+            setSettingsActiveTab('activities');
+            setReturnToSettings(true);
+            setShowGoalForm(true);
+          }}
+          onShowInvite={() => {
+            setSettingsActiveTab('users');
+            setReturnToSettings(true);
+            setShowInvite(true);
+          }}
+          onShowAuthorizedUsers={() => {
+            setSettingsActiveTab('users');
+            setReturnToSettings(true);
+            setShowAuthorizedUsers(true);
+          }}
+          onEditHomeschool={() => {
+            setSettingsActiveTab('general');
+            setReturnToSettings(true);
+            setEditingHomeschool(homeschool);
+          }}
+          onDeleteHomeschool={() => {
+            setSettingsActiveTab('general');
+            setReturnToSettings(true);
+            setShowDeleteHomeschool(true);
+          }}
+          onEditStudent={(student) => {
+            setSettingsActiveTab('students');
+            setReturnToSettings(true);
+            setShowSettings(false);
+            setEditingStudent(student);
+          }}
+          onEditActivity={(activity) => {
+            setSettingsActiveTab('activities');
+            setReturnToSettings(true);
+            setShowSettings(false);
+            setEditingActivity(activity);
+          }}
+          onEditGoal={(goal, activity, students) => {
+            setSettingsActiveTab('activities');
+            setReturnToSettings(true);
+            setShowSettings(false);
+            setEditingGoal({ goal, activity, students });
+          }}
+          onDeleteConfirmation={(type, id, name) => {
+            if (type === 'student') setSettingsActiveTab('students');
+            else if (type === 'activity' || type === 'goal') setSettingsActiveTab('activities');
+            setReturnToSettings(true);
+            setShowSettings(false);
+            setDeleteConfirmation({ type, id, name });
+          }}
           onClose={() => setShowSettings(false)}
         />
       )}

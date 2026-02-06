@@ -33,9 +33,12 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
       const updates: any = {};
 
       if (timesPerWeek) updates.timesPerWeek = Number(timesPerWeek);
-      if (activity.progressReportingStyle.timesTotal && minutesPerSession) {
+      
+      // Always save minutes per session if provided
+      if (minutesPerSession) {
         updates.minutesPerSession = Number(minutesPerSession);
       }
+      
       if (activity.progressReportingStyle.percentageCompletion && dailyPercentageIncrease) {
         updates.dailyPercentageIncrease = Number(dailyPercentageIncrease);
       }
@@ -124,27 +127,29 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
             />
           </div>
 
-          {activity.progressReportingStyle.timesTotal && (
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Minutes per Session
-              </label>
-              <input
-                type="number"
-                value={minutesPerSession}
-                onChange={(e) => setMinutesPerSession(e.target.value ? Number(e.target.value) : '')}
-                min="1"
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  fontSize: '16px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px'
-                }}
-                placeholder="e.g., 45"
-              />
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Minutes per Session {(activity.requiresTimeTracking || activity.progressReportingStyle.timesTotal) ? '*' : '(optional)'}
+            </label>
+            <input
+              type="number"
+              value={minutesPerSession}
+              onChange={(e) => setMinutesPerSession(e.target.value ? Number(e.target.value) : '')}
+              min="1"
+              required={activity.requiresTimeTracking || activity.progressReportingStyle.timesTotal}
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+              placeholder="e.g., 45"
+            />
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              Expected duration of each session in minutes
             </div>
-          )}
+          </div>
 
           {activity.progressReportingStyle.percentageCompletion && (
             <div style={{ marginBottom: '15px' }}>

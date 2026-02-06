@@ -24,6 +24,9 @@ const StudentEdit: React.FC<StudentEditProps> = ({ student, homeschool, inviterN
         new Date(student.dateOfBirth.seconds * 1000).toISOString().split('T')[0]) : 
       ''
   );
+  const [dailyWorkHoursGoal, setDailyWorkHoursGoal] = useState(
+    student.dailyWorkHoursGoal ? student.dailyWorkHoursGoal.toString() : ''
+  );
   const [saving, setSaving] = useState(false);
   const [emailExists, setEmailExists] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
@@ -85,13 +88,32 @@ const StudentEdit: React.FC<StudentEditProps> = ({ student, homeschool, inviterN
 
     try {
       const updates: any = {
-        name: name.trim(),
-        email: email.trim() || undefined,
-        mobile: mobile.trim() || undefined
+        name: name.trim()
       };
+
+      // Only add fields if they have values to avoid Firestore undefined errors
+      if (email.trim()) {
+        updates.email = email.trim();
+      } else {
+        updates.email = null; // Use null instead of undefined for Firestore
+      }
+      
+      if (mobile.trim()) {
+        updates.mobile = mobile.trim();
+      } else {
+        updates.mobile = null;
+      }
+      
+      if (dailyWorkHoursGoal) {
+        updates.dailyWorkHoursGoal = parseFloat(dailyWorkHoursGoal);
+      } else {
+        updates.dailyWorkHoursGoal = null;
+      }
 
       if (dateOfBirth) {
         updates.dateOfBirth = new Date(dateOfBirth);
+      } else {
+        updates.dateOfBirth = null;
       }
 
       await updateDoc(doc(db, 'people', student.id), updates);
@@ -101,7 +123,8 @@ const StudentEdit: React.FC<StudentEditProps> = ({ student, homeschool, inviterN
         name: name.trim(),
         email: email.trim() || undefined,
         mobile: mobile.trim() || undefined,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+        dailyWorkHoursGoal: dailyWorkHoursGoal ? parseFloat(dailyWorkHoursGoal) : undefined
       };
       onUpdate(updatedStudent);
       onClose();
@@ -268,6 +291,31 @@ const StudentEdit: React.FC<StudentEditProps> = ({ student, homeschool, inviterN
                 borderRadius: '4px'
               }}
             />
+          </div>
+          
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Daily Work Hours Goal (optional)
+            </label>
+            <input
+              type="number"
+              value={dailyWorkHoursGoal}
+              onChange={(e) => setDailyWorkHoursGoal(e.target.value)}
+              min="0"
+              max="24"
+              step="0.5"
+              style={{
+                width: '100%',
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+              placeholder="e.g., 4.5"
+            />
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              Students of different ages and abilities do different daily hours of education
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>

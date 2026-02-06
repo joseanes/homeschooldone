@@ -7,6 +7,8 @@ export interface Person {
   dateOfBirth?: Date | any; // Firestore Timestamp
   lastLogin?: Date | any; // Last time user logged in
   lastActivity?: Date | any; // Last time user performed any action
+  // Students of different ages and abilities do different daily hours of education
+  dailyWorkHoursGoal?: number; // Daily educational hours goal for students
 }
 
 export interface Homeschool {
@@ -44,10 +46,13 @@ export interface Activity {
   progressReportingStyle: {
     percentageCompletion?: boolean;
     timesTotal?: boolean;
+    timesPerformed?: boolean;
     progressCount?: boolean;
   };
   progressCountName?: string;
   homeschoolId: string;
+  // Activities that track time require minutes to be specified in goals
+  requiresTimeTracking?: boolean;
 }
 
 export interface Goal {

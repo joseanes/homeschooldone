@@ -26,7 +26,8 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
         name: name.trim(),
         subjectId: subject.trim(),
         description: description.trim(),
-        progressReportingStyle: progressTypes
+        progressReportingStyle: progressTypes,
+        requiresTimeTracking: progressTypes.timesTotal || false
       };
 
       if (progressTypes.progressCount && progressCountName.trim()) {
@@ -41,6 +42,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
         subjectId: subject.trim(),
         description: description.trim(),
         progressReportingStyle: progressTypes,
+        requiresTimeTracking: progressTypes.timesTotal || false,
         progressCountName: progressTypes.progressCount ? progressCountName.trim() : undefined
       };
       
@@ -141,6 +143,9 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
             <label style={{ display: 'block', marginBottom: '10px' }}>
               How to Track Progress:
             </label>
+            <p style={{ fontSize: '14px', color: '#666', marginTop: '-5px', marginBottom: '10px' }}>
+              Times/Week always tracked.
+            </p>
             
             <label style={{ display: 'block', marginBottom: '8px' }}>
               <input
@@ -152,7 +157,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
                 })}
                 style={{ marginRight: '8px' }}
               />
-              Percentage Completion (0-100%)
+              Percentage Completion Increase
             </label>
 
             <label style={{ display: 'block', marginBottom: '8px' }}>
@@ -165,7 +170,20 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
                 })}
                 style={{ marginRight: '8px' }}
               />
-              Track Time (minutes/hours)
+              Track Time (requires minutes in goals)
+            </label>
+
+            <label style={{ display: 'block', marginBottom: '8px' }}>
+              <input
+                type="checkbox"
+                checked={progressTypes.timesPerformed || false}
+                onChange={(e) => setProgressTypes({
+                  ...progressTypes,
+                  timesPerformed: e.target.checked
+                })}
+                style={{ marginRight: '8px' }}
+              />
+              Times Performed
             </label>
 
             <label style={{ display: 'block', marginBottom: '8px' }}>
@@ -178,7 +196,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
                 })}
                 style={{ marginRight: '8px' }}
               />
-              Count Progress
+              Progress Metric
             </label>
 
             {progressTypes.progressCount && (
@@ -202,7 +220,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
           <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
             <button
               type="submit"
-              disabled={saving || !name.trim() || !subject.trim() || (!progressTypes.percentageCompletion && !progressTypes.timesTotal && !progressTypes.progressCount)}
+              disabled={saving || !name.trim() || !subject.trim()}
               style={{
                 padding: '10px 20px',
                 fontSize: '16px',
@@ -211,7 +229,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
                 border: 'none',
                 borderRadius: '4px',
                 cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving || !name.trim() || !subject.trim() || (!progressTypes.percentageCompletion && !progressTypes.timesTotal && !progressTypes.progressCount) ? 0.6 : 1
+                opacity: saving || !name.trim() || !subject.trim() ? 0.6 : 1
               }}
             >
               {saving ? 'Saving...' : 'Save Changes'}

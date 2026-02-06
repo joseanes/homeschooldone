@@ -1,6 +1,6 @@
 //
 //  Item.swift
-//  HomeschoolDone
+//  HomeschoolDone-tvOS
 //
 //  Created by José Anés on 2/5/26.
 //

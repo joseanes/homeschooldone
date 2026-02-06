@@ -1,11 +1,6 @@
-//
-//  ContentView.swift
-//  HomeschoolDone
-//
-//  Created by José Anés on 2/5/26.
-//
-
 import SwiftUI
+import SharedModels
+import FirebaseService
 
 struct ContentView: View {
     @StateObject private var firebaseService = FirebaseService.shared
@@ -28,11 +23,9 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("HomeschoolDone")
-            #if !os(macOS)
             .navigationBarTitleDisplayMode(.large)
-            #endif
             .toolbar {
-                ToolbarItem(placement: .automatic) {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     if firebaseService.currentUser != nil {
                         Button("Sign Out") {
                             firebaseService.signOut()
@@ -165,15 +158,15 @@ struct DashboardSettingsView: View {
             Section("Dashboard Info") {
                 if let homeschool = firebaseService.homeschool {
                     LabeledContent("Homeschool", value: homeschool.name)
-                    LabeledContent("Students", value: "\(firebaseService.students.count)")
-                    LabeledContent("Activities", value: "\(firebaseService.activities.count)")
-                    LabeledContent("Goals", value: "\(firebaseService.goals.count)")
+                    LabeledContent("Students", value: "\\(firebaseService.students.count)")
+                    LabeledContent("Activities", value: "\\(firebaseService.activities.count)")
+                    LabeledContent("Goals", value: "\\(firebaseService.goals.count)")
                 }
             }
             
             Section("TV Display Settings") {
                 if let settings = firebaseService.homeschool?.dashboardSettings {
-                    LabeledContent("Cycle Time", value: "\(settings.cycleSeconds) seconds")
+                    LabeledContent("Cycle Time", value: "\\(settings.cycleSeconds) seconds")
                     LabeledContent("Week Starts", value: dayName(for: settings.startOfWeek))
                     LabeledContent("Timezone", value: settings.timezone)
                 } else {
@@ -187,7 +180,7 @@ struct DashboardSettingsView: View {
                     Text("No activity recorded today")
                         .foregroundColor(.secondary)
                 } else {
-                    Text("\(firebaseService.todayInstances.count) activities completed")
+                    Text("\\(firebaseService.todayInstances.count) activities completed")
                         .foregroundColor(.green)
                 }
             }
@@ -216,7 +209,7 @@ struct DashboardSettingsView: View {
 
 struct LoginView: View {
     @EnvironmentObject var firebaseService: FirebaseService
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\\.dismiss) private var dismiss
     
     @State private var email = ""
     @State private var password = ""
@@ -242,10 +235,8 @@ struct LoginView: View {
                 VStack(spacing: 16) {
                     TextField("Email", text: $email)
                         .textFieldStyle(.roundedBorder)
-                        #if !os(macOS)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
-                        #endif
                     
                     SecureField("Password", text: $password)
                         .textFieldStyle(.roundedBorder)
@@ -278,11 +269,9 @@ struct LoginView: View {
             }
             .padding()
             .navigationTitle("Sign In")
-            #if !os(macOS)
             .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
-                ToolbarItem(placement: .automatic) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }

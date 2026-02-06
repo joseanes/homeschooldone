@@ -1,10 +1,3 @@
-//
-//  HomeschoolDoneApp.swift
-//  HomeschoolDone
-//
-//  Created by José Anés on 2/5/26.
-//
-
 import SwiftUI
 import FirebaseCore
 

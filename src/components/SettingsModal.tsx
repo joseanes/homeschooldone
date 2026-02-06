@@ -85,6 +85,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [users, setUsers] = useState<UserWithStatus[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [expandedWorkload, setExpandedWorkload] = useState<string | null>(null);
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
   const weekDays = [
     { value: 0, label: 'Sunday' },
@@ -159,6 +160,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setLoadingUsers(true);
     
     try {
+      console.log('Fetching users for homeschool:', homeschool);
       const allUsers: UserWithStatus[] = [];
       
       // Get all user IDs from homeschool
@@ -168,13 +170,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         ...(homeschool.observerIds || [])
       ];
       
+      console.log('All user IDs:', allUserIds);
+      
       // Fetch active users from people collection
       if (allUserIds.length > 0) {
         const peopleQuery = query(collection(db, 'people'), where('__name__', 'in', allUserIds));
         const peopleSnapshot = await getDocs(peopleQuery);
         
+        console.log('Found active users:', peopleSnapshot.docs.length);
+        
         peopleSnapshot.docs.forEach(doc => {
           const person = { ...doc.data(), id: doc.id } as Person;
+          console.log('Active user:', person);
           allUsers.push({ ...person, status: 'active' });
         });
       }
@@ -187,22 +194,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         ...(homeschool.observerEmails || [])
       ];
       
+      console.log('All emails:', allEmails);
+      console.log('Active emails:', Array.from(activeEmails));
+      
       allEmails.forEach(email => {
         if (email && !activeEmails.has(email)) {
           let role = 'observer';
           if (homeschool.parentEmails?.includes(email)) role = 'parent';
           else if (homeschool.tutorEmails?.includes(email)) role = 'tutor';
           
-          allUsers.push({
+          const invitedUser = {
             id: `invited-${email}`,
             email,
             name: email,
             role: role as Person['role'],
-            status: 'invited'
-          });
+            status: 'invited' as const
+          };
+          
+          console.log('Adding invited user:', invitedUser);
+          allUsers.push(invitedUser);
         }
       });
       
+      console.log('Final users list:', allUsers);
       setUsers(allUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -212,7 +226,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleRemoveUser = async (userId: string, userEmail: string, userRole: string) => {
+    const userName = users.find(u => u.id === userId)?.name || userEmail;
+    const isInvited = userId.startsWith('invited-');
+    const actionText = isInvited ? 'revoke the invitation for' : 'remove';
+    
+    if (!window.confirm(`Are you sure you want to ${actionText} ${userName}?`)) {
+      return;
+    }
+
+    setRemovingUserId(userId);
+
     try {
+      console.log('Current homeschool data:', homeschool);
+      console.log('Removing user:', { userId, userEmail, userRole });
+      
       const updates: any = {};
       
       // Remove from appropriate arrays
@@ -239,12 +266,26 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         }
       }
       
+      // Check if we have any updates to make
+      if (Object.keys(updates).length === 0) {
+        alert('No changes needed - user may already be removed.');
+        setRemovingUserId(null);
+        return;
+      }
+      
+      console.log('Applying updates to homeschool document:', updates);
       await updateDoc(doc(db, 'homeschools', homeschool.id), updates);
       
+      // Show success message
+      alert(`Successfully ${isInvited ? 'revoked invitation for' : 'removed'} ${userName}`);
+      
       // Refresh users list
-      fetchUsers();
-    } catch (error) {
+      await fetchUsers();
+    } catch (error: any) {
       console.error('Error removing user:', error);
+      alert(`Failed to ${actionText} ${userName}: ${error.message || 'Unknown error'}`);
+    } finally {
+      setRemovingUserId(null);
     }
   };
 
@@ -796,17 +837,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       {userRole === 'parent' && user.id !== currentUserId && (
                         <button
                           onClick={() => handleRemoveUser(user.id, user.email || '', user.role)}
+                          disabled={removingUserId === user.id}
                           style={{
                             padding: '4px 8px',
-                            backgroundColor: '#dc3545',
+                            backgroundColor: removingUserId === user.id ? '#999' : '#dc3545',
                             color: 'white',
                             border: 'none',
                             borderRadius: '3px',
-                            cursor: 'pointer',
+                            cursor: removingUserId === user.id ? 'not-allowed' : 'pointer',
                             fontSize: '12px'
                           }}
                         >
-                          {user.status === 'invited' ? 'Revoke' : 'Remove'}
+                          {removingUserId === user.id 
+                            ? 'Processing...' 
+                            : user.status === 'invited' ? 'Revoke' : 'Remove'}
                         </button>
                       )}
                     </div>

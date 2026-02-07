@@ -3,6 +3,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool, Person, Goal, Activity, ActivityInstance } from '../types';
 import { formatLastActivity } from '../utils/activityTracking';
+import { isGoalActiveForStudent } from '../utils/goalUtils';
 
 interface DashboardViewProps {
   homeschool: Homeschool;
@@ -41,25 +42,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [studentsProgress, setStudentsProgress] = useState<StudentProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Helper function to check if a goal should be shown based on start date and student completion
-  const isGoalActiveForStudent = (goal: Goal, studentId: string, currentDate: Date = new Date()) => {
-    // Check start date
-    if (goal.startDate) {
-      const startDate = goal.startDate instanceof Date ? goal.startDate : new Date(goal.startDate);
-      if (currentDate < startDate) return false;
-    }
-    
-    // Check student completion date
-    if (goal.studentCompletions?.[studentId]?.completionDate) {
-      const completion = goal.studentCompletions[studentId].completionDate;
-      const completionDate = completion instanceof Date 
-        ? completion 
-        : new Date(completion!);
-      if (currentDate > completionDate) return false;
-    }
-    
-    return true;
-  };
+  // Note: isGoalActiveForStudent is now imported from utils/goalUtils
 
   // Handle ESC key (disabled for public dashboards)
   useEffect(() => {

@@ -59,3 +59,80 @@ export function formatDateToStringUTC(date: Date | any): string {
   const day = String(dateObj.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Gets today's date at start of day (00:00:00)
+ */
+export function getTodayStart(): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+/**
+ * Gets tomorrow's date at start of day (00:00:00)
+ */
+export function getTomorrowStart(): Date {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  return tomorrow;
+}
+
+/**
+ * Gets end of today (23:59:59.999)
+ */
+export function getTodayEnd(): Date {
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  return today;
+}
+
+/**
+ * Gets the start of the current week based on startOfWeek setting
+ * @param startOfWeek - Day of week (0 = Sunday, 1 = Monday, etc.)
+ */
+export function getWeekStart(startOfWeek: number = 1): Date {
+  const today = new Date();
+  const day = today.getDay();
+  // Calculate how many days back to go to reach the start of week
+  const diff = (day - startOfWeek + 7) % 7;
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - diff);
+  weekStart.setHours(0, 0, 0, 0);
+  return weekStart;
+}
+
+/**
+ * Gets the end of the current week based on startOfWeek setting
+ * @param startOfWeek - Day of week (0 = Sunday, 1 = Monday, etc.)
+ */
+export function getWeekEnd(startOfWeek: number = 1): Date {
+  const weekStart = getWeekStart(startOfWeek);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+  return weekEnd;
+}
+
+/**
+ * Gets the current date in a specific timezone as YYYY-MM-DD
+ * @param timezone - IANA timezone string (e.g., 'America/New_York')
+ */
+export function getCurrentDateInTimezone(timezone: string = 'America/New_York'): string {
+  const now = new Date();
+  // Create a formatter for the selected timezone
+  const formatter = new Intl.DateTimeFormat('en-CA', { 
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  
+  const parts = formatter.formatToParts(now);
+  const year = parts.find(part => part.type === 'year')?.value;
+  const month = parts.find(part => part.type === 'month')?.value;
+  const day = parts.find(part => part.type === 'day')?.value;
+  
+  return `${year}-${month}-${day}`;
+}

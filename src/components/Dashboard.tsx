@@ -3,6 +3,7 @@ import { User } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, arrayRemove, arrayUnion, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool, Person, Activity, Goal, ActivityInstance } from '../types';
+import { isGoalActiveForStudent } from '../utils/goalUtils';
 import StudentForm from './StudentForm';
 import ActivityForm from './ActivityForm';
 import GoalForm from './GoalForm';
@@ -72,25 +73,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   const [currentStudent, setCurrentStudent] = useState<Person | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Helper function to check if a goal should be shown based on start date and student completion
-  const isGoalActiveForStudent = (goal: Goal, studentId: string, currentDate: Date = new Date()) => {
-    // Check start date
-    if (goal.startDate) {
-      const startDate = goal.startDate instanceof Date ? goal.startDate : new Date(goal.startDate);
-      if (currentDate < startDate) return false;
-    }
-    
-    // Check student completion date
-    if (goal.studentCompletions?.[studentId]?.completionDate) {
-      const completion = goal.studentCompletions[studentId].completionDate;
-      const completionDate = completion instanceof Date 
-        ? completion 
-        : new Date(completion!);
-      if (currentDate > completionDate) return false;
-    }
-    
-    return true;
-  };
+  // Note: isGoalActiveForStudent is now imported from utils/goalUtils
 
   // Load dashboard settings, timer alarm, and public dashboard from homeschool document
   useEffect(() => {

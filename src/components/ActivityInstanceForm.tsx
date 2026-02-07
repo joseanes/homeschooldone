@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { ActivityInstance, Goal, Activity, Person } from '../types';
 import { updateStudentLastActivity, updateLastActivity } from '../utils/activityTracking';
 import { playAlarmSound } from '../utils/alarmSound';
+import { createUTCDateFromString, getStartOfDayUTC, getEndOfDayUTC, dateToFirestoreTimestamp, formatDateToString, formatDateToStringUTC } from '../utils/dateUtils';
 
 interface ActivityInstanceFormProps {
   goals: Goal[];
@@ -85,9 +86,8 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       setSelectedGoal(existingInstance.goalId);
       setSelectedStudent(existingInstance.studentId);
       setDescription(existingInstance.description || '');
-      setDate(existingInstance.date instanceof Date 
-        ? existingInstance.date.toISOString().split('T')[0]
-        : new Date(existingInstance.date).toISOString().split('T')[0]);
+      // Use UTC formatting since dates are stored as UTC in Firestore
+      setDate(formatDateToStringUTC(existingInstance.date));
       setDuration(existingInstance.duration || '');
       setStartingPercentage(existingInstance.startingPercentage || '');
       setEndingPercentage(existingInstance.endingPercentage || '');
@@ -111,60 +111,90 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
 
   // Check for existing instance when multiple records per day is disabled
   useEffect(() => {
-    let cancelled = false;
+    let cancelled: boolean = false;
 
     const checkExistingInstance = async () => {
-      console.log('ActivityInstanceForm: Checking for existing instances', {
+      console.log('=== ActivityInstanceForm: useEffect triggered ===');
+      console.log('Checking for existing instances with:', {
         allowMultipleRecordsPerDay,
         selectedGoal,
         selectedStudent,
         date,
-        existingInstance: !!existingInstance
+        existingInstance: !!existingInstance,
+        existingInstanceId: existingInstance?.id,
+        loadedExistingInstance: !!loadedExistingInstance,
+        loadedExistingInstanceId: loadedExistingInstance?.id
       });
       
-      if (!allowMultipleRecordsPerDay && selectedGoal && selectedStudent && date && !existingInstance) {
+      // Check if all conditions are met for searching
+      if (!allowMultipleRecordsPerDay) {
+        console.log('Multiple records per day is disabled');
+        if (!selectedGoal) console.log('Missing selectedGoal');
+        if (!selectedStudent) console.log('Missing selectedStudent');
+        if (!date) console.log('Missing date');
+      }
+      
+      if (!allowMultipleRecordsPerDay && selectedGoal && selectedStudent && date) {
         console.log('ActivityInstanceForm: Searching for existing instance for', { selectedGoal, selectedStudent, date });
         try {
-          // Parse the date to get start and end of day
-          const dateObj = new Date(date + 'T00:00:00');
-          const startOfDay = new Date(dateObj);
-          startOfDay.setHours(0, 0, 0, 0);
-          const endOfDay = new Date(dateObj);
-          endOfDay.setHours(23, 59, 59, 999);
-
-          // Query for existing instances
-          // Convert to Firestore Timestamps for proper comparison
-          const q = query(
+          // First, let's debug by getting ALL instances for this goal/student combo
+          const debugQuery = query(
             collection(db, 'activityInstances'),
             where('goalId', '==', selectedGoal),
-            where('studentId', '==', selectedStudent),
-            where('date', '>=', Timestamp.fromDate(startOfDay)),
-            where('date', '<=', Timestamp.fromDate(endOfDay))
+            where('studentId', '==', selectedStudent)
           );
-
-          const querySnapshot = await getDocs(q);
-          console.log('ActivityInstanceForm: Found', querySnapshot.docs.length, 'existing instances');
+          const debugSnapshot = await getDocs(debugQuery);
+          console.log('DEBUG: All instances for this goal/student:', debugSnapshot.docs.length);
+          let matchingInstance: { doc: any; data: any } | null = null;
+          debugSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const instanceDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
+            // Use UTC formatting since dates are stored as UTC in Firestore
+            const instanceDateStringUTC = formatDateToStringUTC(instanceDate);
+            const instanceDateStringLocal = formatDateToString(instanceDate);
+            console.log('DEBUG: Instance', {
+              id: doc.id,
+              date: instanceDate,
+              dateStringUTC: instanceDateStringUTC,
+              dateStringLocal: instanceDateStringLocal,
+              dateISO: instanceDate.toISOString(),
+              rawDate: data.date,
+              matchesSelectedDate: instanceDateStringUTC === date
+            });
+            
+            // If we find a match, store it
+            if (instanceDateStringUTC === date && !matchingInstance) {
+              matchingInstance = { doc, data };
+            }
+          });
           
           // Check if this effect has been cancelled
           if (cancelled) return;
-
-          if (!querySnapshot.empty) {
-            // Load the first (and should be only) instance
-            const doc = querySnapshot.docs[0];
-            const data = doc.data();
-            console.log('ActivityInstanceForm: Loading existing instance', data);
+          
+          // If we found a matching instance through simple date string comparison, load it
+          if (matchingInstance) {
+            console.log('DEBUG: Found matching instance through string comparison!', (matchingInstance as any).doc.id);
+            const { doc, data } = matchingInstance as { doc: any; data: any };
             
-            // Convert Firestore Timestamps to JavaScript Dates
+            // Skip if this is the same instance we're already editing
+            if (existingInstance && doc.id === existingInstance.id) {
+              console.log('ActivityInstanceForm: Same instance already loaded, skipping');
+              setLoadedExistingInstance(null);
+              return;
+            }
+            
+            // Convert and load the instance
+            const storedDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
             const instance: ActivityInstance = {
               ...data,
               id: doc.id,
-              date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
+              date: storedDate,
               startTime: data.startTime?.toDate ? data.startTime.toDate() : data.startTime,
               endTime: data.endTime?.toDate ? data.endTime.toDate() : data.endTime
             } as ActivityInstance;
             
-            
             // Populate form with existing data
+            console.log('ActivityInstanceForm: Populating form with matching instance');
             setDescription(instance.description || '');
             setDuration(instance.duration || '');
             setStartingPercentage(instance.startingPercentage || '');
@@ -187,10 +217,34 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
             
             // Store the instance for updating
             setLoadedExistingInstance(instance);
-          } else {
-            // Clear any previously loaded instance when no match found
+            console.log('ActivityInstanceForm: Instance loaded successfully', instance.id);
+            return; // Skip the date range query since we found it
+          }
+          
+          // Parse the date to get start and end of day in UTC
+          // Use utility functions for consistent date handling
+          const dateObj = createUTCDateFromString(date);
+          const startOfDay = getStartOfDayUTC(dateObj);
+          const endOfDay = getEndOfDayUTC(dateObj);
+          
+          console.log('Date range for query:', {
+            date,
+            dateObj: dateObj.toISOString(),
+            dateObjLocal: dateObj.toString(),
+            startOfDay: startOfDay.toISOString(),
+            endOfDay: endOfDay.toISOString(),
+            timezoneOffset: dateObj.getTimezoneOffset()
+          });
+
+          // Since we already found a match with simple date comparison above,
+          // we don't need to run the date range query anymore
+          console.log('ActivityInstanceForm: Skipping date range query since we already checked all instances');
+          
+          // If no match was found, clear the form
+          if (!matchingInstance) {
+            console.log('ActivityInstanceForm: No instances found for this date, clearing form');
             setLoadedExistingInstance(null);
-            // Clear form fields when no existing instance
+            // Clear form fields when changing dates (unless we have an original existing instance)
             if (!existingInstance) {
               setDescription('');
               setDuration('');
@@ -288,7 +342,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
         goalId: selectedGoal,
         studentId: selectedStudent,
         description,
-        date: Timestamp.fromDate(new Date(date + 'T00:00:00')),
+        date: dateToFirestoreTimestamp(date),
         createdBy: userId
       };
 
@@ -463,7 +517,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                 <input
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => {
+                    console.log('Date input changed:', e.target.value);
+                    setDate(e.target.value);
+                  }}
                   required
                   style={{
                     width: '100%',

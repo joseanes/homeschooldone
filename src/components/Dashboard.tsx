@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, arrayRemove, arrayUnion, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool, Person, Activity, Goal, ActivityInstance } from '../types';
 import StudentForm from './StudentForm';
@@ -60,6 +60,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   const [showDashboard, setShowDashboard] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [returnToSettings, setReturnToSettings] = useState(false);
+  const [returnToReports, setReturnToReports] = useState(false);
   const [settingsActiveTab, setSettingsActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users'>('general');
   const [dashboardSettings, setDashboardSettings] = useState({
     cycleSeconds: 10,
@@ -552,7 +553,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       const today = getCurrentDateInTimezone();
       const startOfWeek = new Date(today);
       const dayOfWeek = today.getDay();
-      const startOfWeekDay = dashboardSettings.startOfWeek || 1; // Default Monday
+      const startOfWeekDay = dashboardSettings.startOfWeek !== undefined ? dashboardSettings.startOfWeek : 1; // Default Monday
       
       // Calculate days to subtract to get to start of week
       const daysFromStartOfWeek = (dayOfWeek - startOfWeekDay + 7) % 7;
@@ -562,19 +563,48 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
-
-      const instancesQuery = query(
-        collection(db, 'activityInstances'),
-        where('date', '>=', startOfWeek),
-        where('date', '<=', endOfWeek)
-      );
       
-      const querySnapshot = await getDocs(instancesQuery);
-      const instances = querySnapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-        date: doc.data().date?.toDate ? doc.data().date.toDate() : new Date(doc.data().date)
-      } as ActivityInstance));
+
+      // First get all goal IDs for this homeschool
+      const goalsSnapshot = await getDocs(
+        query(collection(db, 'goals'), where('homeschoolId', '==', homeschool.id))
+      );
+      const homeschoolGoalIds = goalsSnapshot.docs.map(doc => doc.id);
+      
+      if (homeschoolGoalIds.length === 0) {
+        setWeekInstances([]);
+        return;
+      }
+      
+      // Query activity instances for these goals (handle 'in' query limitation of 10 items)
+      let allInstances: ActivityInstance[] = [];
+      
+      // Split goal IDs into chunks of 10 (Firestore 'in' query limit)
+      const chunkSize = 10;
+      for (let i = 0; i < homeschoolGoalIds.length; i += chunkSize) {
+        const chunk = homeschoolGoalIds.slice(i, i + chunkSize);
+        const instancesQuery = query(
+          collection(db, 'activityInstances'),
+          where('goalId', 'in', chunk)
+        );
+        
+        const querySnapshot = await getDocs(instancesQuery);
+        const chunkInstances = querySnapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id,
+          date: doc.data().date?.toDate ? doc.data().date.toDate() : new Date(doc.data().date)
+        } as ActivityInstance));
+        
+        allInstances = [...allInstances, ...chunkInstances];
+      }
+      
+      // Filter for current week in memory
+      const instances = allInstances.filter(instance => {
+        const instanceDate = instance.date instanceof Date ? instance.date : new Date(instance.date);
+        return instanceDate >= startOfWeek && instanceDate <= endOfWeek;
+      });
+      
+
 
       setWeekInstances(instances);
     } catch (error) {
@@ -1001,7 +1031,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button
             onClick={() => setShowSettings(true)}
             style={{
@@ -1011,7 +1041,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              minWidth: '120px'
             }}
           >
             ⚙️ Settings
@@ -1025,7 +1056,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              minWidth: '120px'
             }}
           >
             Reports
@@ -1039,7 +1071,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              minWidth: '120px'
             }}
           >
             📺 Dashboard
@@ -1055,7 +1088,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         marginBottom: '30px',
         textAlign: 'center'
       }}>
-        <h2 style={{ margin: '0 0 20px 0', color: '#333' }}>Record Today's Activities</h2>
         <button 
           onClick={() => setShowActivityInstanceForm(true)}
           disabled={goals.length === 0}
@@ -1092,11 +1124,23 @@ Set up students, activities and goals first using the "Settings" menu
           <p style={{ color: '#666' }}>No goals assigned yet</p>
         ) : (
           <div style={{ display: 'grid', gap: '20px' }}>
-            {students.map(student => {
+            {[...students].sort((a, b) => {
+              // Sort by age (ascending) - younger students first
+              if (a.dateOfBirth && b.dateOfBirth) {
+                const ageA = new Date(a.dateOfBirth);
+                const ageB = new Date(b.dateOfBirth);
+                return ageB.getTime() - ageA.getTime(); // More recent dateOfBirth = younger = comes first
+              }
+              // If no dateOfBirth, fall back to name sorting
+              return a.name.localeCompare(b.name);
+            }).map(student => {
               const studentGoals = goals.filter(g => g.studentIds?.includes(student.id) && isGoalActiveForStudent(g, student.id));
               if (studentGoals.length === 0) return null;
               
-              const completedGoals = studentGoals.filter(goal => getGoalProgress(goal.id, student.id).today > 0).length;
+              const completedGoals = studentGoals.filter(goal => {
+                const status = getGoalStatus(goal, student.id);
+                return status.status === 'completed-today' || status.status === 'weekly-complete';
+              }).length;
               const totalGoals = studentGoals.length;
               const allCompleted = completedGoals === totalGoals;
               
@@ -1175,6 +1219,7 @@ Set up students, activities and goals first using the "Settings" menu
                         i.goalId === goal.id && 
                         i.studentId === student.id
                       ).length;
+                      
                       
                       if (!activity) return null;
                       
@@ -1346,6 +1391,10 @@ Set up students, activities and goals first using the "Settings" menu
             setPreSelectedGoal('');
             setPreSelectedStudent('');
             setEditingActivityInstance(null);
+            if (returnToReports) {
+              setReturnToReports(false);
+              setShowReports(true);
+            }
           }}
           onActivityRecorded={() => {
             // Refresh today's instances
@@ -1355,6 +1404,10 @@ Set up students, activities and goals first using the "Settings" menu
             setPreSelectedGoal('');
             setPreSelectedStudent('');
             setEditingActivityInstance(null);
+            if (returnToReports) {
+              setReturnToReports(false);
+              setShowReports(true);
+            }
           }}
         />
       )}
@@ -1366,6 +1419,14 @@ Set up students, activities and goals first using the "Settings" menu
           activities={activities}
           students={students}
           onClose={() => setShowReports(false)}
+          onEditActivity={(instance) => {
+            setEditingActivityInstance(instance);
+            setPreSelectedGoal(instance.goalId);
+            setPreSelectedStudent(instance.studentId);
+            setReturnToReports(true);
+            setShowReports(false);
+            setShowActivityInstanceForm(true);
+          }}
         />
       )}
 

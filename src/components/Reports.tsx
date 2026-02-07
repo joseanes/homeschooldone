@@ -10,6 +10,7 @@ interface ReportsProps {
   activities: Activity[];
   students: Person[];
   onClose: () => void;
+  onEditActivity?: (instance: ActivityInstance) => void;
 }
 
 const Reports: React.FC<ReportsProps> = ({ 
@@ -17,16 +18,52 @@ const Reports: React.FC<ReportsProps> = ({
   goals, 
   activities, 
   students,
-  onClose 
+  onClose,
+  onEditActivity
 }) => {
   const [activityInstances, setActivityInstances] = useState<ActivityInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'all'>('week');
+  const [selectedWeek, setSelectedWeek] = useState<string>(() => {
+    // Default to current week (start of week Sunday)
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - dayOfWeek);
+    return startOfWeek.toISOString().split('T')[0];
+  });
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     id: string;
     name: string;
   } | null>(null);
+
+  // Generate week options (current week and past 8 weeks)
+  const getWeekOptions = () => {
+    const options = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 9; i++) {
+      const weekStart = new Date(today);
+      const dayOfWeek = today.getDay();
+      weekStart.setDate(today.getDate() - dayOfWeek - (i * 7));
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      
+      const startStr = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const endStr = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      
+      const label = i === 0 ? `This Week (${startStr} - ${endStr})` : `${startStr} - ${endStr}`;
+      
+      options.push({
+        value: weekStart.toISOString().split('T')[0],
+        label: label
+      });
+    }
+    
+    return options;
+  };
 
   const handleDelete = async (instanceId: string) => {
     try {
@@ -98,11 +135,14 @@ const Reports: React.FC<ReportsProps> = ({
         });
         break;
       case 'week':
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekStart = new Date(selectedWeek);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        
         filtered = filtered.filter(instance => {
           const instanceDate = new Date(instance.date);
-          return instanceDate >= weekAgo;
+          return instanceDate >= weekStart && instanceDate <= weekEnd;
         });
         break;
       case 'month':
@@ -125,9 +165,11 @@ const Reports: React.FC<ReportsProps> = ({
     const goalInstances = activityInstances.filter(i => i.goalId === goalId);
     const weekInstances = goalInstances.filter(instance => {
       const instanceDate = new Date(instance.date);
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return instanceDate >= weekAgo;
+      const weekStart = new Date(selectedWeek);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      return instanceDate >= weekStart && instanceDate <= weekEnd;
     });
 
     return {
@@ -215,10 +257,30 @@ const Reports: React.FC<ReportsProps> = ({
             }}
           >
             <option value="today">Today</option>
-            <option value="week">This Week</option>
+            <option value="week">Week of</option>
             <option value="month">This Month</option>
             <option value="all">All Time</option>
           </select>
+
+          {dateRange === 'week' && (
+            <select
+              value={selectedWeek}
+              onChange={(e) => setSelectedWeek(e.target.value)}
+              style={{
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                minWidth: '200px'
+              }}
+            >
+              {getWeekOptions().map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Goals Progress Summary */}
@@ -246,10 +308,15 @@ const Reports: React.FC<ReportsProps> = ({
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                       <div>
-                        <strong>{goalStudents.map(s => s.name).join(', ')}</strong> - {activity.name}
+                        <strong>
+                          {selectedStudent === 'all' 
+                            ? goalStudents.map(s => s.name).join(', ')
+                            : goalStudents.filter(s => s.id === selectedStudent).map(s => s.name).join(', ')
+                          }
+                        </strong> - {activity.name}
                       </div>
                       <div>
-                        {progress.thisWeek}/{progress.target} this week
+                        {progress.thisWeek}/{progress.target} {dateRange === 'week' && selectedWeek !== getWeekOptions()[0].value ? 'that week' : 'this week'}
                       </div>
                     </div>
                     <div style={{
@@ -297,6 +364,23 @@ const Reports: React.FC<ReportsProps> = ({
                       <strong>{student.name} - {activity.name}</strong>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span>{new Date(instance.date).toLocaleDateString()}</span>
+                        {onEditActivity && (
+                          <button
+                            onClick={() => onEditActivity(instance)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '12px',
+                              backgroundColor: '#007bff',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
+                            title="Edit this activity instance"
+                          >
+                            Edit
+                          </button>
+                        )}
                         <button
                           onClick={() => setDeleteConfirmation({ 
                             id: instance.id, 

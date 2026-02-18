@@ -286,11 +286,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '40px'
+        marginBottom: '2vh'
       }}>
-        <h1 style={{ margin: 0, fontSize: '36px' }}>{homeschool.name} Dashboard</h1>
+        <h1 style={{ margin: 0, fontSize: '2.2vw' }}>{homeschool.name} Dashboard</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ fontSize: '18px', opacity: 0.8 }}>
+          <div style={{ fontSize: '1.1vw', opacity: 0.8 }}>
             Student {currentStudentIndex + 1} of {students.length} • Auto-cycling every {cycleSeconds}s
           </div>
           {!isPublic && (
@@ -317,26 +317,27 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         flex: 1,
         display: 'flex',
         alignItems: 'stretch',
-        gap: '40px',
-        height: 'calc(100vh - 160px)' // Account for header
+        gap: '30px',
+        height: 'calc(100vh - 140px)',
+        overflow: 'hidden'
       }}>
         {/* Left Side - Student Name and Progress Circle */}
         <div style={{
           backgroundColor: '#16213e',
           borderRadius: '20px',
-          padding: '40px',
+          padding: '30px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minWidth: '400px',
-          maxWidth: '450px',
+          width: '280px',
+          flexShrink: 0,
           boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
         }}>
           {/* Student Name */}
-          <h2 style={{ 
-            margin: '0 0 30px 0', 
-            fontSize: '42px',
+          <h2 style={{
+            margin: '0 0 2vh 0',
+            fontSize: '2.8vw',
             textAlign: 'center',
             background: 'linear-gradient(45deg, #4caf50, #2196f3)',
             WebkitBackgroundClip: 'text',
@@ -347,10 +348,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           </h2>
 
           {/* Progress Circle */}
-          <div style={{ marginBottom: '30px' }}>
+          <div style={{ marginBottom: '2vh' }}>
             <div style={{
-              width: '220px',
-              height: '220px',
+              width: '14vw',
+              height: '14vw',
               borderRadius: '50%',
               background: `conic-gradient(#4caf50 ${progressPercentage * 3.6}deg, #333 ${progressPercentage * 3.6}deg)`,
               display: 'flex',
@@ -359,8 +360,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               position: 'relative'
             }}>
               <div style={{
-                width: '180px',
-                height: '180px',
+                width: '11.5vw',
+                height: '11.5vw',
                 borderRadius: '50%',
                 backgroundColor: '#1a1a2e',
                 display: 'flex',
@@ -368,28 +369,28 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 justifyContent: 'center',
                 flexDirection: 'column'
               }}>
-                <div style={{ fontSize: '40px', fontWeight: 'bold' }}>
+                <div style={{ fontSize: '2.8vw', fontWeight: 'bold' }}>
                   {currentProgress.completedToday}/{currentProgress.totalGoals}
                 </div>
-                <div style={{ fontSize: '18px', opacity: 0.8 }}>This Week</div>
+                <div style={{ fontSize: '1.2vw', opacity: 0.8 }}>This Week</div>
               </div>
             </div>
           </div>
 
           {/* Progress Percentage */}
-          <div style={{ 
-            fontSize: '24px', 
+          <div style={{
+            fontSize: '1.5vw',
             opacity: 0.9,
             textAlign: 'center',
-            marginBottom: '20px'
+            marginBottom: '1.5vh'
           }}>
             {Math.round(progressPercentage)}% Complete
           </div>
 
           {/* Last Activity */}
           {currentProgress.student.lastActivity && (
-            <div style={{ 
-              fontSize: '16px', 
+            <div style={{
+              fontSize: '1vw',
               opacity: 0.7,
               textAlign: 'center'
             }}>
@@ -402,33 +403,34 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         <div style={{
           backgroundColor: '#16213e',
           borderRadius: '20px',
-          padding: '40px',
+          padding: '24px',
           flex: 1,
           boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          minWidth: 0
         }}>
-          <h3 style={{ 
-            fontSize: '32px', 
-            marginBottom: '30px', 
+          <h3 style={{
+            fontSize: '2vw',
+            marginBottom: '1.2vh',
             textAlign: 'center',
             background: 'linear-gradient(45deg, #4caf50, #2196f3)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+            backgroundClip: 'text',
+            flexShrink: 0
           }}>
-            Pending Tasks and Goals
+            Tasks and Goals
           </h3>
-          
-          <div style={{ 
-            display: 'grid', 
-            gap: '20px',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+
+          <div style={{
+            display: 'grid',
+            gap: '0.8vw',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridAutoRows: '1fr',
             flex: 1,
-            alignContent: 'start',
-            overflow: 'auto',
-            maxHeight: 'calc(100% - 80px)' // Account for header
+            overflow: 'hidden'
           }}>
             {/* Sort goals: gray (pending) first, then yellow (progress week), then blue (done today), then green (weekly complete) */}
             {[...currentProgress.todayGoals].sort((a, b) => {
@@ -477,88 +479,74 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 isActuallyCompleted = todayMinutesForGoal >= goal.minutesPerSession;
               }
               
-              // Determine status and colors using consistent scheme
-              let backgroundColor, borderColor, statusIcon, statusText, textColor;
-              
-              // Check if weekly requirement is met
+              // Dark-themed status colors
+              let cardBg, cardBorder, statusIcon, statusText, cardTextColor;
+
               const weeklyComplete = goal.timesPerWeek && weeklyCount >= goal.timesPerWeek;
-              
+
               if (weeklyComplete) {
-                // Green: Weekly Complete
-                backgroundColor = '#e8f5e9';
-                borderColor = '#4caf50';
-                textColor = '#2e7d32';
-                statusIcon = '✅';
-                statusText = 'Weekly Complete ✓';
+                cardBg = 'rgba(76, 175, 80, 0.15)';
+                cardBorder = 'rgba(76, 175, 80, 0.4)';
+                cardTextColor = '#a5d6a7';
+                statusIcon = '✓';
+                statusText = 'Complete';
               } else if (hasActivityToday) {
-                // Blue: Done Today
-                backgroundColor = '#e3f2fd';
-                borderColor = '#2196f3';
-                textColor = '#1565c0';
-                statusIcon = '✔️';
-                statusText = 'Done Today';
+                cardBg = 'rgba(33, 150, 243, 0.15)';
+                cardBorder = 'rgba(33, 150, 243, 0.4)';
+                cardTextColor = '#90caf9';
+                statusIcon = '✔';
+                statusText = 'Today';
               } else if (weeklyCount > 0) {
-                // Yellow: Progress This Week
-                backgroundColor = '#fff8e1';
-                borderColor = '#ffc107';
-                textColor = '#f57c00';
-                statusIcon = '📝';
-                statusText = 'Progress This Week';
+                cardBg = 'rgba(255, 193, 7, 0.12)';
+                cardBorder = 'rgba(255, 193, 7, 0.35)';
+                cardTextColor = '#ffe082';
+                statusIcon = '◐';
+                statusText = 'Progress';
               } else {
-                // Gray: Pending
-                backgroundColor = '#f5f5f5';
-                borderColor = '#9e9e9e';
-                textColor = '#616161';
-                statusIcon = '⏳';
+                cardBg = 'rgba(255, 255, 255, 0.06)';
+                cardBorder = 'rgba(255, 255, 255, 0.12)';
+                cardTextColor = 'rgba(255, 255, 255, 0.6)';
+                statusIcon = '○';
                 statusText = 'Pending';
               }
-              
+
               return (
                 <div
                   key={goal.id}
                   style={{
-                    padding: '20px',
-                    backgroundColor,
-                    borderRadius: '15px',
-                    border: `2px solid ${borderColor}`,
+                    padding: '1.4vh 0.8vw',
+                    backgroundColor: cardBg,
+                    borderRadius: '0.6vw',
+                    border: `1px solid ${cardBorder}`,
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    textAlign: 'center',
-                    minHeight: '120px',
-                    justifyContent: 'center',
-                    color: textColor
+                    gap: '0.6vw',
+                    color: cardTextColor,
+                    minWidth: 0
                   }}
                 >
-                  <div style={{ 
-                    fontSize: '36px',
-                    marginBottom: '10px'
+                  <div style={{
+                    fontSize: '2vw',
+                    flexShrink: 0,
+                    width: '2.4vw',
+                    textAlign: 'center'
                   }}>
                     {statusIcon}
                   </div>
-                  <div style={{ 
-                    fontSize: '18px', 
-                    fontWeight: 'bold',
-                    marginBottom: '8px',
-                    color: textColor
-                  }}>
-                    {activity?.name}
-                  </div>
-                  <div style={{ 
-                    fontSize: '14px',
-                    opacity: 0.8,
-                    marginBottom: '8px',
-                    color: textColor
-                  }}>
-                    {goal.timesPerWeek && `${weeklyCount} of ${goal.timesPerWeek}/week`}
-                    {goal.minutesPerSession && ` • ${goal.minutesPerSession} min`}
-                  </div>
-                  <div style={{ 
-                    fontSize: '16px',
-                    color: borderColor,
-                    fontWeight: 'bold'
-                  }}>
-                    {statusText}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '1.4vw',
+                      fontWeight: '600',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {goal.name || activity?.name}
+                    </div>
+                    <div style={{ fontSize: '1.1vw', opacity: 0.7 }}>
+                      {goal.timesPerWeek && `${weeklyCount}/${goal.timesPerWeek} wk`}
+                      {goal.minutesPerSession && `${goal.timesPerWeek ? ' · ' : ''}${goal.minutesPerSession} min`}
+                    </div>
                   </div>
                 </div>
               );

@@ -620,58 +620,56 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
 
   const getGoalStatus = (goal: Goal, studentId: string) => {
     const progress = getGoalProgress(goal.id, studentId);
-    
+
     // Count instances this week for this student and goal
-    const weeklyCount = weekInstances.filter(i => 
-      i.goalId === goal.id && 
+    const weeklyCount = weekInstances.filter(i =>
+      i.goalId === goal.id &&
       i.studentId === studentId
     ).length;
-    
+
     // Check if weekly requirement is met
     const weeklyComplete = goal.timesPerWeek && weeklyCount >= goal.timesPerWeek;
-    
-    // If weekly requirement is met, show as completed (green)
+
     if (weeklyComplete) {
-      return { 
-        status: 'weekly-complete', 
-        color: '#4caf50', // Green
-        backgroundColor: '#e8f5e9', // Light green background
-        textColor: '#2e7d32',
-        text: 'Weekly Complete ✓'
+      return {
+        status: 'weekly-complete',
+        color: '#81c784',
+        backgroundColor: '#f1f8f1',
+        textColor: '#4a7c4f',
+        text: '✓',
+        label: 'Weekly Complete'
       };
     }
-    
-    // Check if there's progress TODAY
+
     if (progress.today > 0) {
-      // Has progress today but weekly not complete - show as done today (blue)
-      return { 
-        status: 'done-today', 
-        color: '#2196f3', // Blue
-        backgroundColor: '#e3f2fd', // Light blue background
-        textColor: '#1565c0',
-        text: 'Done Today'
+      return {
+        status: 'done-today',
+        color: '#90caf9',
+        backgroundColor: '#f0f5fb',
+        textColor: '#5a7da8',
+        text: '✔',
+        label: 'Done Today'
       };
     }
-    
-    // Check if there's progress THIS WEEK (but not today)
+
     if (weeklyCount > 0) {
-      // Has progress this week but not today - show as progress this week (yellow)
-      return { 
-        status: 'progress-week', 
-        color: '#ffc107', // Yellow/Amber
-        backgroundColor: '#fff8e1', // Light yellow background
-        textColor: '#f57c00',
-        text: 'Progress This Week'
+      return {
+        status: 'progress-week',
+        color: '#ffe082',
+        backgroundColor: '#fdfaf0',
+        textColor: '#b08d3a',
+        text: '◐',
+        label: 'Progress This Week'
       };
     }
-    
-    // Default: not done this week (gray)
-    return { 
-      status: 'pending', 
-      color: '#9e9e9e', // Gray
-      backgroundColor: '#f5f5f5', // Light gray background
-      textColor: '#616161',
-      text: 'Pending'
+
+    return {
+      status: 'pending',
+      color: '#bdbdbd',
+      backgroundColor: '#f8f8f8',
+      textColor: '#888',
+      text: '○',
+      label: 'Pending'
     };
   };
 
@@ -1041,140 +1039,107 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             </div>
           </div>
         </div>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           flexWrap: 'wrap',
-          gap: '12px',
+          gap: '8px',
           marginTop: '10px',
-          justifyContent: 'flex-start'
+          alignItems: 'center'
         }}>
           <button
-            onClick={() => setShowSettings(true)}
+            onClick={() => setShowActivityInstanceForm(true)}
+            disabled={goals.length === 0}
+            title="Record a new activity session for a student"
             style={{
-              padding: '12px 20px',
-              fontSize: '16px',
-              backgroundColor: '#6c757d',
+              padding: '8px 18px',
+              fontSize: '14px',
+              backgroundColor: goals.length === 0 ? '#ccc' : '#28a745',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '6px',
+              cursor: goals.length === 0 ? 'not-allowed' : 'pointer',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            + Record Activity
+          </button>
+          <button
+            onClick={() => setShowSettings(true)}
+            title="Manage students, activities, goals, and settings"
+            style={{
+              padding: '8px 14px',
+              fontSize: '14px',
+              backgroundColor: 'transparent',
+              color: '#555',
+              border: '1px solid #ccc',
+              borderRadius: '6px',
               cursor: 'pointer',
               fontWeight: '500',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'transform 0.2s ease',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              flex: '1 1 150px',
-              minWidth: '150px'
+              gap: '6px'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
-            ⚙️ Settings
+            Settings
           </button>
           <button
             onClick={() => setShowReports(true)}
+            title="View progress reports, activity history, and export data"
             style={{
-              padding: '12px 20px',
-              fontSize: '16px',
-              backgroundColor: '#9c27b0',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
+              padding: '8px 14px',
+              fontSize: '14px',
+              backgroundColor: 'transparent',
+              color: '#555',
+              border: '1px solid #ccc',
+              borderRadius: '6px',
               cursor: 'pointer',
               fontWeight: '500',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'transform 0.2s ease',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              flex: '1 1 150px',
-              minWidth: '150px'
+              gap: '6px'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
-            📊 Reports
+            Reports
           </button>
           <button
             onClick={() => setShowDashboard(true)}
+            title="Open full-screen TV dashboard for classroom display"
             style={{
-              padding: '12px 20px',
-              fontSize: '16px',
-              backgroundColor: '#ff5722',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
+              padding: '8px 14px',
+              fontSize: '14px',
+              backgroundColor: 'transparent',
+              color: '#555',
+              border: '1px solid #ccc',
+              borderRadius: '6px',
               cursor: 'pointer',
               fontWeight: '500',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              transition: 'transform 0.2s ease',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              flex: '1 1 150px',
-              minWidth: '150px'
+              gap: '6px'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
-            📺 Dashboard
+            Dashboard
           </button>
+          {goals.length === 0 && (
+            <span style={{ fontSize: '13px', color: '#999', marginLeft: '8px' }}>
+              Set up students, activities and goals first
+            </span>
+          )}
         </div>
-      </div>
-      
-      {/* Main Activity Recording Section */}
-      <div style={{
-        backgroundColor: '#f8f9fa',
-        padding: '30px',
-        borderRadius: '12px',
-        marginBottom: '30px',
-        textAlign: 'center'
-      }}>
-        <button 
-          onClick={() => setShowActivityInstanceForm(true)}
-          disabled={goals.length === 0}
-          style={{
-            padding: '16px 40px',
-            fontSize: '20px',
-            backgroundColor: goals.length === 0 ? '#ccc' : '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: goals.length === 0 ? 'not-allowed' : 'pointer',
-            fontWeight: '600',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '10px',
-            transition: 'transform 0.2s ease',
-            boxShadow: goals.length === 0 ? 'none' : '0 4px 8px rgba(40,167,69,0.2)',
-            minWidth: '240px'
-          }}
-          onMouseEnter={(e) => { if (goals.length > 0) e.currentTarget.style.transform = 'translateY(-2px)' }}
-          onMouseLeave={(e) => { if (goals.length > 0) e.currentTarget.style.transform = 'translateY(0)' }}
-        >
-          🎯 Record Activity
-        </button>
-        {goals.length === 0 && (
-          <p style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
-Set up students, activities and goals first using the "Settings" menu
-          </p>
-        )}
       </div>
 
       {/* Today's Progress Overview - Grouped by Student */}
       <div style={{
-        backgroundColor: 'white',
-        border: '1px solid #e0e0e0',
-        borderRadius: '8px',
-        padding: '25px',
+        backgroundColor: '#f0f4f8',
+        border: '1px solid #dde3ea',
+        borderRadius: '10px',
+        padding: '20px',
         marginBottom: '20px'
       }}>
-        <h3 style={{ margin: '0 0 20px 0', color: '#333' }}>Today's Progress</h3>
+        <h3 style={{ margin: '0 0 16px 0', color: '#444' }} title="Overview of today's activity and weekly goal progress for each student">Today's Progress</h3>
         {goals.length === 0 ? (
           <p style={{ color: '#666' }}>No goals assigned yet</p>
         ) : (
@@ -1231,123 +1196,125 @@ Set up students, activities and goals first using the "Settings" menu
               
               return (
                 <div key={student.id} style={{
-                  border: '2px solid #e0e0e0',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  backgroundColor: allCompleted ? '#f0f8f0' : '#fff8f0',
-                  borderColor: allCompleted ? '#4caf50' : '#ff9800'
+                  border: '1px solid #dde3ea',
+                  borderRadius: '10px',
+                  padding: '16px',
+                  backgroundColor: allCompleted ? '#f4f9f4' : '#f7f9fc',
+                  borderColor: allCompleted ? '#a5d6a7' : '#dde3ea'
                 }}>
-                  <div style={{ 
-                    display: 'flex', 
+                  <div style={{
+                    display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    marginBottom: '15px'
+                    marginBottom: '12px'
                   }}>
-                    <h4 style={{ 
-                      margin: 0, 
-                      fontSize: '18px',
-                      color: '#333',
+                    <h4 style={{
+                      margin: 0,
+                      fontSize: '16px',
+                      color: '#444',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px'
+                      gap: '8px'
                     }}>
                       {student.name}
-                      {allCompleted && <span style={{ fontSize: '20px' }}>🎉</span>}
+                      {allCompleted && <span style={{ fontSize: '16px' }}>🎉</span>}
                     </h4>
-                    <div style={{
-                      padding: '6px 12px',
-                      borderRadius: '20px',
-                      backgroundColor: allCompleted ? '#4caf50' : '#ff9800',
-                      color: 'white',
-                      fontSize: '14px',
-                      fontWeight: 'bold'
-                    }}>
-                      {completedGoals}/{totalGoals} Weekly Goals Complete
+                    <div
+                      title={`${completedGoals} of ${totalGoals} weekly goals completed for ${student.name}`}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        backgroundColor: allCompleted ? '#a5d6a7' : '#e0e0e0',
+                        color: allCompleted ? '#2e7d32' : '#555',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}
+                    >
+                      {completedGoals}/{totalGoals} Complete
                     </div>
                   </div>
-                  
-                  <div style={{ display: 'grid', gap: '8px' }}>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '6px' }}>
                     {sortedGoals.map(goal => {
                       const activity = activities.find(a => a.id === goal.activityId);
                       const progress = getGoalProgress(goal.id, student.id);
                       const status = getGoalStatus(goal, student.id);
-                      
-                      // Calculate weekly count for this goal and student
-                      const weeklyCount = weekInstances.filter(i => 
-                        i.goalId === goal.id && 
+
+                      const weeklyCount = weekInstances.filter(i =>
+                        i.goalId === goal.id &&
                         i.studentId === student.id
                       ).length;
-                      
-                      
+
                       if (!activity) return null;
-                      
+
+                      // Build tooltip strings
+                      const iconTooltips: { [key: string]: string } = {
+                        'weekly-complete': `✓ Weekly goal complete (${weeklyCount}/${goal.timesPerWeek} sessions this week)`,
+                        'done-today': `✔ Done today, weekly goal in progress (${weeklyCount}/${goal.timesPerWeek} this week)`,
+                        'progress-week': `◐ Some progress this week (${weeklyCount}/${goal.timesPerWeek} sessions)`,
+                        'pending': '○ No activity recorded this week yet'
+                      };
+
+                      const goalDisplayName = goal.name || activity.name;
+                      const cardTooltip = `${goalDisplayName} – Click to record activity`;
+
                       return (
-                        <div 
-                          key={goal.id} 
+                        <div
+                          key={goal.id}
                           onClick={() => handleOpenRecordActivity(goal.id, student.id)}
-                          style={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between',
+                          style={{
+                            display: 'flex',
                             alignItems: 'center',
-                            padding: '12px',
+                            gap: '8px',
+                            padding: '8px 10px',
                             backgroundColor: status.backgroundColor,
                             color: status.textColor,
                             borderRadius: '6px',
                             border: `1px solid ${status.color}`,
                             cursor: 'pointer',
-                            transition: 'all 0.2s ease'
+                            transition: 'all 0.2s ease',
+                            fontSize: '13px',
+                            lineHeight: '1.3'
                           }}
-                          title={
-                            status.status === 'weekly-complete' 
-                              ? 'Weekly goal met - Click to add more' 
-                              : status.status === 'done-today'
-                              ? 'Done today - Click to add more'
-                              : status.status === 'progress-week'
-                              ? 'Progress made this week - Click to continue today'
-                              : 'Click to record this activity'
-                          }
+                          title={cardTooltip}
                         >
-                          <div>
-                            <span style={{ fontWeight: '500' }}>{goal.name || activity.name}</span>
-                            {goal.timesPerWeek && (
-                              <span style={{ color: status.textColor, opacity: 0.7, fontSize: '13px', marginLeft: '8px' }}>
-                                ({weeklyCount} of {goal.timesPerWeek}/week)
-                              </span>
-                            )}
-                            {(() => {
-                              const latestProgress = getLatestProgress(goal.id, student.id);
-                              const indicators = [];
-                              
-                              // Show percentage progress if activity tracks it and goal has percentage goal or daily increase
-                              if (activity.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && latestProgress?.percentageCompleted !== undefined) {
-                                indicators.push(
-                                  <span key="percent" style={{ color: status.textColor, opacity: 0.7, fontSize: '13px', marginLeft: '8px' }}>
-                                    ({latestProgress.percentageCompleted.toFixed(0)}% of {goal.percentageGoal || 100}%)
-                                  </span>
-                                );
+                          <span style={{ fontSize: '16px', flexShrink: 0 }} title={iconTooltips[status.status] || status.label}>{status.text}</span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={goal.name ? `Goal: ${goal.name} (Activity: ${activity.name})` : `Activity: ${activity.name}`}>
+                              {goalDisplayName}
+                            </div>
+                            <div style={{ fontSize: '11px', opacity: 0.75 }} title={(() => {
+                              const tipParts = [];
+                              if (goal.timesPerWeek) tipParts.push(`${weeklyCount} of ${goal.timesPerWeek} weekly sessions completed`);
+                              const lp = getLatestProgress(goal.id, student.id);
+                              if (activity.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && lp?.percentageCompleted !== undefined) {
+                                tipParts.push(`${lp.percentageCompleted.toFixed(0)}% overall progress`);
                               }
-                              
-                              // Show custom metric progress if activity tracks it and goal has target
-                              if (activity.progressReportingStyle?.progressCount && goal.progressCount && latestProgress?.countCompleted !== undefined) {
-                                indicators.push(
-                                  <span key="count" style={{ color: status.textColor, opacity: 0.7, fontSize: '13px', marginLeft: '8px' }}>
-                                    ({latestProgress.countCompleted} of {goal.progressCount} {activity.progressCountName || 'items'})
-                                  </span>
-                                );
+                              if (activity.progressReportingStyle?.progressCount && goal.progressCount && lp?.countCompleted !== undefined) {
+                                tipParts.push(`${lp.countCompleted} of ${goal.progressCount} units completed`);
                               }
-                              
-                              return indicators;
-                            })()}
-                          </div>
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            color: status.textColor
-                          }}>
-                            {status.text}
-                            {progress.today > 1 && <span style={{ marginLeft: '6px' }}>({progress.today}x)</span>}
+                              if (progress.today > 1) tipParts.push(`Recorded ${progress.today} times today`);
+                              return tipParts.join(' · ') || 'No progress data yet';
+                            })()}>
+                              {goal.timesPerWeek && (
+                                <span>{weeklyCount}/{goal.timesPerWeek} wk</span>
+                              )}
+                              {(() => {
+                                const latestProgress = getLatestProgress(goal.id, student.id);
+                                const parts = [];
+                                if (activity.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && latestProgress?.percentageCompleted !== undefined) {
+                                  parts.push(`${latestProgress.percentageCompleted.toFixed(0)}%`);
+                                }
+                                if (activity.progressReportingStyle?.progressCount && goal.progressCount && latestProgress?.countCompleted !== undefined) {
+                                  parts.push(`${latestProgress.countCompleted}/${goal.progressCount}`);
+                                }
+                                if (parts.length > 0) {
+                                  return <span>{goal.timesPerWeek ? ' · ' : ''}{parts.join(' · ')}</span>;
+                                }
+                                return null;
+                              })()}
+                              {progress.today > 1 && <span> · {progress.today}x today</span>}
+                            </div>
                           </div>
                         </div>
                       );

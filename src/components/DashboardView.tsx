@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool, Person, Goal, Activity, ActivityInstance } from '../types';
-import { formatLastActivity } from '../utils/activityTracking';
 import { isGoalActiveForStudent } from '../utils/goalUtils';
 
 interface DashboardViewProps {
@@ -27,6 +26,23 @@ interface StudentProgress {
   todayMinutes: { [goalId: string]: number };
 }
 
+// Map activity name to emoji icon (matches tvOS SF Symbol mapping)
+const activityIcon = (activityName: string): string => {
+  const name = activityName.toLowerCase();
+  if (name.includes('math') || name.includes('khan')) return 'ƒ';
+  if (name.includes('english') || name.includes('ela') || name.includes('reading') || name.includes('book')) return '📖';
+  if (name.includes('piano') || name.includes('music')) return '♪';
+  if (name.includes('tennis') || name.includes('soccer') || name.includes('sport')) return '🏃';
+  if (name.includes('robot') || name.includes('first') || name.includes('coding')) return '⚙';
+  if (name.includes('geography') || name.includes('map')) return '🌎';
+  if (name.includes('duolingo') || name.includes('language') || name.includes('spanish') || name.includes('french')) return '🌐';
+  if (name.includes('radio') || name.includes('ham')) return '📡';
+  if (name.includes('science') || name.includes('chemistry')) return '🧪';
+  if (name.includes('art') || name.includes('draw') || name.includes('paint')) return '🎨';
+  if (name.includes('history')) return '🕰';
+  return '⭐';
+};
+
 const DashboardView: React.FC<DashboardViewProps> = ({
   homeschool,
   students,
@@ -40,6 +56,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 }) => {
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [studentsProgress, setStudentsProgress] = useState<StudentProgress[]>([]);
+  const [allWeekInstances, setAllWeekInstances] = useState<ActivityInstance[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Note: isGoalActiveForStudent is now imported from utils/goalUtils
@@ -195,6 +212,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
         const progress = await Promise.all(progressPromises);
         setStudentsProgress(progress);
+
+        // Fetch last 5 weeks of instances for charts (Last 7 Days + Weekly Completion)
+        const fiveWeeksAgo = new Date(weekStart);
+        fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 28); // 4 additional weeks back
+        const allInstancesQuery = query(
+          collection(db, 'activityInstances'),
+          where('date', '>=', fiveWeeksAgo),
+          where('date', '<=', weekEnd)
+        );
+        const allInstancesSnap = await getDocs(allInstancesQuery);
+        const instances = allInstancesSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ActivityInstance));
+        setAllWeekInstances(instances);
       } catch (error) {
         console.error('Error fetching dashboard progress:', error);
       } finally {
@@ -264,9 +293,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const currentProgress = studentsProgress[currentStudentIndex];
   if (!currentProgress) return null;
 
-  const progressPercentage = currentProgress.totalGoals > 0 
-    ? (currentProgress.completedToday / currentProgress.totalGoals) * 100 
+  const progressPercentage = currentProgress.totalGoals > 0
+    ? (currentProgress.completedToday / currentProgress.totalGoals) * 100
     : 0;
+
+  // Dynamic grid and text scaling based on card count
+  const goalCount = currentProgress.todayGoals.length;
+  const cols = goalCount <= 2 ? 1 : goalCount <= 6 ? 2 : goalCount <= 9 ? 3 : 4;
+  // Scale: fewer cards = bigger text (1.6x for 1-2, down to 0.85x for 10+)
+  const scale = goalCount <= 2 ? 1.6 : goalCount <= 4 ? 1.3 : goalCount <= 6 ? 1.1 : goalCount <= 9 ? 1.0 : 0.85;
 
   return (
     <div style={{
@@ -372,31 +407,105 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 <div style={{ fontSize: '2.8vw', fontWeight: 'bold' }}>
                   {currentProgress.completedToday}/{currentProgress.totalGoals}
                 </div>
-                <div style={{ fontSize: '1.2vw', opacity: 0.8 }}>This Week</div>
+                <div style={{ fontSize: '1.1vw', fontWeight: '500', color: '#4caf50' }}>
+                  {Math.round(progressPercentage)}%
+                </div>
+                <div style={{ fontSize: '1vw', opacity: 0.8 }}>This Week</div>
               </div>
             </div>
           </div>
 
-          {/* Progress Percentage */}
-          <div style={{
-            fontSize: '1.5vw',
-            opacity: 0.9,
-            textAlign: 'center',
-            marginBottom: '1.5vh'
-          }}>
-            {Math.round(progressPercentage)}% Complete
+          {/* Last 7 Days bar chart */}
+          <div style={{ width: '100%', marginTop: '2vh' }}>
+            <div style={{ fontSize: '0.9vw', opacity: 0.7, textAlign: 'center', marginBottom: '0.8vh' }}>Last 7 Days</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '6vh', justifyContent: 'center' }}>
+              {(() => {
+                const dayLetters = ['S','M','T','W','T','F','S'];
+                const studentId = currentProgress.student.id;
+                const days: { letter: string; count: number; isToday: boolean }[] = [];
+                const now = new Date();
+                for (let i = 6; i >= 0; i--) {
+                  const d = new Date(now);
+                  d.setDate(d.getDate() - i);
+                  const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                  const dayEnd = new Date(dayStart);
+                  dayEnd.setDate(dayEnd.getDate() + 1);
+                  const count = allWeekInstances.filter(inst => {
+                    const instDate = inst.date instanceof Date ? inst.date : new Date((inst.date as any).seconds ? (inst.date as any).seconds * 1000 : inst.date);
+                    return inst.studentId === studentId && instDate >= dayStart && instDate < dayEnd;
+                  }).length;
+                  days.push({ letter: dayLetters[dayStart.getDay()], count, isToday: i === 0 });
+                }
+                const maxCount = Math.max(1, ...days.map(d => d.count));
+                return days.map((day, idx) => (
+                  <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', maxWidth: '24px' }}>
+                    {day.count > 0 && <span style={{ fontSize: '0.7vw', opacity: 0.8 }}>{day.count}</span>}
+                    <div style={{
+                      width: '100%',
+                      height: day.count > 0 ? Math.max(4, (day.count / maxCount) * 40) : 4,
+                      backgroundColor: day.count > 0 ? (day.isToday ? '#2196f3' : '#4caf50') : 'rgba(255,255,255,0.1)',
+                      borderRadius: '2px'
+                    }} />
+                    <span style={{ fontSize: '0.65vw', opacity: day.isToday ? 1 : 0.5, color: day.isToday ? '#2196f3' : 'white' }}>{day.letter}</span>
+                  </div>
+                ));
+              })()}
+            </div>
           </div>
 
-          {/* Last Activity */}
-          {currentProgress.student.lastActivity && (
-            <div style={{
-              fontSize: '1vw',
-              opacity: 0.7,
-              textAlign: 'center'
-            }}>
-              Last activity: {formatLastActivity(currentProgress.student.lastActivity)}
+          {/* Weekly Completion chart - last 5 weeks */}
+          <div style={{ width: '100%', marginTop: '1.5vh' }}>
+            <div style={{ fontSize: '0.9vw', opacity: 0.7, textAlign: 'center', marginBottom: '0.8vh' }}>Weekly Completion</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '6vh', justifyContent: 'center' }}>
+              {(() => {
+                const studentId = currentProgress.student.id;
+                const studentGoals = goals.filter(g => g.studentIds?.includes(studentId) && isGoalActiveForStudent(g, studentId));
+                const weeks: { weekNum: number; pct: number; isCurrent: boolean }[] = [];
+                const now = new Date();
+
+                for (let w = 4; w >= 0; w--) {
+                  const wStart = new Date(now);
+                  // Go back to start of current week, then subtract w weeks
+                  const currentDay = wStart.getDay();
+                  const daysFromStart = (currentDay - startOfWeek + 7) % 7;
+                  wStart.setDate(wStart.getDate() - daysFromStart - (w * 7));
+                  wStart.setHours(0, 0, 0, 0);
+                  const wEnd = new Date(wStart);
+                  wEnd.setDate(wStart.getDate() + 6);
+                  wEnd.setHours(23, 59, 59, 999);
+
+                  // Count completed goals this week
+                  let completed = 0;
+                  studentGoals.forEach(goal => {
+                    const weeklyTarget = goal.timesPerWeek || 1;
+                    const count = allWeekInstances.filter(inst => {
+                      const instDate = inst.date instanceof Date ? inst.date : new Date((inst.date as any).seconds ? (inst.date as any).seconds * 1000 : inst.date);
+                      return inst.studentId === studentId && inst.goalId === goal.id && instDate >= wStart && instDate <= wEnd;
+                    }).length;
+                    if (count >= weeklyTarget) completed++;
+                  });
+
+                  const pct = studentGoals.length > 0 ? (completed / studentGoals.length) * 100 : 0;
+                  const jan1 = new Date(wStart.getFullYear(), 0, 1);
+                  const weekNum = Math.ceil(((wStart.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
+                  weeks.push({ weekNum, pct, isCurrent: w === 0 });
+                }
+
+                return weeks.map((week, idx) => (
+                  <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', maxWidth: '36px' }}>
+                    {week.pct > 0 && <span style={{ fontSize: '0.7vw', opacity: 0.8 }}>{Math.round(week.pct)}%</span>}
+                    <div style={{
+                      width: '100%',
+                      height: week.pct > 0 ? Math.max(4, (week.pct / 100) * 40) : 4,
+                      backgroundColor: week.pct >= 100 ? '#4caf50' : week.pct > 0 ? '#2196f3' : 'rgba(255,255,255,0.1)',
+                      borderRadius: '2px'
+                    }} />
+                    <span style={{ fontSize: '0.65vw', color: week.isCurrent ? '#2196f3' : 'white', opacity: week.isCurrent ? 1 : 0.5 }}>W{week.weekNum}</span>
+                  </div>
+                ));
+              })()}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Right Side - Today's Goals */}
@@ -426,8 +535,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div style={{
             display: 'grid',
-            gap: '0.8vw',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: `${goalCount <= 4 ? 1.2 : 0.8}vw`,
+            gridTemplateColumns: `repeat(${cols}, 1fr)`,
             gridAutoRows: '1fr',
             flex: 1,
             overflow: 'hidden'
@@ -510,43 +619,49 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 statusText = 'Pending';
               }
 
+              const icon = activityIcon(activity?.name || goal.name || '');
+
               return (
                 <div
                   key={goal.id}
                   style={{
-                    padding: '1.4vh 0.8vw',
+                    padding: `${1.2 * scale}vh ${0.8 * scale}vw`,
                     backgroundColor: cardBg,
                     borderRadius: '0.6vw',
                     border: `1px solid ${cardBorder}`,
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '0.6vw',
+                    justifyContent: 'center',
+                    gap: `${0.4 * scale}vh`,
                     color: cardTextColor,
-                    minWidth: 0
+                    minWidth: 0,
+                    textAlign: 'center'
                   }}
                 >
-                  <div style={{
-                    fontSize: '2vw',
-                    flexShrink: 0,
-                    width: '2.4vw',
-                    textAlign: 'center'
-                  }}>
-                    {statusIcon}
+                  <div style={{ fontSize: `${2.2 * scale}vw`, lineHeight: 1 }}>
+                    {icon}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: '1.4vw',
-                      fontWeight: '600',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {goal.name || activity?.name}
-                    </div>
-                    <div style={{ fontSize: '1.1vw', opacity: 0.7 }}>
-                      {goal.timesPerWeek && `${weeklyCount}/${goal.timesPerWeek} wk`}
-                      {goal.minutesPerSession && `${goal.timesPerWeek ? ' · ' : ''}${goal.minutesPerSession} min`}
-                    </div>
+                  <div style={{
+                    fontSize: `${1.2 * scale}vw`,
+                    fontWeight: '600',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    width: '100%'
+                  }}>
+                    {goal.name || activity?.name}
+                  </div>
+                  <div style={{ fontSize: `${0.9 * scale}vw`, opacity: 0.7 }}>
+                    {goal.timesPerWeek && `${weeklyCount}/${goal.timesPerWeek} wk`}
+                    {goal.minutesPerSession && `${goal.timesPerWeek ? ' · ' : ''}${goal.minutesPerSession} min`}
+                  </div>
+                  <div style={{
+                    fontSize: `${0.8 * scale}vw`,
+                    fontWeight: '500',
+                    opacity: 0.9
+                  }}>
+                    {statusIcon} {statusText}
                   </div>
                 </div>
               );

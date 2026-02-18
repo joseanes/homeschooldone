@@ -292,181 +292,80 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
           }
         `}
       </style>
-      {/* Header */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      {/* Header with integrated progress */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '30px',
-        padding: '25px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '25px 30px',
+        background: weeklyProgressPercentage === 100
+          ? 'linear-gradient(135deg, #43a047 0%, #2e7d32 100%)'
+          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         borderRadius: '15px',
         color: 'white',
-        boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)'
+        boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+        flexWrap: 'wrap',
+        gap: '15px'
       }}>
-        <div>
-          <h1 style={{ 
-            margin: 0, 
+        <div style={{ flex: '1 1 auto', minWidth: '200px' }}>
+          <h1 style={{
+            margin: 0,
             color: 'white',
             textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            fontSize: '36px'
+            fontSize: '32px'
           }}>
-            🌟 Welcome, {student.name}! 
-            {completedToday === goals.length && goals.length > 0 && ' 🎉'}
+            {weeklyProgressPercentage === 100 ? '🎉' : '🌟'} Welcome, {student.name}!
           </h1>
-          <p style={{ margin: '8px 0', color: 'rgba(255,255,255,0.9)', fontSize: '18px' }}>
-            {homeschool.name} • {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
+          <p style={{ margin: '6px 0 0 0', color: 'rgba(255,255,255,0.85)', fontSize: '16px' }}>
+            {homeschool.name} • {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric'
             })}
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '15px 20px',
-            backgroundColor: 'rgba(255,255,255,0.2)',
-            borderRadius: '12px',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <div style={{ 
-              fontSize: '28px', 
-              fontWeight: 'bold', 
-              color: completedToday === goals.length && goals.length > 0 ? '#ffd700' : 'white'
-            }}>
-              {completedToday}/{goals.length}
-            </div>
-            <div style={{ fontSize: '16px', color: 'rgba(255,255,255,0.9)' }}>
-              Goals Complete
-            </div>
-          </div>
-          <button
-            onClick={onSignOut}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              color: 'white',
-              border: '2px solid rgba(255,255,255,0.3)',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: '500',
-              backdropFilter: 'blur(10px)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
-
-      {/* Progress Overview */}
-      <div style={{
-        backgroundColor: '#fff',
-        borderRadius: '15px',
-        padding: '30px',
-        marginBottom: '30px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '40px',
-        background: weeklyProgressPercentage === 100 
-          ? 'linear-gradient(135deg, #a8e6cf 0%, #88d8a3 100%)'
-          : 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)'
-      }}>
-        <div style={{ position: 'relative' }}>
-          <div style={{
-            width: '120px',
-            height: '120px',
-            borderRadius: '50%',
-            background: weeklyProgressPercentage === 100 
-              ? 'conic-gradient(#ffd700 360deg, #ffd700 360deg)' 
-              : weeklyProgressPercentage > 50
-              ? `conic-gradient(#4facfe ${weeklyProgressPercentage * 3.6}deg, #e8f4f8 ${weeklyProgressPercentage * 3.6}deg)`
-              : `conic-gradient(#ff6b6b ${weeklyProgressPercentage * 3.6}deg, #ffe0e6 ${weeklyProgressPercentage * 3.6}deg)`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-            boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
-          }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+          {/* Weekly donut */}
+          <div style={{ position: 'relative' }}>
             <div style={{
-              width: '95px',
-              height: '95px',
+              width: '80px',
+              height: '80px',
               borderRadius: '50%',
-              backgroundColor: 'white',
+              background: weeklyProgressPercentage === 100
+                ? 'conic-gradient(#ffd700 360deg, #ffd700 360deg)'
+                : weeklyProgressPercentage > 50
+                ? `conic-gradient(rgba(255,255,255,0.9) ${weeklyProgressPercentage * 3.6}deg, rgba(255,255,255,0.2) ${weeklyProgressPercentage * 3.6}deg)`
+                : `conic-gradient(rgba(255,255,255,0.9) ${weeklyProgressPercentage * 3.6}deg, rgba(255,255,255,0.2) ${weeklyProgressPercentage * 3.6}deg)`,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '22px',
-              fontWeight: 'bold',
-              color: weeklyProgressPercentage === 100 ? '#ffa500' : weeklyProgressPercentage > 50 ? '#4facfe' : '#ff6b6b'
+              justifyContent: 'center'
             }}>
-              {Math.round(weeklyProgressPercentage)}%
-            </div>
-            {weeklyProgressPercentage === 100 && (
               <div style={{
-                position: 'absolute',
-                top: '-5px',
-                right: '-5px',
-                fontSize: '24px',
-                animation: 'bounce 1s infinite'
+                width: '62px',
+                height: '62px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(0,0,0,0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column'
               }}>
-                ⭐
+                <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', lineHeight: 1 }}>
+                  {Math.round(weeklyProgressPercentage)}%
+                </span>
+                <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.8)', lineHeight: 1, marginTop: '2px' }}>week</span>
               </div>
-            )}
+            </div>
           </div>
-        </div>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ 
-            margin: '0 0 15px 0', 
-            color: weeklyProgressPercentage === 100 ? '#2d5016' : '#2c3e50',
-            fontSize: '28px',
-            fontWeight: '600'
-          }}>
-            {weeklyProgressPercentage === 100 
-              ? "🎊 Weekly Goals Crushed!" 
-              : "📊 Weekly Progress"
-            }
-          </h3>
-          <p style={{ 
-            margin: 0, 
-            color: weeklyProgressPercentage === 100 ? '#2d5016' : '#666',
-            fontSize: '18px',
-            lineHeight: '1.5'
-          }}>
-            {weeklyProgressPercentage === 100 
-              ? `Incredible! You've completed all your weekly goals! You're absolutely crushing it! 🔥`
-              : `You've completed ${weeklyProgress.completed} out of ${weeklyProgress.target} weekly activity sessions.${weeklyProgressPercentage > 50 ? ' You\'re doing fantastic this week! 💪' : ' Keep going, you\'ve got this! 🌟'}`
-            }
-          </p>
-          <div style={{
-            marginTop: '15px',
-            padding: '12px 16px',
-            backgroundColor: 'rgba(79, 172, 254, 0.08)',
-            borderRadius: '10px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }}>
-            <span style={{ fontSize: '16px', color: '#4facfe', fontWeight: '500' }}>
-              📅 Today: {completedToday}/{goals.length} goals completed
-            </span>
-            {weeklyProgressPercentage < 100 && (
-              <span style={{ fontSize: '14px', color: '#6b7280' }}>
-                💡 {weeklyProgress.target - weeklyProgress.completed} more sessions to reach weekly targets
-              </span>
-            )}
+          {/* Stats */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>
+              {weeklyProgress.completed}/{weeklyProgress.target} sessions
+            </div>
+            <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginTop: '2px' }}>
+              {completedToday}/{goals.length} today
+            </div>
           </div>
         </div>
       </div>

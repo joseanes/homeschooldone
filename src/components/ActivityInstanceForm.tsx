@@ -96,27 +96,30 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
           
           let latestPercentage = 0;
           let latestProgressCount = 0;
-          let latestDate: Date | null = null;
-          
+          let latestPercentageDate: Date | null = null;
+          let latestProgressCountDate: Date | null = null;
+
           snapshot.docs.forEach(doc => {
             const data = doc.data();
             const instanceDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
-            
+
             // Skip the current instance if editing
             if (existingInstance && doc.id === existingInstance.id) return;
             if (loadedExistingInstance && doc.id === loadedExistingInstance.id) return;
-            
-            if (!latestDate || instanceDate > latestDate) {
-              latestDate = instanceDate;
-              
-              // Get percentage
-              if (selectedActivity.progressReportingStyle.percentageCompletion) {
-                const percentage = data.percentageCompleted || data.endingPercentage || 0;
+
+            // Find latest instance that has a percentage value
+            if (selectedActivity.progressReportingStyle.percentageCompletion) {
+              const percentage = data.percentageCompleted || data.endingPercentage || 0;
+              if (percentage > 0 && (!latestPercentageDate || instanceDate > latestPercentageDate)) {
+                latestPercentageDate = instanceDate;
                 latestPercentage = percentage;
               }
-              
-              // Get progress count
-              if (selectedActivity.progressReportingStyle.progressCount && data.countCompleted) {
+            }
+
+            // Find latest instance that has a progress count value
+            if (selectedActivity.progressReportingStyle.progressCount && data.countCompleted) {
+              if (!latestProgressCountDate || instanceDate > latestProgressCountDate) {
+                latestProgressCountDate = instanceDate;
                 latestProgressCount = data.countCompleted;
               }
             }
@@ -308,13 +311,13 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
           if (!matchingInstance) {
             console.log('ActivityInstanceForm: No instances found for this date, clearing form');
             setLoadedExistingInstance(null);
-            // Clear form fields when changing dates (unless we have an original existing instance)
+            // Clear date-specific form fields when changing dates (unless we have an original existing instance)
+            // Note: Don't reset percentageCompleted or progressCountCompleted here — those are
+            // goal/student-dependent and managed by fetchLastProgress to avoid race conditions.
             if (!existingInstance) {
               setDescription('');
               setDuration('');
-              setPercentageCompleted(lastPercentageCompleted);
               setCountComplete('');
-              setProgressCountCompleted(lastProgressCountCompleted);
               setStartTime('');
               setEndTime('');
             }

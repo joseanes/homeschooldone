@@ -1234,7 +1234,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '6px' }}>
                     {sortedGoals.map(goal => {
                       const activity = activities.find(a => a.id === goal.activityId);
                       const progress = getGoalProgress(goal.id, student.id);

@@ -633,9 +633,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     if (weeklyComplete) {
       return {
         status: 'weekly-complete',
-        color: '#81c784',
-        backgroundColor: '#f1f8f1',
-        textColor: '#4a7c4f',
+        color: '#4caf50',
+        backgroundColor: '#e8f5e9',
+        textColor: '#2e7d32',
         text: '✓',
         label: 'Weekly Complete'
       };
@@ -644,9 +644,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     if (progress.today > 0) {
       return {
         status: 'done-today',
-        color: '#90caf9',
-        backgroundColor: '#f0f5fb',
-        textColor: '#5a7da8',
+        color: '#2196f3',
+        backgroundColor: '#e3f2fd',
+        textColor: '#1565c0',
         text: '✔',
         label: 'Done Today'
       };
@@ -655,9 +655,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     if (weeklyCount > 0) {
       return {
         status: 'progress-week',
-        color: '#ffe082',
-        backgroundColor: '#fdfaf0',
-        textColor: '#b08d3a',
+        color: '#ffc107',
+        backgroundColor: '#fff8e1',
+        textColor: '#f57c00',
         text: '◐',
         label: 'Progress This Week'
       };
@@ -665,9 +665,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
 
     return {
       status: 'pending',
-      color: '#bdbdbd',
-      backgroundColor: '#f8f8f8',
-      textColor: '#888',
+      color: '#9e9e9e',
+      backgroundColor: '#f5f5f5',
+      textColor: '#616161',
       text: '○',
       label: 'Pending'
     };
@@ -1064,7 +1064,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               gap: '6px'
             }}
           >
-            + Record Activity
+            🎯 Record Activity
           </button>
           <button
             onClick={() => setShowSettings(true)}
@@ -1072,18 +1072,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             style={{
               padding: '8px 14px',
               fontSize: '14px',
-              backgroundColor: 'transparent',
-              color: '#555',
-              border: '1px solid #ccc',
+              backgroundColor: '#666',
+              color: 'white',
+              border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontWeight: '500',
+              fontWeight: '600',
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
             }}
           >
-            Settings
+            ⚙️ Settings
           </button>
           <button
             onClick={() => setShowReports(true)}
@@ -1091,18 +1091,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             style={{
               padding: '8px 14px',
               fontSize: '14px',
-              backgroundColor: 'transparent',
-              color: '#555',
-              border: '1px solid #ccc',
+              backgroundColor: '#9c27b0',
+              color: 'white',
+              border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontWeight: '500',
+              fontWeight: '600',
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
             }}
           >
-            Reports
+            📊 Reports
           </button>
           <button
             onClick={() => setShowDashboard(true)}
@@ -1110,18 +1110,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             style={{
               padding: '8px 14px',
               fontSize: '14px',
-              backgroundColor: 'transparent',
-              color: '#555',
-              border: '1px solid #ccc',
+              backgroundColor: '#f57c00',
+              color: 'white',
+              border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
-              fontWeight: '500',
+              fontWeight: '600',
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
             }}
           >
-            Dashboard
+            🖥️ Dashboard
           </button>
           {goals.length === 0 && (
             <span style={{ fontSize: '13px', color: '#999', marginLeft: '8px' }}>
@@ -1234,7 +1234,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {sortedGoals.map(goal => {
                       const activity = activities.find(a => a.id === goal.activityId);
                       const progress = getGoalProgress(goal.id, student.id);

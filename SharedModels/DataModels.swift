@@ -14,20 +14,20 @@ public struct Homeschool: Codable, Identifiable {
     public let dashboardSettings: DashboardSettings?
     public let timerAlarmEnabled: Bool?
     public let publicDashboardId: String?
-    
+
     // Additional fields found in Firestore
     public let parentIds: [String]?
     public let tutorIds: [String]?
     public let observerIds: [String]?
     public let createdBy: String?
     public let createdAt: Timestamp?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case name
         case studentIds
         case parentEmails
-        case tutorEmails  
+        case tutorEmails
         case observerEmails
         case authorizedUsers
         case invitedUsers
@@ -47,7 +47,7 @@ public struct DashboardSettings: Codable {
     public let cycleSeconds: Int
     public let startOfWeek: Int // 0 = Sunday, 1 = Monday, etc.
     public let timezone: String
-    
+
     enum CodingKeys: String, CodingKey {
         case cycleSeconds
         case startOfWeek
@@ -64,7 +64,9 @@ public struct Person: Codable, Identifiable {
     public let role: PersonRole
     public let homeschoolId: String?
     public let lastActivity: Timestamp?
-    
+    // Students of different ages and abilities do different daily hours of education
+    public let dailyWorkHoursGoal: Double?
+
     enum CodingKeys: String, CodingKey {
         case id
         case name
@@ -73,6 +75,7 @@ public struct Person: Codable, Identifiable {
         case role
         case homeschoolId
         case lastActivity
+        case dailyWorkHoursGoal
     }
 }
 
@@ -89,7 +92,7 @@ public struct Activity: Codable, Identifiable {
     public let name: String
     public let description: String
     public let homeschoolId: String
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case name
@@ -101,19 +104,28 @@ public struct Activity: Codable, Identifiable {
 // MARK: - Goal
 public struct Goal: Codable, Identifiable {
     @DocumentID public var id: String?
+    public let name: String?
     public let activityId: String
     public let homeschoolId: String
     public let studentIds: [String]
+    public let timesPerWeek: Int?
     public let sessionsPerWeek: Int?
     public let minutesPerSession: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
+        case name
         case activityId
         case homeschoolId
         case studentIds
+        case timesPerWeek
         case sessionsPerWeek
         case minutesPerSession
+    }
+
+    /// The weekly session target, checking both field names
+    public var weeklyTarget: Int? {
+        timesPerWeek ?? sessionsPerWeek
     }
 }
 
@@ -122,18 +134,18 @@ public struct ActivityInstance: Codable, Identifiable {
     @DocumentID public var id: String?
     public let goalId: String
     public let studentId: String
-    public let homeschoolId: String
+    public let homeschoolId: String?
     public let date: Timestamp
-    public let durationMinutes: Int
+    public let duration: Int?
     public let notes: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case goalId
         case studentId
         case homeschoolId
         case date
-        case durationMinutes
+        case duration
         case notes
     }
 }
@@ -152,15 +164,14 @@ public struct StudentProgress {
 // MARK: - Goal Status (Computed)
 public struct GoalStatus {
     public let status: GoalStatusType
-    public let progress: Int
-    public let target: Int
-    public let minutesToday: Int
-    public let minutesTarget: Int
+    public let weeklyCount: Int
+    public let weeklyTarget: Int
 }
 
+// Matches web app conventions: gray/yellow/blue/green
 public enum GoalStatusType: String, CaseIterable {
-    case notStarted = "not-started"
-    case inProgress = "in-progress" 
-    case completedToday = "completed-today"
-    case overTime = "over-time"
+    case pending = "pending"                 // Gray - no activity this week
+    case progressWeek = "progress-week"      // Yellow - some progress this week
+    case doneToday = "done-today"            // Blue - performed activity today
+    case weeklyComplete = "weekly-complete"  // Green - weekly goal met
 }

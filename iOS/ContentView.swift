@@ -175,12 +175,12 @@ struct DashboardSettingsView: View {
                 }
             }
             
-            Section("Today's Activity") {
-                if firebaseService.todayInstances.isEmpty {
-                    Text("No activity recorded today")
+            Section("This Week's Activity") {
+                if firebaseService.weekInstances.isEmpty {
+                    Text("No activity recorded this week")
                         .foregroundColor(.secondary)
                 } else {
-                    Text("\\(firebaseService.todayInstances.count) activities completed")
+                    Text("\\(firebaseService.weekInstances.count) activities this week")
                         .foregroundColor(.green)
                 }
             }

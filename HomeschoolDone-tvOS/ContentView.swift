@@ -184,9 +184,13 @@ struct HeaderView: View {
             }
 
             Button(action: { firebaseService.signOut() }) {
-                Image(systemName: "rectangle.portrait.and.arrow.right")
-                    .font(.system(size: 22))
-                    .foregroundColor(.gray)
+                HStack(spacing: 8) {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: 20))
+                    Text("Sign Out")
+                        .font(.system(size: 18, weight: .medium))
+                }
+                .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
             }
             .buttonStyle(.plain)
             .padding(.leading, 20)

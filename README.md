@@ -1,46 +1,147 @@
-# Getting Started with Create React App
+# HomeschoolDone
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A comprehensive homeschool tracking and dashboard application with web, iOS, and Apple TV support.
 
-## Available Scripts
+## Platform Overview
 
-In the project directory, you can run:
+### 🌐 Web Application (React)
+- Complete homeschool management interface
+- Student, activity, and goal tracking
+- Real-time progress monitoring
+- Reports and analytics
+- User management and permissions
 
-### `npm start`
+### 📱 iOS App
+- Dashboard configuration and setup
+- Quick access to homeschool data
+- Apple TV companion app
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### 📺 Apple TV App
+- Large-screen dashboard display
+- Auto-cycling through students
+- Real-time progress updates
+- Perfect for classroom or home display
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Quick Start
 
-### `npm test`
+### Web Application
+```bash
+npm install
+npm start
+```
+Open [http://localhost:3000](http://localhost:3000) to view the web app.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### iOS/Apple TV Apps
+See [`ios-tvos/SETUP.md`](ios-tvos/SETUP.md) for detailed setup instructions.
 
-### `npm run build`
+## Architecture
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Frontend (Web)
+- **React** with TypeScript
+- **Firebase Authentication** for user management
+- **Firestore** for real-time data sync
+- **Material Design** components
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Mobile/TV (Native)
+- **Swift** with SwiftUI
+- **Firebase iOS SDK** for data access
+- **Shared data models** between platforms
+- **Real-time listeners** for live updates
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Backend
+- **Firebase Firestore** database
+- **Cloud Functions** for server-side logic
+- **Firebase Authentication** for security
+- **Real-time synchronization** across all platforms
 
-### `npm run eject`
+## Features
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Student Management
+- Add and track multiple students
+- Individual progress monitoring
+- Customizable goals and activities
+- Time tracking with built-in timer
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Activity Tracking
+- Create custom learning activities
+- Set time-based goals
+- Track completion and progress
+- Generate detailed reports
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### Dashboard Display
+- Full-screen dashboard mode
+- Auto-cycling through students
+- Real-time progress updates
+- Optimized for TV viewing
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+### User Roles
+- **Parents**: Full management access
+- **Tutors**: Goal assignment only
+- **Observers**: Read-only access
+- **Students**: Personal dashboard view
+
+### Real-time Sync
+- Changes sync instantly across all devices
+- Web app updates appear on TV immediately
+- Collaborative family tracking
+- Offline resilience
+
+## Deployment
+
+### Web App
+```bash
+npm run build
+firebase deploy --only hosting
+```
+
+### Mobile Apps
+Follow standard iOS App Store submission process for both iOS and tvOS targets.
+
+## Development
+
+### Web Development
+```bash
+npm start          # Development server
+npm test           # Run tests
+npm run build      # Production build
+```
+
+### iOS/tvOS Development
+1. Open Xcode project in `ios-tvos/` folder
+2. Configure Firebase with `GoogleService-Info.plist`
+3. Build and run on simulator or device
+
+## Firebase Configuration
+
+1. Create Firebase project
+2. Enable Authentication and Firestore
+3. Add web app configuration
+4. Add iOS app configuration  
+5. Download and add configuration files
+
+## Security
+
+- Firebase Authentication for all access
+- Firestore security rules for data protection
+- Role-based permissions
+- No sensitive data in client code
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Make changes
+4. Submit pull request
+
+## Platform-Specific Documentation
+
+- **Web App**: Standard React development
+- **iOS/tvOS**: See [`ios-tvos/README.md`](ios-tvos/README.md)
+- **Firebase**: See [`functions/README.md`](functions/README.md)
 
 ## Learn More
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started)
+- [Firebase documentation](https://firebase.google.com/docs)
+- [iOS development guide](https://developer.apple.com/ios/)
+- [tvOS development guide](https://developer.apple.com/tvos/)

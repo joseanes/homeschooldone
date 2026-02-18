@@ -47,7 +47,6 @@ export interface Activity {
   progressReportingStyle: {
     percentageCompletion?: boolean;
     timesTotal?: boolean;
-    timesPerformed?: boolean;
     progressCount?: boolean;
   };
   progressCountName?: string;
@@ -70,6 +69,7 @@ export interface Goal {
   progressCount?: number;
   minutesPerSession?: number;
   dailyPercentageIncrease?: number;
+  percentageGoal?: number; // Target percentage completion (e.g., 95)
   homeschoolId: string;
   createdAt?: Date;
   studentCompletions?: { [studentId: string]: { completionDate?: Date; grade?: string } };
@@ -87,5 +87,6 @@ export interface ActivityInstance {
   studentId: string;
   startingPercentage?: number;
   endingPercentage?: number;
+  percentageCompleted?: number; // Single percentage value
   countCompleted?: number;
 }

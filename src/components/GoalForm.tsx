@@ -26,6 +26,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
   const [timesPerWeek, setTimesPerWeek] = useState<number | ''>('');
   const [minutesPerSession, setMinutesPerSession] = useState<number | ''>('');
   const [targetPercentage, setTargetPercentage] = useState<number | ''>('');
+  const [percentageGoal, setPercentageGoal] = useState<number | ''>('');
   const [targetCount, setTargetCount] = useState<number | ''>('');
   const [startDate, setStartDate] = useState('');
   const [deadline, setDeadline] = useState('');
@@ -68,8 +69,9 @@ const GoalForm: React.FC<GoalFormProps> = ({
         goalData.minutesPerSession = Number(minutesPerSession);
       }
       
-      if (selectedActivityData?.progressReportingStyle.percentageCompletion && targetPercentage) {
-        goalData.dailyPercentageIncrease = Number(targetPercentage);
+      if (selectedActivityData?.progressReportingStyle.percentageCompletion) {
+        if (targetPercentage) goalData.dailyPercentageIncrease = Number(targetPercentage);
+        if (percentageGoal) goalData.percentageGoal = Number(percentageGoal);
       }
       if (selectedActivityData?.progressReportingStyle.progressCount && targetCount) {
         goalData.progressCount = Number(targetCount);
@@ -265,30 +267,56 @@ const GoalForm: React.FC<GoalFormProps> = ({
               </div>
 
               {selectedActivityData.progressReportingStyle.percentageCompletion && (
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>
-                    Daily Percentage Increase
-                  </label>
-                  <input
-                    type="number"
-                    value={targetPercentage}
-                    onChange={(e) => setTargetPercentage(e.target.value ? Number(e.target.value) : '')}
-                    min="0.1"
-                    max="100"
-                    step="0.1"
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      fontSize: '16px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px'
-                    }}
-                    placeholder="e.g., 2 (for 2% increase per day)"
-                  />
-                  <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                    How much percentage progress per day when the activity is performed
+                <>
+                  <div style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px' }}>
+                      Percentage Goal
+                    </label>
+                    <input
+                      type="number"
+                      value={percentageGoal}
+                      onChange={(e) => setPercentageGoal(e.target.value ? Number(e.target.value) : '')}
+                      min="1"
+                      max="100"
+                      step="1"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        fontSize: '16px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                      placeholder="e.g., 95 (for 95% completion goal)"
+                    />
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      Target percentage completion for this goal (default: 100%)
+                    </div>
                   </div>
-                </div>
+                  <div style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', marginBottom: '5px' }}>
+                      Daily Percentage Increase Goal (optional)
+                    </label>
+                    <input
+                      type="number"
+                      value={targetPercentage}
+                      onChange={(e) => setTargetPercentage(e.target.value ? Number(e.target.value) : '')}
+                      min="0.1"
+                      max="100"
+                      step="0.1"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        fontSize: '16px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                      placeholder="e.g., 2 (for 2% increase per day)"
+                    />
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      How much percentage progress per day when the activity is performed
+                    </div>
+                  </div>
+                </>
               )}
 
               {selectedActivityData.progressReportingStyle.progressCount && (

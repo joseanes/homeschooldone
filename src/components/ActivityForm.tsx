@@ -17,7 +17,6 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
   const [progressTypes, setProgressTypes] = useState({
     percentageCompletion: false,
     timesTotal: false,
-    timesPerformed: false,
     progressCount: false
   });
   const [progressCountName, setProgressCountName] = useState('');
@@ -201,7 +200,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
                 })}
                 style={{ marginRight: '8px' }}
               />
-              Percentage Completion Increase
+              Percent of Completion
             </label>
 
             <label style={{ display: 'block', marginBottom: '8px' }}>
@@ -217,18 +216,6 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
               Track Time (requires minutes in goals)
             </label>
 
-            <label style={{ display: 'block', marginBottom: '8px' }}>
-              <input
-                type="checkbox"
-                checked={progressTypes.timesPerformed}
-                onChange={(e) => setProgressTypes({
-                  ...progressTypes,
-                  timesPerformed: e.target.checked
-                })}
-                style={{ marginRight: '8px' }}
-              />
-              Times Performed
-            </label>
 
             <label style={{ display: 'block', marginBottom: '8px' }}>
               <input
@@ -240,7 +227,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
                 })}
                 style={{ marginRight: '8px' }}
               />
-              Progress Metric
+              Custom Progress Metric
             </label>
 
             {progressTypes.progressCount && (

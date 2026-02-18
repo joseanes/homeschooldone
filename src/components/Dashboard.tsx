@@ -603,49 +603,76 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     };
   };
 
+  const getLatestProgress = (goalId: string, studentId: string) => {
+    // Get all instances for this goal and student from weekInstances (includes today)
+    const allInstances = weekInstances
+      .filter(i => i.goalId === goalId && i.studentId === studentId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    if (allInstances.length === 0) return null;
+    
+    const latest = allInstances[0];
+    return {
+      percentageCompleted: latest.percentageCompleted || latest.endingPercentage,
+      countCompleted: latest.countCompleted
+    };
+  };
+
   const getGoalStatus = (goal: Goal, studentId: string) => {
     const progress = getGoalProgress(goal.id, studentId);
     
-    // Check if today's work actually meets the goal requirements
+    // Count instances this week for this student and goal
+    const weeklyCount = weekInstances.filter(i => 
+      i.goalId === goal.id && 
+      i.studentId === studentId
+    ).length;
+    
+    // Check if weekly requirement is met
+    const weeklyComplete = goal.timesPerWeek && weeklyCount >= goal.timesPerWeek;
+    
+    // If weekly requirement is met, show as completed (green)
+    if (weeklyComplete) {
+      return { 
+        status: 'weekly-complete', 
+        color: '#4caf50', // Green
+        backgroundColor: '#e8f5e9', // Light green background
+        textColor: '#2e7d32',
+        text: 'Weekly Complete ✓'
+      };
+    }
+    
+    // Check if there's progress TODAY
     if (progress.today > 0) {
-      // Get today's instances for this goal and student
-      const todayInstancesForGoal = todayInstances.filter(i => 
-        i.goalId === goal.id && i.studentId === studentId
-      );
-      
-      // If goal has minutes requirement, check if total minutes meet requirement
-      if (goal.minutesPerSession) {
-        const totalMinutesToday = todayInstancesForGoal.reduce((sum, instance) => 
-          sum + (instance.duration || 0), 0
-        );
-        
-        if (totalMinutesToday >= goal.minutesPerSession) {
-          return { status: 'completed-today', color: '#4caf50', textColor: 'white' };
-        }
-        // Has activity but not enough minutes - show as pending
-        return { status: 'pending', color: '#f5f5f5', textColor: '#333' };
-      }
-      
-      // For non-time based goals, any activity counts as complete
-      return { status: 'completed-today', color: '#4caf50', textColor: 'white' };
+      // Has progress today but weekly not complete - show as done today (blue)
+      return { 
+        status: 'done-today', 
+        color: '#2196f3', // Blue
+        backgroundColor: '#e3f2fd', // Light blue background
+        textColor: '#1565c0',
+        text: 'Done Today'
+      };
     }
     
-    // If goal has weekly requirements, check if weekly goal is met
-    if (goal.timesPerWeek && goal.timesPerWeek > 0) {
-      // Count instances this week for this student and goal
-      const weeklyCount = weekInstances.filter(i => 
-        i.goalId === goal.id && 
-        i.studentId === studentId
-      ).length;
-      
-      // If weekly requirement is met but not done today, it's gray
-      if (weeklyCount >= goal.timesPerWeek) {
-        return { status: 'weekly-complete', color: '#9e9e9e', textColor: 'white' };
-      }
+    // Check if there's progress THIS WEEK (but not today)
+    if (weeklyCount > 0) {
+      // Has progress this week but not today - show as progress this week (yellow)
+      return { 
+        status: 'progress-week', 
+        color: '#ffc107', // Yellow/Amber
+        backgroundColor: '#fff8e1', // Light yellow background
+        textColor: '#f57c00',
+        text: 'Progress This Week'
+      };
     }
     
-    // Default: not completed, needs work
-    return { status: 'pending', color: '#f5f5f5', textColor: '#333' };
+    // Default: not done this week (gray)
+    return { 
+      status: 'pending', 
+      color: '#9e9e9e', // Gray
+      backgroundColor: '#f5f5f5', // Light gray background
+      textColor: '#616161',
+      text: 'Pending'
+    };
   };
 
   const handleOpenRecordActivity = (goalId: string, studentId: string) => {
@@ -1014,49 +1041,85 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ 
+          display: 'flex', 
+          flexWrap: 'wrap',
+          gap: '12px',
+          marginTop: '10px',
+          justifyContent: 'flex-start'
+        }}>
           <button
             onClick={() => setShowSettings(true)}
             style={{
-              padding: '10px 20px',
+              padding: '12px 20px',
               fontSize: '16px',
               backgroundColor: '#6c757d',
               color: 'white',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '8px',
               cursor: 'pointer',
-              minWidth: '120px'
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'transform 0.2s ease',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              flex: '1 1 150px',
+              minWidth: '150px'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
             ⚙️ Settings
           </button>
           <button
             onClick={() => setShowReports(true)}
             style={{
-              padding: '10px 20px',
+              padding: '12px 20px',
               fontSize: '16px',
               backgroundColor: '#9c27b0',
               color: 'white',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '8px',
               cursor: 'pointer',
-              minWidth: '120px'
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'transform 0.2s ease',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              flex: '1 1 150px',
+              minWidth: '150px'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
-            Reports
+            📊 Reports
           </button>
           <button
             onClick={() => setShowDashboard(true)}
             style={{
-              padding: '10px 20px',
+              padding: '12px 20px',
               fontSize: '16px',
               backgroundColor: '#ff5722',
               color: 'white',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '8px',
               cursor: 'pointer',
-              minWidth: '120px'
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'transform 0.2s ease',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              flex: '1 1 150px',
+              minWidth: '150px'
             }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
             📺 Dashboard
           </button>
@@ -1075,15 +1138,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           onClick={() => setShowActivityInstanceForm(true)}
           disabled={goals.length === 0}
           style={{
-            padding: '15px 40px',
-            fontSize: '18px',
+            padding: '16px 40px',
+            fontSize: '20px',
             backgroundColor: goals.length === 0 ? '#ccc' : '#28a745',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
             cursor: goals.length === 0 ? 'not-allowed' : 'pointer',
-            fontWeight: 'bold'
+            fontWeight: '600',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            transition: 'transform 0.2s ease',
+            boxShadow: goals.length === 0 ? 'none' : '0 4px 8px rgba(40,167,69,0.2)',
+            minWidth: '240px'
           }}
+          onMouseEnter={(e) => { if (goals.length > 0) e.currentTarget.style.transform = 'translateY(-2px)' }}
+          onMouseLeave={(e) => { if (goals.length > 0) e.currentTarget.style.transform = 'translateY(0)' }}
         >
           🎯 Record Activity
         </button>
@@ -1122,36 +1194,39 @@ Set up students, activities and goals first using the "Settings" menu
               
               const completedGoals = studentGoals.filter(goal => {
                 const status = getGoalStatus(goal, student.id);
-                return status.status === 'completed-today' || status.status === 'weekly-complete';
+                return status.status === 'weekly-complete';
               }).length;
               const totalGoals = studentGoals.length;
               const allCompleted = completedGoals === totalGoals;
               
-              // Sort goals: completed at bottom, rest alphabetically by activity name
+              // Sort goals: gray (pending) first, then yellow (progress week), then blue (done today), then green (weekly complete)
+              // Within each status group, sort alphabetically by goal name or activity name
               const sortedGoals = [...studentGoals].sort((a, b) => {
-                const progressA = getGoalProgress(a.id, student.id);
-                const progressB = getGoalProgress(b.id, student.id);
                 const statusA = getGoalStatus(a, student.id);
                 const statusB = getGoalStatus(b, student.id);
                 const activityA = activities.find(act => act.id === a.activityId);
                 const activityB = activities.find(act => act.id === b.activityId);
                 
-                // Weekly complete tasks go to bottom, then completed tasks
-                const isWeeklyCompleteA = statusA.status === 'weekly-complete';
-                const isWeeklyCompleteB = statusB.status === 'weekly-complete';
-                const isCompletedA = statusA.status === 'completed-today';
-                const isCompletedB = statusB.status === 'completed-today';
+                // Define status priority (lower number = higher priority)
+                const statusPriority: { [key: string]: number } = {
+                  'pending': 1,           // Gray - show first
+                  'progress-week': 2,     // Yellow - show second
+                  'done-today': 3,        // Blue - show third
+                  'weekly-complete': 4    // Green - show last
+                };
                 
-                // Weekly complete goes to bottom first
-                if (isWeeklyCompleteA && !isWeeklyCompleteB) return 1;
-                if (!isWeeklyCompleteA && isWeeklyCompleteB) return -1;
+                const priorityA = statusPriority[statusA.status] || 999;
+                const priorityB = statusPriority[statusB.status] || 999;
                 
-                // Then completed today goes to bottom
-                if (isCompletedA && !isCompletedB) return 1;
-                if (!isCompletedA && isCompletedB) return -1;
+                // Sort by status priority first
+                if (priorityA !== priorityB) {
+                  return priorityA - priorityB;
+                }
                 
-                // For non-completed or both completed, sort alphabetically by activity name
-                return (activityA?.name || '').localeCompare(activityB?.name || '');
+                // Within same status, sort alphabetically by goal name (or activity name if no goal name)
+                const nameA = a.name || activityA?.name || '';
+                const nameB = b.name || activityB?.name || '';
+                return nameA.localeCompare(nameB);
               });
               
               return (
@@ -1215,7 +1290,7 @@ Set up students, activities and goals first using the "Settings" menu
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             padding: '12px',
-                            backgroundColor: status.color,
+                            backgroundColor: status.backgroundColor,
                             color: status.textColor,
                             borderRadius: '6px',
                             border: `1px solid ${status.color}`,
@@ -1223,20 +1298,46 @@ Set up students, activities and goals first using the "Settings" menu
                             transition: 'all 0.2s ease'
                           }}
                           title={
-                            status.status === 'completed-today' 
-                              ? 'Completed today - Click to edit' 
-                              : status.status === 'weekly-complete'
-                              ? 'Weekly goal met - Click to record today\'s session'
+                            status.status === 'weekly-complete' 
+                              ? 'Weekly goal met - Click to add more' 
+                              : status.status === 'done-today'
+                              ? 'Done today - Click to add more'
+                              : status.status === 'progress-week'
+                              ? 'Progress made this week - Click to continue today'
                               : 'Click to record this activity'
                           }
                         >
                           <div>
-                            <span style={{ fontWeight: '500' }}>{activity.name}</span>
+                            <span style={{ fontWeight: '500' }}>{goal.name || activity.name}</span>
                             {goal.timesPerWeek && (
                               <span style={{ color: status.textColor, opacity: 0.7, fontSize: '13px', marginLeft: '8px' }}>
                                 ({weeklyCount} of {goal.timesPerWeek}/week)
                               </span>
                             )}
+                            {(() => {
+                              const latestProgress = getLatestProgress(goal.id, student.id);
+                              const indicators = [];
+                              
+                              // Show percentage progress if activity tracks it and goal has percentage goal or daily increase
+                              if (activity.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && latestProgress?.percentageCompleted !== undefined) {
+                                indicators.push(
+                                  <span key="percent" style={{ color: status.textColor, opacity: 0.7, fontSize: '13px', marginLeft: '8px' }}>
+                                    ({latestProgress.percentageCompleted.toFixed(0)}% of {goal.percentageGoal || 100}%)
+                                  </span>
+                                );
+                              }
+                              
+                              // Show custom metric progress if activity tracks it and goal has target
+                              if (activity.progressReportingStyle?.progressCount && goal.progressCount && latestProgress?.countCompleted !== undefined) {
+                                indicators.push(
+                                  <span key="count" style={{ color: status.textColor, opacity: 0.7, fontSize: '13px', marginLeft: '8px' }}>
+                                    ({latestProgress.countCompleted} of {goal.progressCount} {activity.progressCountName || 'items'})
+                                  </span>
+                                );
+                              }
+                              
+                              return indicators;
+                            })()}
                           </div>
                           <div style={{ 
                             display: 'flex', 
@@ -1245,16 +1346,8 @@ Set up students, activities and goals first using the "Settings" menu
                             fontWeight: 'bold',
                             color: status.textColor
                           }}>
-                            {status.status === 'completed-today' ? '✅ Done Today' : 
-                             status.status === 'weekly-complete' ? '📅 Week Complete' : 
-                             '⏳ Pending'}
+                            {status.text}
                             {progress.today > 1 && <span style={{ marginLeft: '6px' }}>({progress.today}x)</span>}
-                            {goal.minutesPerSession && progress.today > 0 && status.status !== 'completed-today' && (
-                              <span style={{ fontSize: '12px', marginLeft: '8px', opacity: 0.8 }}>
-                                {todayInstances.filter(i => i.goalId === goal.id && i.studentId === student.id)
-                                  .reduce((sum, i) => sum + (i.duration || 0), 0)}/{goal.minutesPerSession}min
-                              </span>
-                            )}
                           </div>
                         </div>
                       );

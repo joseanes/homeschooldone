@@ -4,11 +4,8 @@ import ActivityInstanceForm from './ActivityInstanceForm';
 import { formatLastActivity } from '../utils/activityTracking';
 import { 
   calculateGoalProgress, 
-  getGoalStatus, 
   filterActiveGoalsForStudent, 
-  sortGoalsForDisplay,
-  GoalProgress,
-  GoalStatus 
+  GoalProgress
 } from '../utils/goalUtils';
 import { 
   getTodayStart, 
@@ -40,8 +37,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [editingInstance, setEditingInstance] = useState<ActivityInstance | null>(null);
 
-  // Get dashboard settings for week calculation
+  // Get dashboard settings for week calculation and timezone
   const startOfWeek = homeschool.dashboardSettings?.startOfWeek !== undefined ? homeschool.dashboardSettings.startOfWeek : 1;
+  const timezone = homeschool.dashboardSettings?.timezone || 'America/New_York';
 
   // Fetch student's data
   useEffect(() => {
@@ -116,9 +114,82 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     );
   };
 
-  const getStatusForGoal = (goal: Goal): GoalStatus => {
+  const getStatusForGoal = (goal: Goal) => {
     const progress = getProgressForGoal(goal.id);
-    return getGoalStatus(goal, progress);
+    
+    // Count instances this week for this goal and student
+    const weeklyCount = weekInstances.filter(i => 
+      i.goalId === goal.id && 
+      i.studentId === student.id
+    ).length;
+    
+    // Count instances today
+    const todayCount = todayInstances.filter(i => 
+      i.goalId === goal.id && 
+      i.studentId === student.id
+    ).length;
+    
+    // Check if weekly requirement is met
+    const weeklyComplete = goal.timesPerWeek && weeklyCount >= goal.timesPerWeek;
+    
+    // If weekly requirement is met, show as completed (green)
+    if (weeklyComplete) {
+      return { 
+        status: 'weekly-complete', 
+        color: '#4caf50', // Green
+        backgroundColor: '#e8f5e9', // Light green background
+        textColor: '#2e7d32',
+        text: 'Weekly Complete ✓'
+      };
+    }
+    
+    // Check if there's progress TODAY
+    if (todayCount > 0) {
+      // Has progress today but weekly not complete - show as done today (blue)
+      return { 
+        status: 'done-today', 
+        color: '#2196f3', // Blue
+        backgroundColor: '#e3f2fd', // Light blue background
+        textColor: '#1565c0',
+        text: 'Done Today'
+      };
+    }
+    
+    // Check if there's progress THIS WEEK (but not today)
+    if (weeklyCount > 0) {
+      // Has progress this week but not today - show as progress this week (yellow)
+      return { 
+        status: 'progress-week', 
+        color: '#ffc107', // Yellow/Amber
+        backgroundColor: '#fff8e1', // Light yellow background
+        textColor: '#f57c00',
+        text: 'Progress This Week'
+      };
+    }
+    
+    // Default: not done this week (gray)
+    return { 
+      status: 'pending', 
+      color: '#9e9e9e', // Gray
+      backgroundColor: '#f5f5f5', // Light gray background
+      textColor: '#616161',
+      text: 'Pending'
+    };
+  };
+
+  const getLatestProgress = (goalId: string) => {
+    // Get all instances for this goal from weekInstances (includes today)
+    const allInstances = [...todayInstances, ...weekInstances]
+      .filter(i => i.goalId === goalId && i.studentId === student.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    if (allInstances.length === 0) return null;
+    
+    const latest = allInstances[0];
+    return {
+      percentageCompleted: latest.percentageCompleted || latest.endingPercentage,
+      countCompleted: latest.countCompleted
+    };
   };
 
   const handleRecordActivity = (goal: Goal) => {
@@ -163,7 +234,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   const completedToday = goals.filter(goal => {
     const status = getStatusForGoal(goal);
-    return status.status === 'complete';
+    return status.status === 'done-today' || status.status === 'weekly-complete';
   }).length;
 
   // Calculate weekly progress based on weekly goals completion
@@ -437,45 +508,71 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             gap: '15px',
             gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
           }}>
-            {/* Sort goals using shared utility */}
-            {sortGoalsForDisplay(goals, activities, getStatusForGoal).map(goal => {
+            {/* Sort goals: gray (pending) first, then yellow (progress week), then blue (done today), then green (weekly complete) */}
+            {[...goals].sort((a, b) => {
+              const statusA = getStatusForGoal(a);
+              const statusB = getStatusForGoal(b);
+              const activityA = activities.find(act => act.id === a.activityId);
+              const activityB = activities.find(act => act.id === b.activityId);
+              
+              // Define status priority (lower number = higher priority)
+              const statusPriority: { [key: string]: number } = {
+                'pending': 1,           // Gray - show first
+                'progress-week': 2,     // Yellow - show second
+                'done-today': 3,        // Blue - show third
+                'weekly-complete': 4    // Green - show last
+              };
+              
+              const priorityA = statusPriority[statusA.status] || 999;
+              const priorityB = statusPriority[statusB.status] || 999;
+              
+              // Sort by status priority first
+              if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+              }
+              
+              // Within same status, sort alphabetically by goal name (or activity name if no goal name)
+              const nameA = a.name || activityA?.name || '';
+              const nameB = b.name || activityB?.name || '';
+              return nameA.localeCompare(nameB);
+            }).map(goal => {
               const activity = activities.find(a => a.id === goal.activityId);
               const status = getStatusForGoal(goal);
               
-              // Enhanced color scheme based on status
+              // Enhanced color scheme based on status - matching main Dashboard
               const getCardColors = () => {
                 switch (status.status) {
-                  case 'complete':
+                  case 'weekly-complete':
                     return {
-                      border: '3px solid #10b981',
-                      background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
-                      shadow: '0 8px 25px rgba(16, 185, 129, 0.3)',
+                      border: `2px solid ${status.color}`,
+                      background: status.backgroundColor,
+                      shadow: '0 4px 15px rgba(76, 175, 80, 0.2)',
                       emoji: '✅',
-                      titleColor: '#065f46'
+                      titleColor: status.textColor
                     };
-                  case 'partial':
+                  case 'done-today':
                     return {
-                      border: '3px solid #f59e0b',
-                      background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                      shadow: '0 8px 25px rgba(245, 158, 11, 0.3)',
-                      emoji: '⚡',
-                      titleColor: '#92400e'
+                      border: `2px solid ${status.color}`,
+                      background: status.backgroundColor,
+                      shadow: '0 4px 15px rgba(33, 150, 243, 0.2)',
+                      emoji: '✔️',
+                      titleColor: status.textColor
                     };
-                  case 'week_complete':
+                  case 'progress-week':
                     return {
-                      border: '3px solid #8b5cf6',
-                      background: 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-                      shadow: '0 8px 25px rgba(139, 92, 246, 0.3)',
-                      emoji: '🎖️',
-                      titleColor: '#5b21b6'
+                      border: `2px solid ${status.color}`,
+                      background: status.backgroundColor,
+                      shadow: '0 4px 15px rgba(255, 193, 7, 0.2)',
+                      emoji: '📝',
+                      titleColor: status.textColor
                     };
-                  default:
+                  default: // pending
                     return {
-                      border: '3px solid #6366f1',
-                      background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-                      shadow: '0 8px 25px rgba(99, 102, 241, 0.2)',
-                      emoji: '🚀',
-                      titleColor: '#3730a3'
+                      border: `2px solid ${status.color}`,
+                      background: status.backgroundColor,
+                      shadow: '0 4px 15px rgba(158, 158, 158, 0.1)',
+                      emoji: '⏳',
+                      titleColor: status.textColor
                     };
                 }
               };
@@ -535,14 +632,12 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       alignItems: 'center',
                       gap: '8px'
                     }}>
-                      {cardColors.emoji} {activity?.name || 'Unknown Activity'}
+                      {cardColors.emoji} {goal.name || activity?.name || 'Unknown Activity'}
                     </h3>
                     <div style={{
                       padding: '8px 16px',
                       borderRadius: '25px',
-                      backgroundColor: status.status === 'complete' ? '#10b981' : 
-                                     status.status === 'partial' ? '#f59e0b' : 
-                                     status.status === 'week_complete' ? '#8b5cf6' : '#6366f1',
+                      backgroundColor: status.color,
                       color: 'white',
                       fontSize: '14px',
                       fontWeight: 'bold',
@@ -576,6 +671,22 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <div style={{ fontWeight: '500' }}>
                       {goal.timesPerWeek && `📊 ${getProgressForGoal(goal.id).weekCount} of ${goal.timesPerWeek}/week`}
                       {goal.minutesPerSession && ` • ⏱️ ${goal.minutesPerSession} min`}
+                      {(() => {
+                        const latestProgress = getLatestProgress(goal.id);
+                        const indicators = [];
+                        
+                        // Show percentage progress if activity tracks it and goal has percentage goal or daily increase
+                        if (activity?.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && latestProgress?.percentageCompleted !== undefined) {
+                          indicators.push(` • 📈 ${latestProgress.percentageCompleted.toFixed(0)}% of ${goal.percentageGoal || 100}%`);
+                        }
+                        
+                        // Show custom metric progress if activity tracks it and goal has target
+                        if (activity?.progressReportingStyle?.progressCount && goal.progressCount && latestProgress?.countCompleted !== undefined) {
+                          indicators.push(` • 📚 ${latestProgress.countCompleted} of ${goal.progressCount} ${activity.progressCountName || 'items'}`);
+                        }
+                        
+                        return indicators.join('');
+                      })()}
                     </div>
                     <div style={{ 
                       color: '#4f46e5', 
@@ -640,7 +751,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
           preSelectedGoal={selectedGoal.id}
           preSelectedStudent={student.id}
           existingInstance={editingInstance || undefined}
-          timezone="America/New_York" // Default timezone
+          timezone={timezone}
           allowMultipleRecordsPerDay={homeschool.allowMultipleRecordsPerDay || false}
           onClose={handleActivityFormClose}
           onActivityRecorded={handleActivityFormClose}

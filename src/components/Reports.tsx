@@ -406,10 +406,9 @@ const Reports: React.FC<ReportsProps> = ({
                       <div>Duration: {formatDuration(instance.duration)}</div>
                     )}
                     
-                    {instance.startingPercentage !== undefined && instance.endingPercentage !== undefined && (
+                    {(instance.percentageCompleted !== undefined || instance.endingPercentage !== undefined) && (
                       <div>
-                        Progress: {instance.startingPercentage}% → {instance.endingPercentage}% 
-                        (+{(instance.endingPercentage - instance.startingPercentage).toFixed(1)}%)
+                        Completion: {(instance.percentageCompleted || instance.endingPercentage || 0).toFixed(1)}%
                       </div>
                     )}
                     

@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { ActivityInstance, Goal, Activity, Person } from '../types';
 import { updateStudentLastActivity, updateLastActivity } from '../utils/activityTracking';
 import { playAlarmSound } from '../utils/alarmSound';
-import { createUTCDateFromString, getStartOfDayUTC, getEndOfDayUTC, dateToFirestoreTimestamp, formatDateToString, formatDateToStringUTC } from '../utils/dateUtils';
+import { createUTCDateFromString, getStartOfDayUTC, getEndOfDayUTC, dateToFirestoreTimestamp, formatDateToString, formatDateToStringUTC, localDateTimeToFirestoreTimestamp, formatTimeToString } from '../utils/dateUtils';
 
 interface ActivityInstanceFormProps {
   goals: Goal[];
@@ -59,9 +59,11 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [duration, setDuration] = useState<number | ''>('');
-  const [startingPercentage, setStartingPercentage] = useState<number | ''>('');
-  const [endingPercentage, setEndingPercentage] = useState<number | ''>('');
+  const [percentageCompleted, setPercentageCompleted] = useState<number>(0);
+  const [lastPercentageCompleted, setLastPercentageCompleted] = useState<number>(0);
   const [countComplete, setCountComplete] = useState<number | ''>('');
+  const [progressCountCompleted, setProgressCountCompleted] = useState<number>(0);
+  const [lastProgressCountCompleted, setLastProgressCountCompleted] = useState<number>(0);
   const [saving, setSaving] = useState(false);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerStartTime, setTimerStartTime] = useState<Date | null>(null);
@@ -80,6 +82,70 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
     }
   }, [selectedGoalData, selectedActivity]);
 
+  // Fetch last recorded percentage and progress count for Goal/Student combination
+  useEffect(() => {
+    const fetchLastProgress = async () => {
+      if (selectedGoal && selectedStudent && selectedActivity) {
+        try {
+          const q = query(
+            collection(db, 'activityInstances'),
+            where('goalId', '==', selectedGoal),
+            where('studentId', '==', selectedStudent)
+          );
+          const snapshot = await getDocs(q);
+          
+          let latestPercentage = 0;
+          let latestProgressCount = 0;
+          let latestDate: Date | null = null;
+          
+          snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const instanceDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
+            
+            // Skip the current instance if editing
+            if (existingInstance && doc.id === existingInstance.id) return;
+            if (loadedExistingInstance && doc.id === loadedExistingInstance.id) return;
+            
+            if (!latestDate || instanceDate > latestDate) {
+              latestDate = instanceDate;
+              
+              // Get percentage
+              if (selectedActivity.progressReportingStyle.percentageCompletion) {
+                const percentage = data.percentageCompleted || data.endingPercentage || 0;
+                latestPercentage = percentage;
+              }
+              
+              // Get progress count
+              if (selectedActivity.progressReportingStyle.progressCount && data.countCompleted) {
+                latestProgressCount = data.countCompleted;
+              }
+            }
+          });
+          
+          if (selectedActivity.progressReportingStyle.percentageCompletion) {
+            setLastPercentageCompleted(latestPercentage);
+            // Set initial value if not editing an existing instance
+            if (!existingInstance && !loadedExistingInstance) {
+              setPercentageCompleted(latestPercentage);
+            }
+          }
+          
+          if (selectedActivity.progressReportingStyle.progressCount) {
+            setLastProgressCountCompleted(latestProgressCount);
+            // Set initial value if not editing an existing instance
+            if (!existingInstance && !loadedExistingInstance) {
+              setProgressCountCompleted(latestProgressCount);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching last progress:', error);
+        }
+      }
+    };
+    
+    fetchLastProgress();
+  }, [selectedGoal, selectedStudent, selectedActivity, existingInstance, loadedExistingInstance]);
+
   // Populate form fields when editing existing instance
   useEffect(() => {
     if (existingInstance) {
@@ -89,9 +155,11 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       // Use UTC formatting since dates are stored as UTC in Firestore
       setDate(formatDateToStringUTC(existingInstance.date));
       setDuration(existingInstance.duration || '');
-      setStartingPercentage(existingInstance.startingPercentage || '');
-      setEndingPercentage(existingInstance.endingPercentage || '');
+      // Use new percentageCompleted field if available, otherwise fallback to endingPercentage
+      const percentage = existingInstance.percentageCompleted || existingInstance.endingPercentage || 0;
+      setPercentageCompleted(percentage);
       setCountComplete(existingInstance.countCompleted || '');
+      setProgressCountCompleted(existingInstance.countCompleted || 0);
       
       // Convert times if they exist
       if (existingInstance.startTime) {
@@ -197,22 +265,18 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
             console.log('ActivityInstanceForm: Populating form with matching instance');
             setDescription(instance.description || '');
             setDuration(instance.duration || '');
-            setStartingPercentage(instance.startingPercentage || '');
-            setEndingPercentage(instance.endingPercentage || '');
+            // Use new percentageCompleted field if available, otherwise fallback to endingPercentage
+            const percentage = instance.percentageCompleted || instance.endingPercentage || 0;
+            setPercentageCompleted(percentage);
             setCountComplete(instance.countCompleted || '');
+            setProgressCountCompleted(instance.countCompleted || 0);
             
-            // Convert times if they exist
+            // Convert times if they exist - use timezone-aware formatting
             if (instance.startTime) {
-              const startTimeDate = instance.startTime instanceof Date 
-                ? instance.startTime
-                : new Date(instance.startTime);
-              setStartTime(startTimeDate.toTimeString().slice(0, 5));
+              setStartTime(formatTimeToString(instance.startTime, timezone));
             }
             if (instance.endTime) {
-              const endTimeDate = instance.endTime instanceof Date 
-                ? instance.endTime
-                : new Date(instance.endTime);
-              setEndTime(endTimeDate.toTimeString().slice(0, 5));
+              setEndTime(formatTimeToString(instance.endTime, timezone));
             }
             
             // Store the instance for updating
@@ -248,9 +312,9 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
             if (!existingInstance) {
               setDescription('');
               setDuration('');
-              setStartingPercentage('');
-              setEndingPercentage('');
+              setPercentageCompleted(lastPercentageCompleted);
               setCountComplete('');
+              setProgressCountCompleted(lastProgressCountCompleted);
               setStartTime('');
               setEndTime('');
             }
@@ -310,12 +374,14 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       // Start timer
       setTimerStartTime(new Date());
       const now = new Date();
-      setStartTime(now.toTimeString().slice(0, 5));
+      // Format time in user's timezone
+      setStartTime(formatTimeToString(now, timezone));
       setTimerRunning(true);
     } else {
       // Stop timer
       const now = new Date();
-      setEndTime(now.toTimeString().slice(0, 5));
+      // Format time in user's timezone
+      setEndTime(formatTimeToString(now, timezone));
       setDuration(Math.ceil(elapsedTime / 60)); // Convert to minutes
       setTimerRunning(false);
     }
@@ -342,23 +408,29 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
         goalId: selectedGoal,
         studentId: selectedStudent,
         description,
-        date: dateToFirestoreTimestamp(date),
+        date: dateToFirestoreTimestamp(date, timezone),
         createdBy: userId
       };
 
-      if (startTime) activityInstanceData.startTime = Timestamp.fromDate(new Date(`${date} ${startTime}`));
-      if (endTime) activityInstanceData.endTime = Timestamp.fromDate(new Date(`${date} ${endTime}`));
+      if (startTime) activityInstanceData.startTime = localDateTimeToFirestoreTimestamp(date, startTime, timezone);
+      if (endTime) activityInstanceData.endTime = localDateTimeToFirestoreTimestamp(date, endTime, timezone);
       if (calculatedDuration) activityInstanceData.duration = Number(calculatedDuration);
       
       // Add percentage tracking
       if (selectedActivity?.progressReportingStyle.percentageCompletion) {
-        if (startingPercentage !== '') activityInstanceData.startingPercentage = Number(startingPercentage);
-        if (endingPercentage !== '') activityInstanceData.endingPercentage = Number(endingPercentage);
+        activityInstanceData.percentageCompleted = percentageCompleted;
+        // Also save as endingPercentage for backward compatibility temporarily
+        activityInstanceData.endingPercentage = percentageCompleted;
       }
       
       // Add count tracking
-      if (selectedActivity?.progressReportingStyle.progressCount && countComplete !== '') {
-        activityInstanceData.countCompleted = Number(countComplete);
+      if (selectedActivity?.progressReportingStyle.progressCount) {
+        // Use slider value if goal has a target, otherwise use manual input
+        if (selectedGoalData.progressCount) {
+          activityInstanceData.countCompleted = progressCountCompleted;
+        } else if (countComplete !== '') {
+          activityInstanceData.countCompleted = Number(countComplete);
+        }
       }
 
       const instanceToUpdate = existingInstance || loadedExistingInstance;
@@ -636,85 +708,167 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
               )}
 
               {selectedActivity.progressReportingStyle.percentageCompletion && (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px' }}>
-                        Starting Percentage
-                      </label>
-                      <input
-                        type="number"
-                        value={startingPercentage}
-                        onChange={(e) => {
-                          const val = e.target.value ? Number(e.target.value) : '';
-                          setStartingPercentage(val);
-                          // Auto-calculate ending if we have daily increase
-                          if (val !== '' && selectedGoalData.dailyPercentageIncrease) {
-                            setEndingPercentage(Number(val) + selectedGoalData.dailyPercentageIncrease);
-                          }
-                        }}
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          fontSize: '16px',
-                          border: '1px solid #ccc',
-                          borderRadius: '4px'
-                        }}
-                        placeholder="e.g., 45"
-                      />
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '10px' }}>
+                    Percent of Completion
+                  </label>
+                  <div style={{ 
+                    backgroundColor: '#f0f0f0', 
+                    padding: '15px', 
+                    borderRadius: '8px',
+                    border: '1px solid #ddd'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '10px'
+                    }}>
+                      <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#4285f4' }}>
+                        {percentageCompleted.toFixed(1)}%
+                      </span>
+                      {lastPercentageCompleted > 0 && (
+                        <span style={{ fontSize: '14px', color: '#666' }}>
+                          Last recorded: {lastPercentageCompleted.toFixed(1)}%
+                        </span>
+                      )}
                     </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px' }}>
-                        Ending Percentage
-                      </label>
-                      <input
-                        type="number"
-                        value={endingPercentage}
-                        onChange={(e) => setEndingPercentage(e.target.value ? Number(e.target.value) : '')}
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          fontSize: '16px',
-                          border: '1px solid #ccc',
-                          borderRadius: '4px'
-                        }}
-                        placeholder="e.g., 47"
-                      />
+                    <input
+                      type="range"
+                      min="0"
+                      max={selectedGoalData.percentageGoal || 100}
+                      step="0.5"
+                      value={percentageCompleted}
+                      onChange={(e) => setPercentageCompleted(Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        height: '8px',
+                        borderRadius: '4px',
+                        outline: 'none',
+                        WebkitAppearance: 'none',
+                        appearance: 'none',
+                        background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, #ddd ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, #ddd 100%)`,
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginTop: '5px',
+                      fontSize: '12px',
+                      color: '#666'
+                    }}>
+                      <span>0%</span>
+                      <span>{selectedGoalData.percentageGoal || 100}%</span>
                     </div>
+                    {(selectedGoalData.dailyPercentageIncrease || selectedGoalData.percentageGoal) && (
+                      <div style={{ 
+                        fontSize: '14px', 
+                        color: '#666', 
+                        marginTop: '10px',
+                        backgroundColor: '#fff',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        border: '1px solid #e0e0e0'
+                      }}>
+                        {selectedGoalData.dailyPercentageIncrease && (
+                          <>Target today: {Math.min(selectedGoalData.percentageGoal || 100, lastPercentageCompleted + selectedGoalData.dailyPercentageIncrease).toFixed(1)}% 
+                          (+{selectedGoalData.dailyPercentageIncrease}% from last)</>
+                        )}
+                        {selectedGoalData.percentageGoal && (
+                          <div>Goal: {selectedGoalData.percentageGoal}%</div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  {selectedGoalData.dailyPercentageIncrease && (
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '-10px', marginBottom: '15px' }}>
-                      Daily goal: {selectedGoalData.dailyPercentageIncrease}% increase
-                    </div>
-                  )}
-                </>
+                </div>
               )}
 
               {selectedActivity.progressReportingStyle.progressCount && (
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '10px' }}>
                     {selectedActivity.progressCountName || 'Count'} Completed
                   </label>
-                  <input
-                    type="number"
-                    value={countComplete}
-                    onChange={(e) => setCountComplete(e.target.value ? Number(e.target.value) : '')}
-                    min="0"
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      fontSize: '16px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px'
-                    }}
-                    placeholder={`Number of ${selectedActivity.progressCountName || 'items'} completed`}
-                  />
+                  {selectedGoalData.progressCount ? (
+                    // Show slider when goal has a target
+                    <div style={{ 
+                      backgroundColor: '#f0f0f0', 
+                      padding: '15px', 
+                      borderRadius: '8px',
+                      border: '1px solid #ddd'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '10px'
+                      }}>
+                        <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#4285f4' }}>
+                          {progressCountCompleted} / {selectedGoalData.progressCount}
+                        </span>
+                        {lastProgressCountCompleted > 0 && (
+                          <span style={{ fontSize: '14px', color: '#666' }}>
+                            Last recorded: {lastProgressCountCompleted}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max={selectedGoalData.progressCount}
+                        step="1"
+                        value={progressCountCompleted}
+                        onChange={(e) => setProgressCountCompleted(Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          height: '8px',
+                          borderRadius: '4px',
+                          outline: 'none',
+                          WebkitAppearance: 'none',
+                          appearance: 'none',
+                          background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, #ddd ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, #ddd 100%)`,
+                          cursor: 'pointer'
+                        }}
+                      />
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginTop: '5px',
+                        fontSize: '12px',
+                        color: '#666'
+                      }}>
+                        <span>0</span>
+                        <span>{selectedGoalData.progressCount}</span>
+                      </div>
+                      <div style={{ 
+                        fontSize: '14px', 
+                        color: '#666', 
+                        marginTop: '10px',
+                        backgroundColor: '#fff',
+                        padding: '8px',
+                        borderRadius: '4px',
+                        border: '1px solid #e0e0e0'
+                      }}>
+                        Progress: {((progressCountCompleted / selectedGoalData.progressCount) * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  ) : (
+                    // Show regular input when no goal target
+                    <input
+                      type="number"
+                      value={countComplete}
+                      onChange={(e) => setCountComplete(e.target.value ? Number(e.target.value) : '')}
+                      min="0"
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        fontSize: '16px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                      placeholder={`Number of ${selectedActivity.progressCountName || 'items'} completed`}
+                    />
+                  )}
                 </div>
               )}
 

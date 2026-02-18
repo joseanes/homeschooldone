@@ -16,6 +16,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
   const [timesPerWeek, setTimesPerWeek] = useState<number | ''>(goal.timesPerWeek || '');
   const [minutesPerSession, setMinutesPerSession] = useState<number | ''>(goal.minutesPerSession || '');
   const [dailyPercentageIncrease, setDailyPercentageIncrease] = useState<number | ''>(goal.dailyPercentageIncrease || '');
+  const [percentageGoal, setPercentageGoal] = useState<number | ''>(goal.percentageGoal || '');
   const [targetCount, setTargetCount] = useState<number | ''>(goal.progressCount || '');
   const [startDate, setStartDate] = useState(
     goal.startDate ? 
@@ -65,8 +66,9 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
         updates.minutesPerSession = Number(minutesPerSession);
       }
       
-      if (activity.progressReportingStyle.percentageCompletion && dailyPercentageIncrease) {
-        updates.dailyPercentageIncrease = Number(dailyPercentageIncrease);
+      if (activity.progressReportingStyle.percentageCompletion) {
+        if (dailyPercentageIncrease) updates.dailyPercentageIncrease = Number(dailyPercentageIncrease);
+        if (percentageGoal) updates.percentageGoal = Number(percentageGoal);
       }
       if (activity.progressReportingStyle.progressCount && targetCount) {
         updates.progressCount = Number(targetCount);
@@ -111,6 +113,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
         timesPerWeek: timesPerWeek ? Number(timesPerWeek) : undefined,
         minutesPerSession: minutesPerSession ? Number(minutesPerSession) : undefined,
         dailyPercentageIncrease: dailyPercentageIncrease ? Number(dailyPercentageIncrease) : undefined,
+        percentageGoal: percentageGoal ? Number(percentageGoal) : undefined,
         progressCount: targetCount ? Number(targetCount) : undefined,
         startDate: startDate ? new Date(startDate) : undefined,
         deadline: deadline ? new Date(deadline) : undefined,
@@ -225,27 +228,53 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
           </div>
 
           {activity.progressReportingStyle.percentageCompletion && (
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Daily Percentage Increase
-              </label>
-              <input
-                type="number"
-                value={dailyPercentageIncrease}
-                onChange={(e) => setDailyPercentageIncrease(e.target.value ? Number(e.target.value) : '')}
-                min="0.1"
-                max="100"
-                step="0.1"
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  fontSize: '16px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px'
-                }}
-                placeholder="e.g., 2 (for 2% increase per day)"
-              />
-            </div>
+            <>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px' }}>
+                  Percentage Goal
+                </label>
+                <input
+                  type="number"
+                  value={percentageGoal}
+                  onChange={(e) => setPercentageGoal(e.target.value ? Number(e.target.value) : '')}
+                  min="1"
+                  max="100"
+                  step="1"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    fontSize: '16px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px'
+                  }}
+                  placeholder="e.g., 95 (for 95% completion goal)"
+                />
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  Target percentage completion for this goal (default: 100%)
+                </div>
+              </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '5px' }}>
+                  Daily Percentage Increase Goal (optional)
+                </label>
+                <input
+                  type="number"
+                  value={dailyPercentageIncrease}
+                  onChange={(e) => setDailyPercentageIncrease(e.target.value ? Number(e.target.value) : '')}
+                  min="0.1"
+                  max="100"
+                  step="0.1"
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    fontSize: '16px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px'
+                  }}
+                  placeholder="e.g., 2 (for 2% increase per day)"
+                />
+              </div>
+            </>
           )}
 
           {activity.progressReportingStyle.progressCount && (

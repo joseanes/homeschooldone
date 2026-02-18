@@ -430,33 +430,39 @@ const DashboardView: React.FC<DashboardViewProps> = ({
             overflow: 'auto',
             maxHeight: 'calc(100% - 80px)' // Account for header
           }}>
-            {/* Sort goals: completed at bottom, rest alphabetically */}
+            {/* Sort goals: gray (pending) first, then yellow (progress week), then blue (done today), then green (weekly complete) */}
             {[...currentProgress.todayGoals].sort((a, b) => {
               const activityA = activities.find(act => act.id === a.activityId);
               const activityB = activities.find(act => act.id === b.activityId);
               
-              // Check if goals are actually completed today
-              const hasActivityA = currentProgress.todayCompletedGoalIds.has(a.id);
-              const hasActivityB = currentProgress.todayCompletedGoalIds.has(b.id);
-              const todayMinutesA = currentProgress.todayMinutes[a.id] || 0;
-              const todayMinutesB = currentProgress.todayMinutes[b.id] || 0;
+              // Get status for each goal
+              const weeklyCountA = currentProgress.weeklyProgress[a.id] || 0;
+              const weeklyCountB = currentProgress.weeklyProgress[b.id] || 0;
+              const hasActivityTodayA = currentProgress.todayCompletedGoalIds.has(a.id);
+              const hasActivityTodayB = currentProgress.todayCompletedGoalIds.has(b.id);
+              const weeklyCompleteA = !!(a.timesPerWeek && weeklyCountA >= a.timesPerWeek);
+              const weeklyCompleteB = !!(b.timesPerWeek && weeklyCountB >= b.timesPerWeek);
               
-              let isActuallyCompletedA = hasActivityA;
-              let isActuallyCompletedB = hasActivityB;
+              // Determine status priority
+              const getStatusPriority = (goal: Goal, weeklyCount: number, hasToday: boolean, weeklyComplete: boolean) => {
+                if (weeklyComplete) return 4; // Green - show last
+                if (hasToday) return 3; // Blue - show third
+                if (weeklyCount > 0) return 2; // Yellow - show second
+                return 1; // Gray - show first
+              };
               
-              if (hasActivityA && a.minutesPerSession) {
-                isActuallyCompletedA = todayMinutesA >= a.minutesPerSession;
+              const priorityA = getStatusPriority(a, weeklyCountA, hasActivityTodayA, weeklyCompleteA);
+              const priorityB = getStatusPriority(b, weeklyCountB, hasActivityTodayB, weeklyCompleteB);
+              
+              // Sort by status priority first
+              if (priorityA !== priorityB) {
+                return priorityA - priorityB;
               }
-              if (hasActivityB && b.minutesPerSession) {
-                isActuallyCompletedB = todayMinutesB >= b.minutesPerSession;
-              }
               
-              // Completed tasks go to bottom
-              if (isActuallyCompletedA && !isActuallyCompletedB) return 1;
-              if (!isActuallyCompletedA && isActuallyCompletedB) return -1;
-              
-              // For non-completed or both completed, sort alphabetically by activity name
-              return (activityA?.name || '').localeCompare(activityB?.name || '');
+              // Within same status, sort alphabetically by goal name (or activity name if no goal name)
+              const nameA = a.name || activityA?.name || '';
+              const nameB = b.name || activityB?.name || '';
+              return nameA.localeCompare(nameB);
             }).map(goal => {
               const activity = activities.find(a => a.id === goal.activityId);
               const weeklyCount = currentProgress.weeklyProgress[goal.id] || 0;
@@ -471,32 +477,38 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 isActuallyCompleted = todayMinutesForGoal >= goal.minutesPerSession;
               }
               
-              // Determine status and colors based on actual completion
-              let backgroundColor, borderColor, statusIcon, statusText;
-              if (isActuallyCompleted && hasActivityToday) {
-                // Green: actually completed today
-                backgroundColor = '#2d5a2d';
+              // Determine status and colors using consistent scheme
+              let backgroundColor, borderColor, statusIcon, statusText, textColor;
+              
+              // Check if weekly requirement is met
+              const weeklyComplete = goal.timesPerWeek && weeklyCount >= goal.timesPerWeek;
+              
+              if (weeklyComplete) {
+                // Green: Weekly Complete
+                backgroundColor = '#e8f5e9';
                 borderColor = '#4caf50';
+                textColor = '#2e7d32';
                 statusIcon = '✅';
-                statusText = 'Complete';
-              } else if (hasActivityToday && !isActuallyCompleted) {
-                // Yellow/Orange: has activity but not complete
-                backgroundColor = '#4a3c00';
+                statusText = 'Weekly Complete ✓';
+              } else if (hasActivityToday) {
+                // Blue: Done Today
+                backgroundColor = '#e3f2fd';
+                borderColor = '#2196f3';
+                textColor = '#1565c0';
+                statusIcon = '✔️';
+                statusText = 'Done Today';
+              } else if (weeklyCount > 0) {
+                // Yellow: Progress This Week
+                backgroundColor = '#fff8e1';
                 borderColor = '#ffc107';
-                statusIcon = '⏳';
-                statusText = goal.minutesPerSession ? 
-                  `${todayMinutesForGoal}/${goal.minutesPerSession}min` : 
-                  'In Progress';
-              } else if (goal.timesPerWeek && weeklyCount >= goal.timesPerWeek) {
-                // Gray: weekly goal met but not done today
-                backgroundColor = '#4a4a4a';
-                borderColor = '#9e9e9e';
-                statusIcon = '📅';
-                statusText = 'Week Complete';
+                textColor = '#f57c00';
+                statusIcon = '📝';
+                statusText = 'Progress This Week';
               } else {
-                // Default: pending
-                backgroundColor = '#2d2d2d';
-                borderColor = '#444';
+                // Gray: Pending
+                backgroundColor = '#f5f5f5';
+                borderColor = '#9e9e9e';
+                textColor = '#616161';
                 statusIcon = '⏳';
                 statusText = 'Pending';
               }
@@ -508,13 +520,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     padding: '20px',
                     backgroundColor,
                     borderRadius: '15px',
-                    border: `3px solid ${borderColor}`,
+                    border: `2px solid ${borderColor}`,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     textAlign: 'center',
                     minHeight: '120px',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    color: textColor
                   }}
                 >
                   <div style={{ 
@@ -526,14 +539,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   <div style={{ 
                     fontSize: '18px', 
                     fontWeight: 'bold',
-                    marginBottom: '8px'
+                    marginBottom: '8px',
+                    color: textColor
                   }}>
                     {activity?.name}
                   </div>
                   <div style={{ 
                     fontSize: '14px',
                     opacity: 0.8,
-                    marginBottom: '8px'
+                    marginBottom: '8px',
+                    color: textColor
                   }}>
                     {goal.timesPerWeek && `${weeklyCount} of ${goal.timesPerWeek}/week`}
                     {goal.minutesPerSession && ` • ${goal.minutesPerSession} min`}

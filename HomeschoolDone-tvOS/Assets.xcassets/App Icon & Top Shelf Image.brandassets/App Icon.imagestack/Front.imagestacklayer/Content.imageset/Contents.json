@@ -1,12 +1,12 @@
 {
   "images" : [
     {
-      "filename" : "HomeschoolDone_Icon_400_cropped.png",
+      "filename" : "front_1x.png",
       "idiom" : "tv",
       "scale" : "1x"
     },
     {
-      "filename" : "HomeschoolDone_Icon_400_cropped.png",
+      "filename" : "front_2x.png",
       "idiom" : "tv",
       "scale" : "2x"
     }

@@ -417,7 +417,7 @@ struct GoalCardView: View {
                     .fill(cardBackgroundColor(for: status.status))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(cardBorderColor(for: status.status), lineWidth: status.status == .weeklyComplete ? 3 : 1.5)
+                            .stroke(cardBorderColor(for: status.status), lineWidth: status.status == .weeklyComplete ? 4 : 2.5)
                     )
             )
 
@@ -456,10 +456,10 @@ struct GoalCardView: View {
 
     private func cardBackgroundColor(for status: GoalStatusType) -> Color {
         switch status {
-        case .weeklyComplete: return Color(red: 0.10, green: 0.25, blue: 0.12) // dark green
-        case .doneToday:      return Color(red: 0.08, green: 0.15, blue: 0.30) // dark blue
-        case .progressWeek:   return Color(red: 0.30, green: 0.25, blue: 0.08) // dark amber
-        case .pending:        return Color(red: 0.15, green: 0.15, blue: 0.20) // dark gray
+        case .weeklyComplete: return Color(red: 0.08, green: 0.35, blue: 0.12) // rich dark green
+        case .doneToday:      return Color(red: 0.06, green: 0.18, blue: 0.42) // rich dark blue
+        case .progressWeek:   return Color(red: 0.40, green: 0.32, blue: 0.05) // rich dark amber
+        case .pending:        return Color(red: 0.18, green: 0.18, blue: 0.22) // dark gray
         }
     }
 

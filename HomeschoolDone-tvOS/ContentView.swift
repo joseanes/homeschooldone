@@ -32,27 +32,6 @@ struct ContentView: View {
                 }
             } else if let error = firebaseService.error {
                 VStack(spacing: 30) {
-                    HStack {
-                        Spacer()
-                        Button(action: { firebaseService.signOut() }) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "rectangle.portrait.and.arrow.right")
-                                    .font(.system(size: 20))
-                                Text("Sign Out")
-                                    .font(.system(size: 20, weight: .medium))
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.red.opacity(0.8))
-                            .cornerRadius(8)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.horizontal, 60)
-
-                    Spacer()
-
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 60))
                         .foregroundColor(.red)
@@ -64,8 +43,12 @@ struct ContentView: View {
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 100)
-
-                    Spacer()
+                    Button(action: { firebaseService.signOut() }) {
+                        Text("Sign Out")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
                 }
             } else if firebaseService.homeschool == nil {
                 VStack(spacing: 30) {
@@ -186,21 +169,6 @@ struct HeaderView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 8) {
-                Button(action: { firebaseService.signOut() }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                            .font(.system(size: 20))
-                        Text("Sign Out")
-                            .font(.system(size: 20, weight: .medium))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.red.opacity(0.8))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-
                 Text("Student \(studentIndex + 1) of \(totalStudents)")
                     .font(.system(size: 24, weight: .medium))
                     .foregroundColor(.white)
@@ -214,6 +182,14 @@ struct HeaderView: View {
                         .foregroundColor(.gray)
                 }
             }
+
+            Button(action: { firebaseService.signOut() }) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 22))
+                    .foregroundColor(.gray)
+            }
+            .buttonStyle(.plain)
+            .padding(.leading, 20)
         }
         .onReceive(timer) { _ in
             let elapsed = Date().timeIntervalSince(cycleBegan)

@@ -472,14 +472,14 @@ struct GoalCardView: View {
         return "star.fill"
     }
 
-    // Web-matched colors: Green (#4caf50), Blue (#2196f3), Yellow (#ffc107), Gray (#9e9e9e)
+    // Dark-theme colors matching web conventions: Green, Blue, Yellow/Amber, Gray
 
     private func cardBackgroundColor(for status: GoalStatusType) -> Color {
         switch status {
-        case .weeklyComplete: return Color(red: 0.91, green: 0.96, blue: 0.91) // #e8f5e9
-        case .doneToday:      return Color(red: 0.89, green: 0.95, blue: 0.99) // #e3f2fd
-        case .progressWeek:   return Color(red: 1.0,  green: 0.97, blue: 0.88) // #fff8e1
-        case .pending:        return Color(red: 0.96, green: 0.96, blue: 0.96) // #f5f5f5
+        case .weeklyComplete: return Color(red: 0.10, green: 0.25, blue: 0.12) // dark green
+        case .doneToday:      return Color(red: 0.08, green: 0.15, blue: 0.30) // dark blue
+        case .progressWeek:   return Color(red: 0.30, green: 0.25, blue: 0.08) // dark amber
+        case .pending:        return Color(red: 0.15, green: 0.15, blue: 0.20) // dark gray
         }
     }
 
@@ -488,34 +488,34 @@ struct GoalCardView: View {
         case .weeklyComplete: return Color(red: 0.30, green: 0.69, blue: 0.31) // #4caf50
         case .doneToday:      return Color(red: 0.13, green: 0.59, blue: 0.95) // #2196f3
         case .progressWeek:   return Color(red: 1.0,  green: 0.76, blue: 0.03) // #ffc107
-        case .pending:        return Color(red: 0.62, green: 0.62, blue: 0.62) // #9e9e9e
+        case .pending:        return Color(red: 0.45, green: 0.45, blue: 0.50) // medium gray
         }
     }
 
     private func statusAccentColor(for status: GoalStatusType) -> Color {
         switch status {
-        case .weeklyComplete: return Color(red: 0.30, green: 0.69, blue: 0.31)
-        case .doneToday:      return Color(red: 0.13, green: 0.59, blue: 0.95)
-        case .progressWeek:   return Color(red: 0.96, green: 0.49, blue: 0.0)
-        case .pending:        return Color(red: 0.62, green: 0.62, blue: 0.62)
+        case .weeklyComplete: return Color(red: 0.40, green: 0.85, blue: 0.42) // bright green
+        case .doneToday:      return Color(red: 0.30, green: 0.70, blue: 1.0)  // bright blue
+        case .progressWeek:   return Color(red: 1.0,  green: 0.80, blue: 0.20) // bright amber
+        case .pending:        return Color(red: 0.55, green: 0.55, blue: 0.60) // light gray
         }
     }
 
     private func statusTextColor(for status: GoalStatusType) -> Color {
         switch status {
-        case .weeklyComplete: return Color(red: 0.18, green: 0.49, blue: 0.20) // #2e7d32
-        case .doneToday:      return Color(red: 0.08, green: 0.40, blue: 0.75) // #1565c0
-        case .progressWeek:   return Color(red: 0.96, green: 0.49, blue: 0.0)  // #f57c00
-        case .pending:        return Color(red: 0.38, green: 0.38, blue: 0.38) // #616161
+        case .weeklyComplete: return Color(red: 0.40, green: 0.85, blue: 0.42) // bright green
+        case .doneToday:      return Color(red: 0.30, green: 0.70, blue: 1.0)  // bright blue
+        case .progressWeek:   return Color(red: 1.0,  green: 0.80, blue: 0.20) // bright amber
+        case .pending:        return Color(red: 0.55, green: 0.55, blue: 0.60) // light gray
         }
     }
 
     private func statusBadgeBackground(for status: GoalStatusType) -> Color {
         switch status {
-        case .weeklyComplete: return Color(red: 0.30, green: 0.69, blue: 0.31).opacity(0.15)
-        case .doneToday:      return Color(red: 0.13, green: 0.59, blue: 0.95).opacity(0.15)
-        case .progressWeek:   return Color(red: 1.0,  green: 0.76, blue: 0.03).opacity(0.15)
-        case .pending:        return Color.gray.opacity(0.15)
+        case .weeklyComplete: return Color(red: 0.30, green: 0.69, blue: 0.31).opacity(0.25)
+        case .doneToday:      return Color(red: 0.13, green: 0.59, blue: 0.95).opacity(0.25)
+        case .progressWeek:   return Color(red: 1.0,  green: 0.76, blue: 0.03).opacity(0.25)
+        case .pending:        return Color.gray.opacity(0.25)
         }
     }
 

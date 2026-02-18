@@ -954,7 +954,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   return (
     <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '30px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <svg width="60" height="60" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M14 43L40 19L66 43V67C66 70.3137 63.3137 73 60 73H20C16.6863 73 14 70.3137 14 67V43Z" fill="#F59E0B"/>
@@ -1064,7 +1064,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               gap: '6px'
             }}
           >
-            🎯 Record Activity
+            + Record Activity
           </button>
           <button
             onClick={() => setShowSettings(true)}
@@ -1083,7 +1083,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               gap: '6px'
             }}
           >
-            ⚙️ Settings
+            Settings
           </button>
           <button
             onClick={() => setShowReports(true)}
@@ -1102,7 +1102,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               gap: '6px'
             }}
           >
-            📊 Reports
+            Reports
           </button>
           <button
             onClick={() => setShowDashboard(true)}
@@ -1121,7 +1121,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               gap: '6px'
             }}
           >
-            🖥️ Dashboard
+            Dashboard
           </button>
           {goals.length === 0 && (
             <span style={{ fontSize: '13px', color: '#999', marginLeft: '8px' }}>

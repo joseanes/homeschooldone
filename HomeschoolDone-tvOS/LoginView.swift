@@ -13,10 +13,6 @@ struct LoginView: View {
             Color.blue.opacity(0.1).ignoresSafeArea()
             
             VStack(spacing: 40) {
-                Text("🎯 THIS IS THE NEW LOGIN SCREEN 🎯")
-                    .font(.system(size: 40, weight: .bold))
-                    .foregroundColor(.red)
-                
                 VStack(spacing: 16) {
                     Image(systemName: "graduationcap.circle.fill")
                         .font(.system(size: 100))

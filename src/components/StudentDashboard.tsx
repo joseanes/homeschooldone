@@ -670,13 +670,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   <div
                     key={`task-${task.id}`}
                     style={{
-                      border: isCompleted ? '2px solid #4caf50' : isOverdue ? '2px solid #f44336' : '2px solid #17a2b8',
+                      border: isCompleted ? '2px solid #4caf50' : '2px solid #ddd',
                       borderRadius: '15px',
                       padding: '25px',
-                      background: isCompleted ? '#e8f5e9' : isOverdue ? '#fce4ec' : '#e0f7fa',
+                      background: isCompleted ? '#e8f5e9' : '#f5f5f5',
                       cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: isCompleted ? '0 4px 15px rgba(76, 175, 80, 0.2)' : '0 4px 15px rgba(23, 162, 184, 0.2)',
+                      boxShadow: isCompleted ? '0 4px 15px rgba(76, 175, 80, 0.2)' : '0 4px 15px rgba(0, 0, 0, 0.08)',
                       position: 'relative',
                       overflow: 'hidden'
                     }}

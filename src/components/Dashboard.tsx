@@ -1424,10 +1424,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                             alignItems: 'center',
                             gap: '8px',
                             padding: '8px 10px',
-                            backgroundColor: isOverdue ? '#fce4ec' : '#e0f7fa',
-                            color: isOverdue ? '#c62828' : '#006064',
+                            backgroundColor: '#f5f5f5',
+                            color: '#666',
                             borderRadius: '6px',
-                            border: `1px solid ${isOverdue ? '#f44336' : '#17a2b8'}`,
+                            border: '1px solid #ddd',
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                             fontSize: '13px',
@@ -1435,7 +1435,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                           }}
                           title={`Task: ${task.name}${td ? ` – Due ${td.toLocaleDateString()}` : ''} – Click to complete`}
                         >
-                          <span style={{ fontSize: '16px', flexShrink: 0 }}>{isOverdue ? '⚠️' : '📋'}</span>
+                          <span style={{ fontSize: '16px', flexShrink: 0 }}>📋</span>
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {task.name}

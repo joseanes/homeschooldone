@@ -31,6 +31,7 @@ export interface Homeschool {
   timerAlarmEnabled?: boolean;
   publicDashboardId?: string;
   allowMultipleRecordsPerDay?: boolean;
+  studentSortOrder?: 'age-asc' | 'age-desc' | 'alpha' | 'workload';
 }
 
 export interface Subject {
@@ -89,4 +90,17 @@ export interface ActivityInstance {
   endingPercentage?: number;
   percentageCompleted?: number; // Single percentage value
   countCompleted?: number;
+}
+
+export interface AdHocTask {
+  id: string;
+  name: string;
+  description?: string;
+  studentId: string;
+  homeschoolId: string;
+  startDate: Date;         // when task becomes visible
+  targetDate?: Date;       // when task should be done by
+  completedDate?: Date;    // null until completed
+  createdBy: string;
+  createdAt: Date;
 }

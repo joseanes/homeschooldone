@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Homeschool, Person, Activity, Goal } from '../types';
+import { Homeschool, Person, Activity, Goal, AdHocTask } from '../types';
 import { formatLastActivity } from '../utils/activityTracking';
 import { generatePublicDashboardId } from '../utils/publicDashboard';
 
@@ -25,8 +25,10 @@ interface SettingsModalProps {
   timerAlarmEnabled: boolean;
   publicDashboardId: string | null;
   allowMultipleRecordsPerDay: boolean;
-  activeTab?: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users';
-  onTabChange?: (tab: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users') => void;
+  studentSortOrder: string;
+  adHocTasks: AdHocTask[];
+  activeTab?: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks';
+  onTabChange?: (tab: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks') => void;
   onSaveSettings: (settings: {
     cycleSeconds: number;
     startOfWeek: number;
@@ -35,6 +37,10 @@ interface SettingsModalProps {
   onSaveTimerAlarm: (enabled: boolean) => void;
   onSavePublicDashboard: (dashboardId: string | null) => void;
   onSaveMultipleRecords: (enabled: boolean) => void;
+  onSaveStudentSortOrder: (order: string) => void;
+  onEditTask: (task: AdHocTask) => void;
+  onDeleteTask: (taskId: string) => void;
+  onTasksUpdated: () => void;
   onShowStudentForm: () => void;
   onShowActivityForm: () => void;
   onShowGoalForm: () => void;
@@ -62,12 +68,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   timerAlarmEnabled,
   publicDashboardId,
   allowMultipleRecordsPerDay,
+  studentSortOrder,
+  adHocTasks,
   activeTab: initialActiveTab,
   onTabChange,
   onSaveSettings,
   onSaveTimerAlarm,
   onSavePublicDashboard,
   onSaveMultipleRecords,
+  onSaveStudentSortOrder,
+  onEditTask,
+  onDeleteTask,
+  onTasksUpdated,
   onShowStudentForm,
   onShowActivityForm,
   onShowGoalForm,
@@ -82,7 +94,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onClose,
   onHomeschoolUpdate
 }) => {
-  const [activeTab, setActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users'>(initialActiveTab || 'general');
+  const [activeTab, setActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks'>(initialActiveTab || 'general');
+  const [sortOrder, setSortOrder] = useState(studentSortOrder || 'age-asc');
+  const [taskFilterStudent, setTaskFilterStudent] = useState('');
+  const [taskFilterStatus, setTaskFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
+  const [taskFilterFrom, setTaskFilterFrom] = useState('');
+  const [taskFilterTo, setTaskFilterTo] = useState('');
+  const [taskToDelete, setTaskToDelete] = useState<AdHocTask | null>(null);
   const [cycleSeconds, setCycleSeconds] = useState(dashboardSettings.cycleSeconds);
   const [startOfWeek, setStartOfWeek] = useState(dashboardSettings.startOfWeek);
   const [timezone, setTimezone] = useState(dashboardSettings.timezone);
@@ -569,9 +587,45 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     <span style={{ fontSize: '16px' }}>Multiple Records on a Day</span>
                   </label>
                   <p style={{ fontSize: '14px', color: '#666', marginLeft: '25px', marginTop: '5px', marginBottom: 0 }}>
-                    When enabled, allows recording the same activity multiple times per student per day. 
+                    When enabled, allows recording the same activity multiple times per student per day.
                     When disabled, recording an activity that was already done today will edit the existing record.
                   </p>
+                </div>
+              </div>
+            )}
+
+            {userRole === 'parent' && (
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                padding: '20px',
+                marginTop: '20px'
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: '15px' }}>📊 Student Sorting</h3>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#555' }}>
+                    Sort students on the main page by:
+                  </label>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => {
+                      setSortOrder(e.target.value);
+                      onSaveStudentSortOrder(e.target.value);
+                    }}
+                    style={{
+                      width: '100%',
+                      maxWidth: '300px',
+                      padding: '8px',
+                      fontSize: '14px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    <option value="age-asc">Age, Ascending (youngest first)</option>
+                    <option value="age-desc">Age, Descending (oldest first)</option>
+                    <option value="alpha">Alphabetically</option>
+                    <option value="workload">Workload (most first)</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -1352,6 +1406,241 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         );
         
+      case 'tasks': {
+        const toDate = (v: any): Date => v instanceof Date ? v : v?.toDate ? v.toDate() : new Date(v);
+        const filteredTasks = adHocTasks.filter(task => {
+          if (taskFilterStudent && task.studentId !== taskFilterStudent) return false;
+          if (taskFilterStatus === 'pending' && task.completedDate) return false;
+          if (taskFilterStatus === 'completed' && !task.completedDate) return false;
+          if (taskFilterFrom) {
+            const sd = toDate(task.startDate);
+            sd.setHours(0, 0, 0, 0);
+            const from = new Date(taskFilterFrom + 'T00:00:00');
+            if (sd < from) return false;
+          }
+          if (taskFilterTo) {
+            const sd = toDate(task.startDate);
+            sd.setHours(0, 0, 0, 0);
+            const to = new Date(taskFilterTo + 'T23:59:59');
+            if (sd > to) return false;
+          }
+          return true;
+        }).sort((a, b) => {
+          // Pending first, then completed; within each group sort by date desc
+          if (!a.completedDate && b.completedDate) return -1;
+          if (a.completedDate && !b.completedDate) return 1;
+          const dateA = toDate(a.completedDate || a.startDate);
+          const dateB = toDate(b.completedDate || b.startDate);
+          return dateB.getTime() - dateA.getTime();
+        });
+
+        const formatDate = (v: any) => {
+          if (!v) return '—';
+          const d = toDate(v);
+          return d.toLocaleDateString();
+        };
+
+        return (
+          <div>
+            <div style={{
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{ marginTop: 0, marginBottom: '15px' }}>📋 Tasks & Activities</h3>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px' }}>
+                <select
+                  value={taskFilterStudent}
+                  onChange={(e) => setTaskFilterStudent(e.target.value)}
+                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }}
+                >
+                  <option value="">All Students</option>
+                  {students.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={taskFilterStatus}
+                  onChange={(e) => setTaskFilterStatus(e.target.value as any)}
+                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <input
+                  type="date"
+                  value={taskFilterFrom}
+                  onChange={(e) => setTaskFilterFrom(e.target.value)}
+                  placeholder="From"
+                  title="From date"
+                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }}
+                />
+                <input
+                  type="date"
+                  value={taskFilterTo}
+                  onChange={(e) => setTaskFilterTo(e.target.value)}
+                  placeholder="To"
+                  title="To date"
+                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }}
+                />
+                {(taskFilterStudent || taskFilterStatus !== 'all' || taskFilterFrom || taskFilterTo) && (
+                  <button
+                    onClick={() => { setTaskFilterStudent(''); setTaskFilterStatus('all'); setTaskFilterFrom(''); setTaskFilterTo(''); }}
+                    style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', backgroundColor: '#fff' }}
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {filteredTasks.length === 0 ? (
+              <p style={{ color: '#666', textAlign: 'center', padding: '30px 0' }}>
+                {adHocTasks.length === 0 ? 'No tasks have been created yet.' : 'No tasks match the selected filters.'}
+              </p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #ddd' }}>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Task Name</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Student</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Start</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Target</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Status</th>
+                      <th style={{ textAlign: 'right', padding: '8px 6px', color: '#555' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTasks.map(task => {
+                      const studentName = students.find(s => s.id === task.studentId)?.name || 'Unknown';
+                      const isPending = !task.completedDate;
+                      return (
+                        <tr key={task.id} style={{ borderBottom: '1px solid #eee' }}>
+                          <td style={{ padding: '8px 6px', fontWeight: '500' }}>
+                            {task.name}
+                            {task.description && (
+                              <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{task.description}</div>
+                            )}
+                          </td>
+                          <td style={{ padding: '8px 6px' }}>{studentName}</td>
+                          <td style={{ padding: '8px 6px' }}>{formatDate(task.startDate)}</td>
+                          <td style={{ padding: '8px 6px' }}>{formatDate(task.targetDate)}</td>
+                          <td style={{ padding: '8px 6px' }}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              backgroundColor: isPending ? '#e0f7fa' : '#e8f5e9',
+                              color: isPending ? '#006064' : '#2e7d32'
+                            }}>
+                              {isPending ? 'Pending' : `Completed ${formatDate(task.completedDate)}`}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 6px', textAlign: 'right' }}>
+                            <button
+                              onClick={() => { onEditTask(task); onClose(); }}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                backgroundColor: '#17a2b8',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                marginRight: '4px'
+                              }}
+                            >
+                              Edit
+                            </button>
+                            {userRole === 'parent' && (
+                              <button
+                                onClick={() => setTaskToDelete(task)}
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '12px',
+                                  backgroundColor: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Task Delete Confirmation */}
+            {taskToDelete && (
+              <div style={{
+                position: 'fixed',
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2000
+              }}>
+                <div style={{
+                  backgroundColor: 'white',
+                  padding: '30px',
+                  borderRadius: '8px',
+                  maxWidth: '400px',
+                  width: '90%'
+                }}>
+                  <h3 style={{ color: '#dc3545', marginTop: 0 }}>Delete Task</h3>
+                  <p>Are you sure you want to delete "<strong>{taskToDelete.name}</strong>"? This cannot be undone.</p>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                    <button
+                      onClick={async () => {
+                        await onDeleteTask(taskToDelete.id);
+                        setTaskToDelete(null);
+                        onTasksUpdated();
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setTaskToDelete(null)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#6c757d',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -1419,6 +1708,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             { id: 'general', label: '🏠 General', icon: '🏠' },
             { id: 'students', label: '👨‍🎓 Students', icon: '👨‍🎓' },
             { id: 'activities', label: '📚 Activities', icon: '📚' },
+            { id: 'tasks', label: '📋 Tasks', icon: '📋' },
             { id: 'users', label: '🔐 Users', icon: '🔐' },
             { id: 'dashboard', label: '📺 Dashboard', icon: '📺' },
             { id: 'timer', label: '⏰ Timer', icon: '⏰' }

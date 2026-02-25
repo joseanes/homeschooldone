@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, arrayRemove, arrayUnion, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Homeschool, Person, Activity, Goal, ActivityInstance } from '../types';
+import { Homeschool, Person, Activity, Goal, ActivityInstance, AdHocTask } from '../types';
 import { isGoalActiveForStudent } from '../utils/goalUtils';
 import StudentForm from './StudentForm';
 import ActivityForm from './ActivityForm';
@@ -21,6 +21,7 @@ import AuthorizedUsers from './AuthorizedUsers';
 import DashboardView from './DashboardView';
 import StudentDashboard from './StudentDashboard';
 import SettingsModal from './SettingsModal';
+import AdHocTaskForm from './AdHocTaskForm';
 
 interface DashboardProps {
   user: User;
@@ -62,7 +63,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [returnToSettings, setReturnToSettings] = useState(false);
   const [returnToReports, setReturnToReports] = useState(false);
-  const [settingsActiveTab, setSettingsActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users'>('general');
+  const [settingsActiveTab, setSettingsActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks'>('general');
   const [dashboardSettings, setDashboardSettings] = useState({
     cycleSeconds: 10,
     startOfWeek: 1, // 1 = Monday
@@ -72,6 +73,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   const [publicDashboardId, setPublicDashboardId] = useState<string | null>(null);
   const [currentStudent, setCurrentStudent] = useState<Person | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [showAdHocTaskForm, setShowAdHocTaskForm] = useState(false);
+  const [adHocTaskMode, setAdHocTaskMode] = useState<'assign' | 'record'>('record');
+  const [adHocTaskStudent, setAdHocTaskStudent] = useState<string>('');
+  const [adHocTasks, setAdHocTasks] = useState<AdHocTask[]>([]);
+  const [editingAdHocTask, setEditingAdHocTask] = useState<AdHocTask | null>(null);
 
   // Note: isGoalActiveForStudent is now imported from utils/goalUtils
 
@@ -148,7 +154,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   // Save multiple records per day setting to Firebase
   const saveMultipleRecordsSetting = async (enabled: boolean) => {
     if (!homeschool?.id) return;
-    
+
     try {
       await updateDoc(doc(db, 'homeschools', homeschool.id), {
         allowMultipleRecordsPerDay: enabled
@@ -156,6 +162,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       setHomeschool(prev => prev ? { ...prev, allowMultipleRecordsPerDay: enabled } : null);
     } catch (error) {
       console.error('Error saving multiple records setting:', error);
+    }
+  };
+
+  // Save student sort order setting to Firebase
+  const saveStudentSortOrder = async (order: string) => {
+    if (!homeschool?.id) return;
+    try {
+      await updateDoc(doc(db, 'homeschools', homeschool.id), {
+        studentSortOrder: order
+      });
+      setHomeschool(prev => prev ? { ...prev, studentSortOrder: order as any } : null);
+    } catch (error) {
+      console.error('Error saving student sort order:', error);
     }
   };
 
@@ -433,6 +452,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             id: doc.id
           } as Goal));
           setGoals(goalsList);
+
+          // Fetch ad-hoc tasks
+          const adHocTasksQuery = query(collection(db, 'adHocTasks'), where('homeschoolId', '==', homeschoolData.id));
+          const adHocTasksSnapshot = await getDocs(adHocTasksQuery);
+          const adHocTasksList = adHocTasksSnapshot.docs.map(doc => ({
+            ...doc.data(),
+            id: doc.id
+          } as AdHocTask));
+          setAdHocTasks(adHocTasksList);
         }
       } catch (error) {
         console.error('Error checking homeschool:', error);
@@ -1064,6 +1092,26 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               gap: '6px'
             }}
           >
+            + Record Progress
+          </button>
+          <button
+            onClick={() => { setAdHocTaskMode('record'); setAdHocTaskStudent(''); setShowAdHocTaskForm(true); }}
+            disabled={students.length === 0}
+            title="Record a one-off task or activity"
+            style={{
+              padding: '8px 18px',
+              fontSize: '14px',
+              backgroundColor: students.length === 0 ? '#ccc' : '#17a2b8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: students.length === 0 ? 'not-allowed' : 'pointer',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
             + Record Activity
           </button>
           <button
@@ -1145,13 +1193,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         ) : (
           <div style={{ display: 'grid', gap: '20px' }}>
             {[...students].sort((a, b) => {
-              // Sort by age (ascending) - younger students first
-              if (a.dateOfBirth && b.dateOfBirth) {
-                const ageA = new Date(a.dateOfBirth);
-                const ageB = new Date(b.dateOfBirth);
-                return ageB.getTime() - ageA.getTime(); // More recent dateOfBirth = younger = comes first
+              const order = homeschool?.studentSortOrder || 'age-asc';
+              if (order === 'alpha') {
+                return a.name.localeCompare(b.name);
               }
-              // If no dateOfBirth, fall back to name sorting
+              if (order === 'workload') {
+                const workload = (s: typeof a) => goals.filter(g => g.studentIds?.includes(s.id)).reduce((sum, g) => sum + (g.minutesPerSession || 0) * (g.timesPerWeek || 0), 0);
+                return workload(b) - workload(a);
+              }
+              // age-asc or age-desc
+              if (a.dateOfBirth && b.dateOfBirth) {
+                const dobA = a.dateOfBirth instanceof Date ? a.dateOfBirth : (a.dateOfBirth as any)?.toDate ? (a.dateOfBirth as any).toDate() : new Date(a.dateOfBirth);
+                const dobB = b.dateOfBirth instanceof Date ? b.dateOfBirth : (b.dateOfBirth as any)?.toDate ? (b.dateOfBirth as any).toDate() : new Date(b.dateOfBirth);
+                return order === 'age-asc'
+                  ? dobB.getTime() - dobA.getTime()   // younger (more recent DOB) first
+                  : dobA.getTime() - dobB.getTime();   // older (earlier DOB) first
+              }
               return a.name.localeCompare(b.name);
             }).map(student => {
               const studentGoals = goals.filter(g => g.studentIds?.includes(student.id) && isGoalActiveForStudent(g, student.id));
@@ -1219,18 +1276,41 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                       {student.name}
                       {allCompleted && <span style={{ fontSize: '16px' }}>🎉</span>}
                     </h4>
-                    <div
-                      title={`${completedGoals} of ${totalGoals} weekly goals completed for ${student.name}`}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        backgroundColor: allCompleted ? '#a5d6a7' : '#e0e0e0',
-                        color: allCompleted ? '#2e7d32' : '#555',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}
-                    >
-                      {completedGoals}/{totalGoals} Complete
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button
+                        onClick={() => {
+                          setAdHocTaskMode('assign');
+                          setAdHocTaskStudent(student.id);
+                          setShowAdHocTaskForm(true);
+                        }}
+                        title={`Assign a task to ${student.name}`}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '10px',
+                          backgroundColor: '#17a2b8',
+                          color: 'white',
+                          border: 'none',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Assign Task
+                      </button>
+                      <div
+                        title={`${completedGoals} of ${totalGoals} weekly goals completed for ${student.name}`}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          backgroundColor: allCompleted ? '#a5d6a7' : '#e0e0e0',
+                          color: allCompleted ? '#2e7d32' : '#555',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}
+                      >
+                        {completedGoals}/{totalGoals} Complete
+                      </div>
                     </div>
                   </div>
 
@@ -1314,6 +1394,54 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                                 return null;
                               })()}
                               {progress.today > 1 && <span> · {progress.today}x today</span>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Pending ad-hoc task cards */}
+                    {adHocTasks.filter(task => {
+                      if (task.studentId !== student.id || task.completedDate) return false;
+                      const sd = task.startDate instanceof Date ? task.startDate : (task.startDate as any)?.toDate ? (task.startDate as any).toDate() : new Date(task.startDate);
+                      const startNorm = new Date(sd); startNorm.setHours(0, 0, 0, 0);
+                      const todayNorm = new Date(); todayNorm.setHours(0, 0, 0, 0);
+                      return startNorm <= todayNorm;
+                    }).map(task => {
+                      const td = task.targetDate ? (task.targetDate instanceof Date ? task.targetDate : (task.targetDate as any)?.toDate ? (task.targetDate as any).toDate() : new Date(task.targetDate as any)) : null;
+                      const todayNorm = new Date(); todayNorm.setHours(0, 0, 0, 0);
+                      const isOverdue = td && new Date(td).setHours(0,0,0,0) < todayNorm.getTime();
+                      return (
+                        <div
+                          key={`task-${task.id}`}
+                          onClick={() => {
+                            setAdHocTaskMode('assign');
+                            setAdHocTaskStudent(student.id);
+                            setEditingAdHocTask(task);
+                            setShowAdHocTaskForm(true);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 10px',
+                            backgroundColor: isOverdue ? '#fce4ec' : '#e0f7fa',
+                            color: isOverdue ? '#c62828' : '#006064',
+                            borderRadius: '6px',
+                            border: `1px solid ${isOverdue ? '#f44336' : '#17a2b8'}`,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontSize: '13px',
+                            lineHeight: '1.3'
+                          }}
+                          title={`Task: ${task.name}${td ? ` – Due ${td.toLocaleDateString()}` : ''} – Click to complete`}
+                        >
+                          <span style={{ fontSize: '16px', flexShrink: 0 }}>{isOverdue ? '⚠️' : '📋'}</span>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {task.name}
+                            </div>
+                            <div style={{ fontSize: '11px', opacity: 0.75 }}>
+                              {isOverdue ? 'Overdue' : 'Pending'}{td ? ` · Due ${td.toLocaleDateString()}` : ''}
                             </div>
                           </div>
                         </div>
@@ -1455,12 +1583,50 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         />
       )}
 
+      {showAdHocTaskForm && homeschool && (
+        <AdHocTaskForm
+          homeschoolId={homeschool.id}
+          students={students}
+          userId={user.uid}
+          timezone={dashboardSettings.timezone}
+          mode={adHocTaskMode}
+          preSelectedStudent={adHocTaskStudent || undefined}
+          existingTask={editingAdHocTask || undefined}
+          onClose={() => {
+            setShowAdHocTaskForm(false);
+            setAdHocTaskStudent('');
+            setEditingAdHocTask(null);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
+          }}
+          onTaskAdded={async () => {
+            // Refresh ad-hoc tasks
+            const adHocTasksQuery = query(collection(db, 'adHocTasks'), where('homeschoolId', '==', homeschool.id));
+            const adHocTasksSnapshot = await getDocs(adHocTasksQuery);
+            const adHocTasksList = adHocTasksSnapshot.docs.map(doc => ({
+              ...doc.data(),
+              id: doc.id
+            } as AdHocTask));
+            setAdHocTasks(adHocTasksList);
+            setShowAdHocTaskForm(false);
+            setEditingAdHocTask(null);
+            if (returnToSettings) {
+              setReturnToSettings(false);
+              setShowSettings(true);
+            }
+          }}
+        />
+      )}
+
       {showReports && homeschool && (
         <Reports
           homeschoolId={homeschool.id}
           goals={goals}
           activities={activities}
           students={students}
+          adHocTasks={adHocTasks}
           onClose={() => setShowReports(false)}
           onEditActivity={(instance) => {
             setEditingActivityInstance(instance);
@@ -1628,12 +1794,38 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           timerAlarmEnabled={timerAlarmEnabled}
           publicDashboardId={publicDashboardId}
           allowMultipleRecordsPerDay={homeschool.allowMultipleRecordsPerDay || false}
+          studentSortOrder={homeschool.studentSortOrder || 'age-asc'}
+          adHocTasks={adHocTasks}
           activeTab={settingsActiveTab}
           onTabChange={setSettingsActiveTab}
           onSaveSettings={saveDashboardSettings}
           onSaveTimerAlarm={saveTimerAlarmSetting}
           onSavePublicDashboard={savePublicDashboardSetting}
           onSaveMultipleRecords={saveMultipleRecordsSetting}
+          onSaveStudentSortOrder={saveStudentSortOrder}
+          onEditTask={(task) => {
+            setSettingsActiveTab('tasks');
+            setReturnToSettings(true);
+            setShowSettings(false);
+            setEditingAdHocTask(task);
+            setAdHocTaskMode('assign');
+            setShowAdHocTaskForm(true);
+          }}
+          onDeleteTask={async (taskId) => {
+            try {
+              await deleteDoc(doc(db, 'adHocTasks', taskId));
+              const adHocTasksQuery = query(collection(db, 'adHocTasks'), where('homeschoolId', '==', homeschool.id));
+              const adHocTasksSnapshot = await getDocs(adHocTasksQuery);
+              setAdHocTasks(adHocTasksSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as AdHocTask)));
+            } catch (error) {
+              console.error('Error deleting task:', error);
+            }
+          }}
+          onTasksUpdated={async () => {
+            const adHocTasksQuery = query(collection(db, 'adHocTasks'), where('homeschoolId', '==', homeschool.id));
+            const adHocTasksSnapshot = await getDocs(adHocTasksQuery);
+            setAdHocTasks(adHocTasksSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as AdHocTask)));
+          }}
           onShowStudentForm={() => {
             setSettingsActiveTab('students');
             setReturnToSettings(true);

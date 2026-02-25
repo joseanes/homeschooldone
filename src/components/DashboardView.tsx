@@ -625,7 +625,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 <div
                   key={goal.id}
                   style={{
-                    padding: `${1.2 * scale}vh ${0.8 * scale}vw`,
+                    padding: `${1.5 * scale}vh ${1.0 * scale}vw`,
                     backgroundColor: cardBg,
                     borderRadius: '0.6vw',
                     border: `1px solid ${cardBorder}`,
@@ -633,7 +633,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: `${0.4 * scale}vh`,
+                    gap: `${0.5 * scale}vh`,
                     color: cardTextColor,
                     minWidth: 0,
                     textAlign: 'center'
@@ -657,7 +657,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     {goal.minutesPerSession && `${goal.timesPerWeek ? ' · ' : ''}${goal.minutesPerSession} min`}
                   </div>
                   <div style={{
-                    fontSize: `${0.8 * scale}vw`,
+                    fontSize: `${0.85 * scale}vw`,
                     fontWeight: '500',
                     opacity: 0.9
                   }}>

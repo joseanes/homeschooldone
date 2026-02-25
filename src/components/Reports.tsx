@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ActivityInstance, Goal, Activity, Person } from '../types';
+import { ActivityInstance, Goal, Activity, Person, AdHocTask } from '../types';
 import DeleteConfirmation from './DeleteConfirmation';
 
 interface ReportsProps {
@@ -9,6 +9,7 @@ interface ReportsProps {
   goals: Goal[];
   activities: Activity[];
   students: Person[];
+  adHocTasks: AdHocTask[];
   onClose: () => void;
   onEditActivity?: (instance: ActivityInstance) => void;
 }
@@ -18,6 +19,7 @@ const Reports: React.FC<ReportsProps> = ({
   goals,
   activities,
   students,
+  adHocTasks,
   onClose,
   onEditActivity
 }) => {
@@ -25,7 +27,7 @@ const Reports: React.FC<ReportsProps> = ({
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom' | 'all'>('week');
-  const [activeTab, setActiveTab] = useState<'progress' | 'history' | 'transcript'>('progress');
+  const [activeTab, setActiveTab] = useState<'progress' | 'history' | 'transcript' | 'effort'>('progress');
   const [selectedWeek, setSelectedWeek] = useState<string>(() => {
     const today = new Date();
     const dayOfWeek = today.getDay();
@@ -320,14 +322,40 @@ const Reports: React.FC<ReportsProps> = ({
 
   const filteredInstances = getFilteredInstances();
 
-  // Dynamic tab label based on timeframe
-  const getProgressTabLabel = () => {
+  // Check if a date falls within the currently selected date range
+  const isDateInRange = (d: Date): boolean => {
+    const checkDate = new Date(d);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     switch (dateRange) {
-      case 'today': return 'Daily Progress';
-      case 'week': return 'Weekly Progress';
-      case 'month': return 'Monthly Progress';
-      case 'year': return 'Yearly Progress';
-      default: return 'Goal Progress';
+      case 'today':
+        return checkDate >= today;
+      case 'week': {
+        const weekStart = new Date(selectedWeek);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        return checkDate >= weekStart && checkDate <= weekEnd;
+      }
+      case 'month': {
+        const [mY, mN] = selectedMonth.split('-').map(Number);
+        const monthStart = new Date(mY, mN - 1, 1);
+        const monthEnd = new Date(mY, mN, 0, 23, 59, 59, 999);
+        return checkDate >= monthStart && checkDate <= monthEnd;
+      }
+      case 'year': {
+        const yearStart = new Date(selectedYear, 0, 1);
+        const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
+        return checkDate >= yearStart && checkDate <= yearEnd;
+      }
+      case 'custom': {
+        const customStart = new Date(customStartDate + 'T00:00:00');
+        const customEnd = new Date(customEndDate + 'T23:59:59.999');
+        return checkDate >= customStart && checkDate <= customEnd;
+      }
+      case 'all':
+        return true;
     }
   };
 
@@ -345,10 +373,11 @@ const Reports: React.FC<ReportsProps> = ({
 
   if (loading) return <div>Loading...</div>;
 
-  const tabs: { key: 'progress' | 'history' | 'transcript'; label: string }[] = [
-    { key: 'progress', label: getProgressTabLabel() },
+  const tabs: { key: 'progress' | 'history' | 'transcript' | 'effort'; label: string }[] = [
+    { key: 'progress', label: 'Consistent Effort' },
     { key: 'history', label: 'Activity History' },
     { key: 'transcript', label: 'Transcript' },
+    { key: 'effort', label: 'Effort Summary' },
   ];
 
   return (
@@ -375,7 +404,7 @@ const Reports: React.FC<ReportsProps> = ({
       }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0 }}>Progress Reports</h2>
+          <h2 style={{ margin: 0 }}>Reports</h2>
           <button
             onClick={onClose}
             style={{
@@ -516,21 +545,6 @@ const Reports: React.FC<ReportsProps> = ({
             </div>
           )}
 
-          <button
-            onClick={() => { /* Print Report - to be implemented */ }}
-            style={{
-              padding: '8px 16px',
-              fontSize: '16px',
-              backgroundColor: '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              marginLeft: 'auto'
-            }}
-          >
-            Print Report
-          </button>
         </div>
 
         {/* Tab Bar */}
@@ -832,6 +846,257 @@ const Reports: React.FC<ReportsProps> = ({
                   );
                 })
               )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'effort' && (
+          <div>
+            {/* Print styles for PDF output */}
+            <style>{`
+              @media print {
+                body * { visibility: hidden; }
+                .effort-print-area, .effort-print-area * { visibility: visible; }
+                .effort-print-area {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                  padding: 10px 20px;
+                  box-sizing: border-box;
+                }
+                .no-print { display: none !important; }
+                .effort-student-section {
+                  break-inside: avoid;
+                  page-break-inside: avoid;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  padding: 10px 0 !important;
+                  margin-bottom: 10px !important;
+                }
+                .effort-student-section h3 {
+                  font-size: 18px !important;
+                  margin-bottom: 10px !important;
+                }
+              }
+            `}</style>
+
+            {/* Print Report button at top */}
+            <div className="no-print" style={{ marginBottom: '16px', textAlign: 'right' }}>
+              <button
+                onClick={() => window.print()}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '16px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Print Report
+              </button>
+            </div>
+
+            <div className="effort-print-area">
+              {/* Report Title */}
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '22px', color: '#333' }}>Effort Summary</h3>
+                <div style={{ fontSize: '14px', color: '#666' }}>
+                  {(() => {
+                    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    switch (dateRange) {
+                      case 'today': return fmt(new Date());
+                      case 'week': {
+                        const ws = new Date(selectedWeek);
+                        const we = new Date(ws); we.setDate(ws.getDate() + 6);
+                        return `Week of ${fmt(ws)} - ${fmt(we)}`;
+                      }
+                      case 'month': {
+                        const [y, m] = selectedMonth.split('-').map(Number);
+                        return new Date(y, m - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                      }
+                      case 'year': return String(selectedYear);
+                      case 'custom': return `${fmt(new Date(customStartDate))} - ${fmt(new Date(customEndDate))}`;
+                      case 'all': return 'All Time';
+                    }
+                  })()}
+                </div>
+              </div>
+
+              {[...students]
+                .sort((a, b) => {
+                  if (a.dateOfBirth && b.dateOfBirth) {
+                    return new Date(b.dateOfBirth).getTime() - new Date(a.dateOfBirth).getTime();
+                  }
+                  return a.name.localeCompare(b.name);
+                })
+                .filter(student => selectedStudent === 'all' || student.id === selectedStudent)
+                .map(student => {
+                  const studentGoals = goals.filter(g => g.studentIds?.includes(student.id));
+                  const studentInstances = filteredInstances.filter(i => i.studentId === student.id);
+                  const studentTasks = adHocTasks.filter(t => {
+                    if (t.studentId !== student.id) return false;
+                    if (!t.completedDate) return false; // only show completed tasks
+                    const taskDate = t.completedDate instanceof Date ? t.completedDate : (t.completedDate as any)?.toDate ? (t.completedDate as any).toDate() : new Date(t.completedDate);
+                    return isDateInRange(taskDate);
+                  });
+
+                  // Group goals by subject
+                  const subjectGroups: { [subject: string]: Goal[] } = {};
+                  studentGoals.forEach(goal => {
+                    const activity = activities.find(a => a.id === goal.activityId);
+                    const subject = activity?.subjectId || 'Other';
+                    if (!subjectGroups[subject]) subjectGroups[subject] = [];
+                    subjectGroups[subject].push(goal);
+                  });
+
+                  const sortedSubjects = Object.keys(subjectGroups).sort();
+
+                  // Collect all goal rows across subjects for consistent column widths
+                  const allGoalRows = sortedSubjects.flatMap(subject =>
+                    subjectGroups[subject].map(goal => {
+                      const activity = activities.find(a => a.id === goal.activityId);
+                      const goalInstances = studentInstances.filter(i => i.goalId === goal.id);
+                      const timesWorked = goalInstances.length;
+                      const weeksInPeriod = getWeeksInPeriod();
+                      const target = weeksInPeriod > 0 && goal.timesPerWeek ? goal.timesPerWeek * weeksInPeriod : 0;
+
+                      let attainment: string = '-';
+                      if (goalInstances.length > 0) {
+                        const sorted = [...goalInstances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                        const latest = sorted[0];
+                        if (latest.endingPercentage !== undefined) {
+                          attainment = `${latest.endingPercentage.toFixed(1)}%`;
+                        } else if (latest.percentageCompleted !== undefined) {
+                          attainment = `${latest.percentageCompleted.toFixed(1)}%`;
+                        }
+                      }
+
+                      const isComplete = goal.studentCompletions?.[student.id]?.completionDate != null;
+                      const status = isComplete ? 'Complete' : (timesWorked > 0 ? 'In Progress' : 'Not Started');
+                      const statusColor = isComplete ? '#4caf50' : (timesWorked > 0 ? '#ff9800' : '#9e9e9e');
+
+                      return { goal, activity, subject, timesWorked, target, attainment, status, statusColor };
+                    })
+                  );
+
+                  return (
+                    <div key={student.id} className="effort-student-section" style={{
+                      border: '2px solid #e0e0e0',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      marginBottom: '20px',
+                      backgroundColor: '#fff'
+                    }}>
+                      <h3 style={{ margin: '0 0 15px 0', fontSize: '20px', color: '#333', borderBottom: '2px solid #2196f3', paddingBottom: '8px' }}>
+                        {student.name}
+                      </h3>
+
+                      <div style={{ display: 'flex', gap: '20px' }}>
+                        {/* Left Column - Goals & Progress (2/3) */}
+                        <div style={{ flex: 2, minWidth: 0 }}>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#555' }}>Goals &amp; Progress</h4>
+                          {sortedSubjects.length === 0 ? (
+                            <p style={{ color: '#999', fontSize: '14px' }}>No goals assigned.</p>
+                          ) : (
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
+                              <colgroup>
+                                <col style={{ width: '42%' }} />
+                                <col style={{ width: '18%' }} />
+                                <col style={{ width: '18%' }} />
+                                <col style={{ width: '22%' }} />
+                              </colgroup>
+                              <thead>
+                                <tr style={{ borderBottom: '2px solid #ddd' }}>
+                                  <th style={{ textAlign: 'left', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Goal</th>
+                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Times Worked</th>
+                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Attainment</th>
+                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sortedSubjects.map(subject => {
+                                  const subjectRows = allGoalRows.filter(r => r.subject === subject);
+                                  return (
+                                    <React.Fragment key={subject}>
+                                      <tr>
+                                        <td colSpan={4} style={{ padding: '10px 8px 4px 8px' }}>
+                                          <span style={{ fontSize: '14px', fontWeight: '700', color: '#2196f3', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                            {subject}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                      {subjectRows.map(({ goal, activity, timesWorked, target, attainment, status, statusColor }) => (
+                                        <tr key={goal.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                          <td style={{ padding: '8px', color: '#333', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                                            {goal.name || activity?.name || 'Unnamed Goal'}
+                                          </td>
+                                          <td style={{ padding: '8px', textAlign: 'center', color: '#333' }}>
+                                            {target > 0 ? `${timesWorked}/${target}` : `${timesWorked}`}
+                                          </td>
+                                          <td style={{ padding: '8px', textAlign: 'center', color: '#333' }}>
+                                            {attainment}
+                                          </td>
+                                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                                            <span style={{
+                                              padding: '3px 10px',
+                                              borderRadius: '12px',
+                                              fontSize: '12px',
+                                              fontWeight: '600',
+                                              color: 'white',
+                                              backgroundColor: statusColor,
+                                              display: 'inline-block',
+                                              whiteSpace: 'nowrap'
+                                            }}>
+                                              {status}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+
+                        {/* Right Column - Tasks and Activities (1/3) */}
+                        <div style={{ flex: 1, borderLeft: '1px solid #e0e0e0', paddingLeft: '20px', minWidth: 0 }}>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#555' }}>Tasks and Activities</h4>
+                          {studentTasks.length === 0 ? (
+                            <p style={{ color: '#999', fontSize: '14px' }}>No tasks recorded for this period.</p>
+                          ) : (
+                            <div style={{ display: 'grid', gap: '10px' }}>
+                              {studentTasks.map(task => {
+                                if (!task.completedDate) return null;
+                                const taskDate = task.completedDate instanceof Date ? task.completedDate : (task.completedDate as any)?.toDate ? (task.completedDate as any).toDate() : new Date(task.completedDate as any);
+                                return (
+                                  <div key={task.id} style={{
+                                    padding: '10px',
+                                    backgroundColor: '#f8f9fa',
+                                    borderRadius: '6px',
+                                    border: '1px solid #e9ecef'
+                                  }}>
+                                    <div style={{ fontWeight: '500', fontSize: '14px', color: '#333' }}>{task.name}</div>
+                                    {task.description && (
+                                      <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{task.description}</div>
+                                    )}
+                                    <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                                      {taskDate.toLocaleDateString()}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         )}

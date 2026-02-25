@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Person, Goal, Activity, ActivityInstance, Homeschool } from '../types';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
+import { Person, Goal, Activity, ActivityInstance, Homeschool, AdHocTask } from '../types';
 import ActivityInstanceForm from './ActivityInstanceForm';
+import AdHocTaskForm from './AdHocTaskForm';
 import { formatLastActivity } from '../utils/activityTracking';
 import { 
   calculateGoalProgress, 
@@ -36,6 +39,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [editingInstance, setEditingInstance] = useState<ActivityInstance | null>(null);
+  const [showAdHocTaskForm, setShowAdHocTaskForm] = useState(false);
+  const [adHocTasks, setAdHocTasks] = useState<AdHocTask[]>([]);
+  const [editingTask, setEditingTask] = useState<AdHocTask | null>(null);
 
   // Get dashboard settings for week calculation and timezone
   const startOfWeek = homeschool.dashboardSettings?.startOfWeek !== undefined ? homeschool.dashboardSettings.startOfWeek : 1;
@@ -72,6 +78,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         setActivities(data.activities);
         setTodayInstances(data.todayInstances);
         setWeekInstances(data.weekInstances);
+
+        // Fetch ad-hoc tasks for this homeschool
+        const tasksQuery = query(collection(db, 'adHocTasks'), where('homeschoolId', '==', homeschool.id));
+        const tasksSnapshot = await getDocs(tasksQuery);
+        const tasksList = tasksSnapshot.docs.map(d => ({
+          ...d.data(),
+          id: d.id
+        } as AdHocTask));
+        setAdHocTasks(tasksList);
 
       } catch (error) {
         console.error('Error fetching student data:', error);
@@ -379,18 +394,38 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
         background: 'linear-gradient(135deg, #fff 0%, #f8fffe 100%)'
       }}>
-        <h2 style={{ 
-          marginTop: 0, 
-          marginBottom: '25px', 
-          color: '#2c3e50',
-          fontSize: '32px',
-          fontWeight: '700',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px'
-        }}>
-          🎯 Today's Activities
-        </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+          <h2 style={{
+            margin: 0,
+            color: '#2c3e50',
+            fontSize: '32px',
+            fontWeight: '700',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            🎯 Today's Activities
+          </h2>
+          <button
+            onClick={() => setShowAdHocTaskForm(true)}
+            style={{
+              padding: '10px 20px',
+              fontSize: '15px',
+              backgroundColor: '#17a2b8',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 12px rgba(23, 162, 184, 0.3)'
+            }}
+          >
+            + Record Activity
+          </button>
+        </div>
         
         {goals.length === 0 ? (
           <div style={{
@@ -598,6 +633,148 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
               );
             })}
+
+            {/* Ad-hoc task cards */}
+            {(() => {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const weekStart = getWeekStart(startOfWeek);
+              const weekEnd = getWeekEnd(startOfWeek);
+
+              // Filter tasks for this student: pending (startDate <= today, no completedDate)
+              // or completed this week (completedDate within this week)
+              const toMidnight = (d: Date) => { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; };
+              const toDate = (v: any): Date => v instanceof Date ? v : v?.toDate ? v.toDate() : new Date(v);
+
+              const visibleTasks = adHocTasks.filter(task => {
+                if (task.studentId !== student.id) return false;
+
+                const taskStartDate = toMidnight(toDate(task.startDate));
+
+                if (task.completedDate) {
+                  // Completed task: only show if completed this week
+                  const cd = toMidnight(toDate(task.completedDate));
+                  return cd >= weekStart && cd <= weekEnd;
+                } else {
+                  // Pending task: show if startDate <= today
+                  return taskStartDate <= today;
+                }
+              });
+
+              return visibleTasks.map(task => {
+                const isCompleted = !!task.completedDate;
+                const targetDate = task.targetDate ? toMidnight(toDate(task.targetDate)) : null;
+                const isOverdue = targetDate && !isCompleted && targetDate < today;
+
+                return (
+                  <div
+                    key={`task-${task.id}`}
+                    style={{
+                      border: isCompleted ? '2px solid #4caf50' : isOverdue ? '2px solid #f44336' : '2px solid #17a2b8',
+                      borderRadius: '15px',
+                      padding: '25px',
+                      background: isCompleted ? '#e8f5e9' : isOverdue ? '#fce4ec' : '#e0f7fa',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: isCompleted ? '0 4px 15px rgba(76, 175, 80, 0.2)' : '0 4px 15px rgba(23, 162, 184, 0.2)',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onClick={() => {
+                      if (!isCompleted) {
+                        setEditingTask(task);
+                        setShowAdHocTaskForm(true);
+                      }
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      right: 0,
+                      fontSize: '40px',
+                      opacity: 0.1,
+                      transform: 'rotate(15deg)',
+                      marginTop: '10px',
+                      marginRight: '10px'
+                    }}>
+                      {isCompleted ? '✅' : '📋'}
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      marginBottom: '10px'
+                    }}>
+                      <h3 style={{
+                        margin: 0,
+                        fontSize: '22px',
+                        color: isCompleted ? '#2e7d32' : isOverdue ? '#c62828' : '#00838f',
+                        fontWeight: '600',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        📋 {task.name}
+                      </h3>
+                      <div style={{
+                        padding: '8px 16px',
+                        borderRadius: '25px',
+                        backgroundColor: isCompleted ? '#4caf50' : isOverdue ? '#f44336' : '#17a2b8',
+                        color: 'white',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {isCompleted ? 'Done' : isOverdue ? 'Overdue' : 'Task'}
+                      </div>
+                    </div>
+
+                    {task.description && (
+                      <p style={{
+                        margin: '0 0 15px 0',
+                        color: '#4b5563',
+                        fontSize: '16px',
+                        lineHeight: '1.5'
+                      }}>
+                        {task.description}
+                      </p>
+                    )}
+
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '14px',
+                      color: '#6b7280',
+                      backgroundColor: 'rgba(255,255,255,0.7)',
+                      padding: '12px 16px',
+                      borderRadius: '10px'
+                    }}>
+                      <div style={{ fontWeight: '500' }}>
+                        {targetDate && `Due: ${targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                      </div>
+                      {!isCompleted && (
+                        <div style={{
+                          color: '#4f46e5',
+                          fontWeight: '600',
+                          fontSize: '13px'
+                        }}>
+                          ✏️ Mark Done
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         )}
       </div>
@@ -654,6 +831,32 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
           allowMultipleRecordsPerDay={homeschool.allowMultipleRecordsPerDay || false}
           onClose={handleActivityFormClose}
           onActivityRecorded={handleActivityFormClose}
+        />
+      )}
+
+      {/* Ad-Hoc Task Form Modal */}
+      {showAdHocTaskForm && (
+        <AdHocTaskForm
+          homeschoolId={homeschool.id}
+          students={[student]}
+          userId={student.id}
+          timezone={timezone}
+          mode={editingTask ? 'record' : 'record'}
+          existingTask={editingTask || undefined}
+          preSelectedStudent={student.id}
+          onClose={() => { setShowAdHocTaskForm(false); setEditingTask(null); }}
+          onTaskAdded={async () => {
+            setShowAdHocTaskForm(false);
+            setEditingTask(null);
+            // Refresh tasks
+            const tasksQuery = query(collection(db, 'adHocTasks'), where('homeschoolId', '==', homeschool.id));
+            const tasksSnapshot = await getDocs(tasksQuery);
+            const tasksList = tasksSnapshot.docs.map(d => ({
+              ...d.data(),
+              id: d.id
+            } as AdHocTask));
+            setAdHocTasks(tasksList);
+          }}
         />
       )}
     </div>

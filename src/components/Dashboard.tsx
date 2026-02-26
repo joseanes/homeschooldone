@@ -4,6 +4,7 @@ import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, upda
 import { db } from '../firebase';
 import { Homeschool, Person, Activity, Goal, ActivityInstance, AdHocTask } from '../types';
 import { isGoalActiveForStudent } from '../utils/goalUtils';
+import { getWeekStart, getWeekEnd } from '../utils/dateUtils';
 import StudentForm from './StudentForm';
 import ActivityForm from './ActivityForm';
 import GoalForm from './GoalForm';
@@ -162,6 +163,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       setHomeschool(prev => prev ? { ...prev, allowMultipleRecordsPerDay: enabled } : null);
     } catch (error) {
       console.error('Error saving multiple records setting:', error);
+    }
+  };
+
+  // Save school year start setting to Firebase
+  const saveSchoolYearStart = async (month: number, day: number) => {
+    if (!homeschool?.id) return;
+    try {
+      await updateDoc(doc(db, 'homeschools', homeschool.id), {
+        schoolYearStartMonth: month,
+        schoolYearStartDay: day
+      });
+      setHomeschool(prev => prev ? { ...prev, schoolYearStartMonth: month, schoolYearStartDay: day } : null);
+    } catch (error) {
+      console.error('Error saving school year start:', error);
     }
   };
 
@@ -644,6 +659,38 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       percentageCompleted: latest.percentageCompleted || latest.endingPercentage,
       countCompleted: latest.countCompleted
     };
+  };
+
+  const getWeeklyAttainmentChange = (goalId: string, studentId: string) => {
+    // Get all instances for this goal and student from weekInstances, sorted by date asc
+    const instances = weekInstances
+      .filter(i => i.goalId === goalId && i.studentId === studentId)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    if (instances.length < 1) return null;
+
+    const latest = instances[instances.length - 1];
+    const latestPct = latest.percentageCompleted ?? latest.endingPercentage;
+    const latestCount = latest.countCompleted;
+
+    // For percentage: compare with the starting value of the earliest instance this week
+    // The "starting" value is either startingPercentage of earliest, or percentageCompleted of the previous week's last instance
+    // Simplest: compare earliest instance's startingPercentage (or percentageCompleted) with latest's ending
+    const earliest = instances[0];
+    const earliestPct = earliest.startingPercentage ?? earliest.percentageCompleted ?? earliest.endingPercentage;
+
+    let pctChange: number | null = null;
+    if (latestPct !== undefined && earliestPct !== undefined) {
+      pctChange = latestPct - earliestPct;
+    }
+
+    // For count: compare earliest countCompleted with latest countCompleted
+    let countChange: number | null = null;
+    if (latestCount !== undefined && earliest.countCompleted !== undefined) {
+      countChange = latestCount - earliest.countCompleted;
+    }
+
+    return { pctChange, countChange, latestPct, latestCount };
   };
 
   const getGoalStatus = (goal: Goal, studentId: string) => {
@@ -1221,36 +1268,45 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               const totalGoals = studentGoals.length;
               const allCompleted = completedGoals === totalGoals;
               
-              // Sort goals: gray (pending) first, then yellow (progress week), then blue (done today), then green (weekly complete)
-              // Within each status group, sort alphabetically by goal name or activity name
-              const sortedGoals = [...studentGoals].sort((a, b) => {
-                const statusA = getGoalStatus(a, student.id);
-                const statusB = getGoalStatus(b, student.id);
-                const activityA = activities.find(act => act.id === a.activityId);
-                const activityB = activities.find(act => act.id === b.activityId);
-                
-                // Define status priority (lower number = higher priority)
-                const statusPriority: { [key: string]: number } = {
-                  'pending': 1,           // Gray - show first
-                  'progress-week': 2,     // Yellow - show second
-                  'done-today': 3,        // Blue - show third
-                  'weekly-complete': 4    // Green - show last
-                };
-                
-                const priorityA = statusPriority[statusA.status] || 999;
-                const priorityB = statusPriority[statusB.status] || 999;
-                
-                // Sort by status priority first
-                if (priorityA !== priorityB) {
-                  return priorityA - priorityB;
-                }
-                
-                // Within same status, sort alphabetically by goal name (or activity name if no goal name)
-                const nameA = a.name || activityA?.name || '';
-                const nameB = b.name || activityB?.name || '';
-                return nameA.localeCompare(nameB);
+              // Build combined sorted list of goals + tasks
+              const statusPriority: { [key: string]: number } = {
+                'pending': 1,           // Gray - show first
+                'progress-week': 2,     // Yellow - show second
+                'done-today': 3,        // Blue - show third
+                'weekly-complete': 4    // Green - show last
+              };
+
+              type CardItem = { type: 'goal'; goal: typeof studentGoals[0]; priority: number; name: string }
+                | { type: 'task'; task: typeof adHocTasks[0]; priority: number; name: string };
+
+              const goalItems: CardItem[] = studentGoals.map(goal => {
+                const status = getGoalStatus(goal, student.id);
+                const activity = activities.find(act => act.id === goal.activityId);
+                return { type: 'goal', goal, priority: statusPriority[status.status] || 999, name: goal.name || activity?.name || '' };
               });
-              
+
+              const todayNorm = new Date(); todayNorm.setHours(0, 0, 0, 0);
+              const taskItems: CardItem[] = adHocTasks.filter(task => {
+                if (task.studentId !== student.id) return false;
+                const sd = task.startDate instanceof Date ? task.startDate : (task.startDate as any)?.toDate ? (task.startDate as any).toDate() : new Date(task.startDate);
+                const startNorm = new Date(sd); startNorm.setHours(0, 0, 0, 0);
+                if (task.completedDate) {
+                  const weekStart = getWeekStart(dashboardSettings.startOfWeek);
+                  const weekEnd = getWeekEnd(dashboardSettings.startOfWeek);
+                  const cd = task.completedDate instanceof Date ? task.completedDate : (task.completedDate as any)?.toDate ? (task.completedDate as any).toDate() : new Date(task.completedDate);
+                  const cdNorm = new Date(cd); cdNorm.setHours(0, 0, 0, 0);
+                  return cdNorm >= weekStart && cdNorm <= weekEnd;
+                }
+                return startNorm <= todayNorm;
+              }).map(task => ({
+                type: 'task' as const, task, priority: task.completedDate ? 4 : 1, name: task.name
+              }));
+
+              const sortedItems = [...goalItems, ...taskItems].sort((a, b) => {
+                if (a.priority !== b.priority) return a.priority - b.priority;
+                return a.name.localeCompare(b.name);
+              });
+
               return (
                 <div key={student.id} style={{
                   border: '1px solid #dde3ea',
@@ -1315,137 +1371,118 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '6px' }}>
-                    {sortedGoals.map(goal => {
-                      const activity = activities.find(a => a.id === goal.activityId);
-                      const progress = getGoalProgress(goal.id, student.id);
-                      const status = getGoalStatus(goal, student.id);
-
-                      const weeklyCount = weekInstances.filter(i =>
-                        i.goalId === goal.id &&
-                        i.studentId === student.id
-                      ).length;
-
-                      if (!activity) return null;
-
-                      // Build tooltip strings
-                      const iconTooltips: { [key: string]: string } = {
-                        'weekly-complete': `✓ Weekly goal complete (${weeklyCount}/${goal.timesPerWeek} sessions this week)`,
-                        'done-today': `✔ Done today, weekly goal in progress (${weeklyCount}/${goal.timesPerWeek} this week)`,
-                        'progress-week': `◐ Some progress this week (${weeklyCount}/${goal.timesPerWeek} sessions)`,
-                        'pending': '○ No activity recorded this week yet'
-                      };
-
-                      const goalDisplayName = goal.name || activity.name;
-                      const cardTooltip = `${goalDisplayName} – Click to record activity`;
-
-                      return (
-                        <div
-                          key={goal.id}
-                          onClick={() => handleOpenRecordActivity(goal.id, student.id)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 10px',
-                            backgroundColor: status.backgroundColor,
-                            color: status.textColor,
-                            borderRadius: '6px',
-                            border: `1px solid ${status.color}`,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            fontSize: '13px',
-                            lineHeight: '1.3'
-                          }}
-                          title={cardTooltip}
-                        >
-                          <span style={{ fontSize: '16px', flexShrink: 0 }} title={iconTooltips[status.status] || status.label}>{status.text}</span>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={goal.name ? `Goal: ${goal.name} (Activity: ${activity.name})` : `Activity: ${activity.name}`}>
-                              {goalDisplayName}
-                            </div>
-                            <div style={{ fontSize: '11px', opacity: 0.75 }} title={(() => {
-                              const tipParts = [];
-                              if (goal.timesPerWeek) tipParts.push(`${weeklyCount} of ${goal.timesPerWeek} weekly sessions completed`);
-                              const lp = getLatestProgress(goal.id, student.id);
-                              if (activity.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && lp?.percentageCompleted !== undefined) {
-                                tipParts.push(`${lp.percentageCompleted.toFixed(0)}% overall progress`);
-                              }
-                              if (activity.progressReportingStyle?.progressCount && goal.progressCount && lp?.countCompleted !== undefined) {
-                                tipParts.push(`${lp.countCompleted} of ${goal.progressCount} units completed`);
-                              }
-                              if (progress.today > 1) tipParts.push(`Recorded ${progress.today} times today`);
-                              return tipParts.join(' · ') || 'No progress data yet';
-                            })()}>
-                              {goal.timesPerWeek && (
-                                <span>{weeklyCount}/{goal.timesPerWeek} wk</span>
-                              )}
-                              {(() => {
-                                const latestProgress = getLatestProgress(goal.id, student.id);
-                                const parts = [];
-                                if (activity.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && latestProgress?.percentageCompleted !== undefined) {
-                                  parts.push(`${latestProgress.percentageCompleted.toFixed(0)}%`);
+                    {sortedItems.map(item => {
+                      if (item.type === 'goal') {
+                        const goal = item.goal;
+                        const activity = activities.find(a => a.id === goal.activityId);
+                        const progress = getGoalProgress(goal.id, student.id);
+                        const status = getGoalStatus(goal, student.id);
+                        const weeklyCount = weekInstances.filter(i => i.goalId === goal.id && i.studentId === student.id).length;
+                        if (!activity) return null;
+                        const iconTooltips: { [key: string]: string } = {
+                          'weekly-complete': `✓ Weekly goal complete (${weeklyCount}/${goal.timesPerWeek} sessions this week)`,
+                          'done-today': `✔ Done today, weekly goal in progress (${weeklyCount}/${goal.timesPerWeek} this week)`,
+                          'progress-week': `◐ Some progress this week (${weeklyCount}/${goal.timesPerWeek} sessions)`,
+                          'pending': '○ No activity recorded this week yet'
+                        };
+                        const goalDisplayName = goal.name || activity.name;
+                        return (
+                          <div
+                            key={goal.id}
+                            onClick={() => handleOpenRecordActivity(goal.id, student.id)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
+                              backgroundColor: status.backgroundColor, color: status.textColor,
+                              borderRadius: '6px', border: `1px solid ${status.color}`,
+                              cursor: 'pointer', transition: 'all 0.2s ease', fontSize: '13px', lineHeight: '1.3'
+                            }}
+                            title={`${goalDisplayName} – Click to record activity`}
+                          >
+                            <span style={{ fontSize: '16px', flexShrink: 0 }} title={iconTooltips[status.status] || status.label}>{status.text}</span>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={goal.name ? `Goal: ${goal.name} (Activity: ${activity.name})` : `Activity: ${activity.name}`}>
+                                {goalDisplayName}
+                              </div>
+                              <div style={{ fontSize: '11px', opacity: 0.75 }} title={(() => {
+                                const tipParts = [];
+                                if (goal.timesPerWeek) tipParts.push(`${weeklyCount} of ${goal.timesPerWeek} weekly sessions completed`);
+                                const lp = getLatestProgress(goal.id, student.id);
+                                const wc = getWeeklyAttainmentChange(goal.id, student.id);
+                                if (activity.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && lp?.percentageCompleted !== undefined) {
+                                  let pctTip = `Attainment: ${lp.percentageCompleted.toFixed(1)}%`;
+                                  if (goal.percentageGoal) pctTip += ` of ${goal.percentageGoal}%`;
+                                  if (wc?.pctChange !== null && wc?.pctChange !== undefined && wc.pctChange !== 0) {
+                                    const sign = wc.pctChange > 0 ? '+' : '';
+                                    pctTip += ` (${sign}${wc.pctChange.toFixed(1)}% this week)`;
+                                  }
+                                  tipParts.push(pctTip);
                                 }
-                                if (activity.progressReportingStyle?.progressCount && goal.progressCount && latestProgress?.countCompleted !== undefined) {
-                                  parts.push(`${latestProgress.countCompleted}/${goal.progressCount}`);
+                                if (activity.progressReportingStyle?.progressCount && goal.progressCount && lp?.countCompleted !== undefined) {
+                                  let countTip = `${lp.countCompleted} of ${goal.progressCount} ${activity.progressCountName || 'units'}`;
+                                  if (wc?.countChange !== null && wc?.countChange !== undefined && wc.countChange !== 0) {
+                                    const sign = wc.countChange > 0 ? '+' : '';
+                                    countTip += ` (${sign}${wc.countChange} this week)`;
+                                  }
+                                  tipParts.push(countTip);
                                 }
-                                if (parts.length > 0) {
-                                  return <span>{goal.timesPerWeek ? ' · ' : ''}{parts.join(' · ')}</span>;
-                                }
-                                return null;
-                              })()}
-                              {progress.today > 1 && <span> · {progress.today}x today</span>}
+                                if (progress.today > 1) tipParts.push(`Recorded ${progress.today} times today`);
+                                return tipParts.join(' · ') || 'No progress data yet';
+                              })()}>
+                                {goal.timesPerWeek && <span>{weeklyCount}/{goal.timesPerWeek} wk</span>}
+                                {(() => {
+                                  const latestProgress = getLatestProgress(goal.id, student.id);
+                                  const parts = [];
+                                  if (activity.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && latestProgress?.percentageCompleted !== undefined) {
+                                    parts.push(`${latestProgress.percentageCompleted.toFixed(0)}%`);
+                                  }
+                                  if (activity.progressReportingStyle?.progressCount && goal.progressCount && latestProgress?.countCompleted !== undefined) {
+                                    parts.push(`${latestProgress.countCompleted}/${goal.progressCount}`);
+                                  }
+                                  return parts.length > 0 ? <span>{goal.timesPerWeek ? ' · ' : ''}{parts.join(' · ')}</span> : null;
+                                })()}
+                                {progress.today > 1 && <span> · {progress.today}x today</span>}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                    {/* Pending ad-hoc task cards */}
-                    {adHocTasks.filter(task => {
-                      if (task.studentId !== student.id || task.completedDate) return false;
-                      const sd = task.startDate instanceof Date ? task.startDate : (task.startDate as any)?.toDate ? (task.startDate as any).toDate() : new Date(task.startDate);
-                      const startNorm = new Date(sd); startNorm.setHours(0, 0, 0, 0);
-                      const todayNorm = new Date(); todayNorm.setHours(0, 0, 0, 0);
-                      return startNorm <= todayNorm;
-                    }).map(task => {
-                      const td = task.targetDate ? (task.targetDate instanceof Date ? task.targetDate : (task.targetDate as any)?.toDate ? (task.targetDate as any).toDate() : new Date(task.targetDate as any)) : null;
-                      const todayNorm = new Date(); todayNorm.setHours(0, 0, 0, 0);
-                      const isOverdue = td && new Date(td).setHours(0,0,0,0) < todayNorm.getTime();
-                      return (
-                        <div
-                          key={`task-${task.id}`}
-                          onClick={() => {
-                            setAdHocTaskMode('assign');
-                            setAdHocTaskStudent(student.id);
-                            setEditingAdHocTask(task);
-                            setShowAdHocTaskForm(true);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 10px',
-                            backgroundColor: '#f5f5f5',
-                            color: '#666',
-                            borderRadius: '6px',
-                            border: '1px solid #ddd',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            fontSize: '13px',
-                            lineHeight: '1.3'
-                          }}
-                          title={`Task: ${task.name}${td ? ` – Due ${td.toLocaleDateString()}` : ''} – Click to complete`}
-                        >
-                          <span style={{ fontSize: '16px', flexShrink: 0 }}>📋</span>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {task.name}
-                            </div>
-                            <div style={{ fontSize: '11px', opacity: 0.75 }}>
-                              {isOverdue ? 'Overdue' : 'Pending'}{td ? ` · Due ${td.toLocaleDateString()}` : ''}
+                        );
+                      } else {
+                        const task = item.task;
+                        const isCompleted = !!task.completedDate;
+                        const td = task.targetDate ? (task.targetDate instanceof Date ? task.targetDate : (task.targetDate as any)?.toDate ? (task.targetDate as any).toDate() : new Date(task.targetDate as any)) : null;
+                        const isOverdue = td && !isCompleted && new Date(td).setHours(0,0,0,0) < todayNorm.getTime();
+                        return (
+                          <div
+                            key={`task-${task.id}`}
+                            onClick={() => {
+                              if (!isCompleted) {
+                                setAdHocTaskMode('assign');
+                                setAdHocTaskStudent(student.id);
+                                setEditingAdHocTask(task);
+                                setShowAdHocTaskForm(true);
+                              }
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
+                              backgroundColor: isCompleted ? '#e8f5e9' : '#f5f5f5',
+                              color: isCompleted ? '#2e7d32' : '#666',
+                              borderRadius: '6px', border: `1px solid ${isCompleted ? '#a5d6a7' : '#ddd'}`,
+                              cursor: isCompleted ? 'default' : 'pointer', transition: 'all 0.2s ease',
+                              fontSize: '13px', lineHeight: '1.3'
+                            }}
+                            title={`Task: ${task.name}${td ? ` – Due ${td.toLocaleDateString()}` : ''}${isCompleted ? ' (Completed)' : ' – Click to complete'}`}
+                          >
+                            <span style={{ fontSize: '16px', flexShrink: 0 }}>{isCompleted ? '✅' : '📋'}</span>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {task.name}
+                              </div>
+                              <div style={{ fontSize: '11px', opacity: 0.75 }}>
+                                {isCompleted ? 'Completed' : isOverdue ? 'Overdue' : 'Pending'}{td && !isCompleted ? ` · Due ${td.toLocaleDateString()}` : ''}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
+                        );
+                      }
                     })}
                   </div>
                 </div>
@@ -1627,6 +1664,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           activities={activities}
           students={students}
           adHocTasks={adHocTasks}
+          schoolYearStartMonth={homeschool.schoolYearStartMonth || 8}
+          schoolYearStartDay={homeschool.schoolYearStartDay || 1}
           onClose={() => setShowReports(false)}
           onEditActivity={(instance) => {
             setEditingActivityInstance(instance);
@@ -1795,6 +1834,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           publicDashboardId={publicDashboardId}
           allowMultipleRecordsPerDay={homeschool.allowMultipleRecordsPerDay || false}
           studentSortOrder={homeschool.studentSortOrder || 'age-asc'}
+          schoolYearStartMonth={homeschool.schoolYearStartMonth || 8}
+          schoolYearStartDay={homeschool.schoolYearStartDay || 1}
           adHocTasks={adHocTasks}
           activeTab={settingsActiveTab}
           onTabChange={setSettingsActiveTab}
@@ -1803,6 +1844,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           onSavePublicDashboard={savePublicDashboardSetting}
           onSaveMultipleRecords={saveMultipleRecordsSetting}
           onSaveStudentSortOrder={saveStudentSortOrder}
+          onSaveSchoolYearStart={saveSchoolYearStart}
           onEditTask={(task) => {
             setSettingsActiveTab('tasks');
             setReturnToSettings(true);

@@ -2,6 +2,28 @@
 
 A comprehensive homeschool tracking and dashboard application with web, iOS, and Apple TV support.
 
+## Screenshots
+
+### Parent Dashboard
+Track daily progress for all students with color-coded goal cards (gray = pending, yellow = in progress, blue = done today, green = weekly complete).
+
+![Parent Dashboard](docs/screenshots/main-dashboard.png)
+
+### TV Dashboard
+Full-screen display optimized for large screens, auto-cycling through students with real-time progress updates.
+
+![TV Dashboard](docs/screenshots/tv-dashboard.png)
+
+### Student Progress View
+Individual student view with detailed goal cards, task assignments, and progress tracking.
+
+![Student Progress](docs/screenshots/student-progress.png)
+
+### Effort Summary Report
+Printable weekly report with goals, progress, and tasks per student organized by subject.
+
+![Effort Summary](docs/screenshots/effort-summary.png)
+
 ## Platform Overview
 
 ### 🌐 Web Application (React)

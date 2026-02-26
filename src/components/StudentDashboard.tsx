@@ -442,334 +442,132 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             gap: '15px',
             gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
           }}>
-            {/* Sort goals: gray (pending) first, then yellow (progress week), then blue (done today), then green (weekly complete) */}
-            {[...goals].sort((a, b) => {
-              const statusA = getStatusForGoal(a);
-              const statusB = getStatusForGoal(b);
-              const activityA = activities.find(act => act.id === a.activityId);
-              const activityB = activities.find(act => act.id === b.activityId);
-              
-              // Define status priority (lower number = higher priority)
-              const statusPriority: { [key: string]: number } = {
-                'pending': 1,           // Gray - show first
-                'progress-week': 2,     // Yellow - show second
-                'done-today': 3,        // Blue - show third
-                'weekly-complete': 4    // Green - show last
-              };
-              
-              const priorityA = statusPriority[statusA.status] || 999;
-              const priorityB = statusPriority[statusB.status] || 999;
-              
-              // Sort by status priority first
-              if (priorityA !== priorityB) {
-                return priorityA - priorityB;
-              }
-              
-              // Within same status, sort alphabetically by goal name (or activity name if no goal name)
-              const nameA = a.name || activityA?.name || '';
-              const nameB = b.name || activityB?.name || '';
-              return nameA.localeCompare(nameB);
-            }).map(goal => {
-              const activity = activities.find(a => a.id === goal.activityId);
-              const status = getStatusForGoal(goal);
-              
-              // Enhanced color scheme based on status - matching main Dashboard
-              const getCardColors = () => {
-                switch (status.status) {
-                  case 'weekly-complete':
-                    return {
-                      border: `2px solid ${status.color}`,
-                      background: status.backgroundColor,
-                      shadow: '0 4px 15px rgba(76, 175, 80, 0.2)',
-                      emoji: '✅',
-                      titleColor: status.textColor
-                    };
-                  case 'done-today':
-                    return {
-                      border: `2px solid ${status.color}`,
-                      background: status.backgroundColor,
-                      shadow: '0 4px 15px rgba(33, 150, 243, 0.2)',
-                      emoji: '✔️',
-                      titleColor: status.textColor
-                    };
-                  case 'progress-week':
-                    return {
-                      border: `2px solid ${status.color}`,
-                      background: status.backgroundColor,
-                      shadow: '0 4px 15px rgba(255, 193, 7, 0.2)',
-                      emoji: '📝',
-                      titleColor: status.textColor
-                    };
-                  default: // pending
-                    return {
-                      border: `2px solid ${status.color}`,
-                      background: status.backgroundColor,
-                      shadow: '0 4px 15px rgba(158, 158, 158, 0.1)',
-                      emoji: '⏳',
-                      titleColor: status.textColor
-                    };
-                }
-              };
-
-              const cardColors = getCardColors();
-              
-              return (
-                <div
-                  key={goal.id}
-                  style={{
-                    border: cardColors.border,
-                    borderRadius: '15px',
-                    padding: '25px',
-                    background: cardColors.background,
-                    cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: cardColors.shadow,
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                  onClick={() => handleRecordActivity(goal)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                    e.currentTarget.style.boxShadow = `0 15px 40px ${cardColors.shadow.match(/rgba\([^)]+\)/)?.[0] || 'rgba(0,0,0,0.3)'}`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                    e.currentTarget.style.boxShadow = cardColors.shadow;
-                  }}
-                >
-                  {/* Decorative corner element */}
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    fontSize: '40px',
-                    opacity: 0.1,
-                    transform: 'rotate(15deg)',
-                    marginTop: '10px',
-                    marginRight: '10px'
-                  }}>
-                    {cardColors.emoji}
-                  </div>
-
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'flex-start',
-                    marginBottom: '15px'
-                  }}>
-                    <h3 style={{ 
-                      margin: 0, 
-                      fontSize: '22px',
-                      color: cardColors.titleColor,
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      {cardColors.emoji} {goal.name || activity?.name || 'Unknown Activity'}
-                    </h3>
-                    <div style={{
-                      padding: '8px 16px',
-                      borderRadius: '25px',
-                      backgroundColor: status.color,
-                      color: 'white',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      textShadow: '0 1px 2px rgba(0,0,0,0.2)'
-                    }}>
-                      {status.text}
-                    </div>
-                  </div>
-                  
-                  <p style={{ 
-                    margin: '0 0 20px 0', 
-                    color: '#4b5563',
-                    fontSize: '16px',
-                    lineHeight: '1.5'
-                  }}>
-                    {activity?.description || 'No description available'}
-                  </p>
-                  
-                  <div style={{ 
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: '14px',
-                    color: '#6b7280',
-                    backgroundColor: 'rgba(255,255,255,0.7)',
-                    padding: '12px 16px',
-                    borderRadius: '10px',
-                    marginTop: '10px'
-                  }}>
-                    <div style={{ fontWeight: '500' }}>
-                      {goal.timesPerWeek && `📊 ${getProgressForGoal(goal.id).weekCount} of ${goal.timesPerWeek}/week`}
-                      {goal.minutesPerSession && ` • ⏱️ ${goal.minutesPerSession} min`}
-                      {(() => {
-                        const latestProgress = getLatestProgress(goal.id);
-                        const indicators = [];
-                        
-                        // Show percentage progress if activity tracks it and goal has percentage goal or daily increase
-                        if (activity?.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && latestProgress?.percentageCompleted !== undefined) {
-                          indicators.push(` • 📈 ${latestProgress.percentageCompleted.toFixed(0)}% of ${goal.percentageGoal || 100}%`);
-                        }
-                        
-                        // Show custom metric progress if activity tracks it and goal has target
-                        if (activity?.progressReportingStyle?.progressCount && goal.progressCount && latestProgress?.countCompleted !== undefined) {
-                          indicators.push(` • 📚 ${latestProgress.countCompleted} of ${goal.progressCount} ${activity.progressCountName || 'items'}`);
-                        }
-                        
-                        return indicators.join('');
-                      })()}
-                    </div>
-                    <div style={{ 
-                      color: '#4f46e5', 
-                      fontWeight: '600',
-                      fontSize: '13px'
-                    }}>
-                      {getProgressForGoal(goal.id).todayInstance ? '✏️ Edit' : '➕ Record'}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Ad-hoc task cards */}
+            {/* Sort goals + tasks together: gray (pending) first, yellow, blue, green */}
             {(() => {
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const weekStart = getWeekStart(startOfWeek);
-              const weekEnd = getWeekEnd(startOfWeek);
+              const sp: { [key: string]: number } = { 'pending': 1, 'progress-week': 2, 'done-today': 3, 'weekly-complete': 4 };
+              const toMid = (d: Date) => { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; };
+              const toD = (v: any): Date => v instanceof Date ? v : v?.toDate ? v.toDate() : new Date(v);
+              const todayMid = new Date(); todayMid.setHours(0, 0, 0, 0);
+              const wkS = getWeekStart(startOfWeek);
+              const wkE = getWeekEnd(startOfWeek);
 
-              // Filter tasks for this student: pending (startDate <= today, no completedDate)
-              // or completed this week (completedDate within this week)
-              const toMidnight = (d: Date) => { const c = new Date(d); c.setHours(0, 0, 0, 0); return c; };
-              const toDate = (v: any): Date => v instanceof Date ? v : v?.toDate ? v.toDate() : new Date(v);
+              type SI = { type: 'goal'; goal: typeof goals[0]; pri: number; nm: string }
+                | { type: 'task'; task: typeof adHocTasks[0]; pri: number; nm: string };
 
-              const visibleTasks = adHocTasks.filter(task => {
-                if (task.studentId !== student.id) return false;
-
-                const taskStartDate = toMidnight(toDate(task.startDate));
-
-                if (task.completedDate) {
-                  // Completed task: only show if completed this week
-                  const cd = toMidnight(toDate(task.completedDate));
-                  return cd >= weekStart && cd <= weekEnd;
-                } else {
-                  // Pending task: show if startDate <= today
-                  return taskStartDate <= today;
-                }
+              const gItems: SI[] = goals.map(g => {
+                const s = getStatusForGoal(g);
+                const a = activities.find(act => act.id === g.activityId);
+                return { type: 'goal', goal: g, pri: sp[s.status] || 999, nm: g.name || a?.name || '' };
               });
 
-              return visibleTasks.map(task => {
-                const isCompleted = !!task.completedDate;
-                const targetDate = task.targetDate ? toMidnight(toDate(task.targetDate)) : null;
-                const isOverdue = targetDate && !isCompleted && targetDate < today;
+              const tItems: SI[] = adHocTasks.filter(t => {
+                if (t.studentId !== student.id) return false;
+                if (t.completedDate) {
+                  const cd = toMid(toD(t.completedDate));
+                  return cd >= wkS && cd <= wkE;
+                }
+                return toMid(toD(t.startDate)) <= todayMid;
+              }).map(t => ({ type: 'task' as const, task: t, pri: t.completedDate ? 4 : 1, nm: t.name }));
+
+              return [...gItems, ...tItems].sort((a, b) => a.pri !== b.pri ? a.pri - b.pri : a.nm.localeCompare(b.nm)).map(item => {
+                if (item.type === 'task') {
+                  const task = item.task;
+                  const isCompleted = !!task.completedDate;
+                  const targetDate = task.targetDate ? toMid(toD(task.targetDate)) : null;
+                  return (
+                    <div
+                      key={`task-${task.id}`}
+                      style={{
+                        border: isCompleted ? '2px solid #4caf50' : '2px solid #ddd',
+                        borderRadius: '15px', padding: '25px',
+                        background: isCompleted ? '#e8f5e9' : '#f5f5f5',
+                        cursor: isCompleted ? 'default' : 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: isCompleted ? '0 4px 15px rgba(76, 175, 80, 0.2)' : '0 4px 15px rgba(0, 0, 0, 0.08)',
+                        position: 'relative', overflow: 'hidden'
+                      }}
+                      onClick={() => { if (!isCompleted) { setEditingTask(task); setShowAdHocTaskForm(true); } }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; }}
+                    >
+                      <div style={{ position: 'absolute', top: 0, right: 0, fontSize: '40px', opacity: 0.1, transform: 'rotate(15deg)', marginTop: '10px', marginRight: '10px' }}>
+                        {isCompleted ? '✅' : '📋'}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                        <h3 style={{ margin: 0, fontSize: '22px', color: isCompleted ? '#2e7d32' : '#666', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          📋 {task.name}
+                        </h3>
+                        <div style={{
+                          padding: '8px 16px', borderRadius: '25px',
+                          backgroundColor: isCompleted ? '#4caf50' : '#9e9e9e',
+                          color: 'white', fontSize: '14px', fontWeight: 'bold',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap'
+                        }}>
+                          {isCompleted ? 'Done' : 'Task'}
+                        </div>
+                      </div>
+                      {task.description && <p style={{ margin: '0 0 15px 0', color: '#4b5563', fontSize: '16px', lineHeight: '1.5' }}>{task.description}</p>}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: '#6b7280', backgroundColor: 'rgba(255,255,255,0.7)', padding: '12px 16px', borderRadius: '10px' }}>
+                        <div style={{ fontWeight: '500' }}>{targetDate && `Due: ${targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}</div>
+                        {!isCompleted && <div style={{ color: '#4f46e5', fontWeight: '600', fontSize: '13px' }}>✏️ Mark Done</div>}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Goal card
+                const goal = item.goal;
+                const activity = activities.find(a => a.id === goal.activityId);
+                const status = getStatusForGoal(goal);
+                const cardColors = (() => {
+                  switch (status.status) {
+                    case 'weekly-complete': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(76, 175, 80, 0.2)', emoji: '✅', titleColor: status.textColor };
+                    case 'done-today': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(33, 150, 243, 0.2)', emoji: '✔️', titleColor: status.textColor };
+                    case 'progress-week': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(255, 193, 7, 0.2)', emoji: '📝', titleColor: status.textColor };
+                    default: return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(158, 158, 158, 0.1)', emoji: '⏳', titleColor: status.textColor };
+                  }
+                })();
 
                 return (
                   <div
-                    key={`task-${task.id}`}
+                    key={goal.id}
                     style={{
-                      border: isCompleted ? '2px solid #4caf50' : '2px solid #ddd',
-                      borderRadius: '15px',
-                      padding: '25px',
-                      background: isCompleted ? '#e8f5e9' : '#f5f5f5',
-                      cursor: 'pointer',
+                      border: cardColors.border, borderRadius: '15px', padding: '25px',
+                      background: cardColors.background, cursor: 'pointer',
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: isCompleted ? '0 4px 15px rgba(76, 175, 80, 0.2)' : '0 4px 15px rgba(0, 0, 0, 0.08)',
-                      position: 'relative',
-                      overflow: 'hidden'
+                      boxShadow: cardColors.shadow, position: 'relative', overflow: 'hidden'
                     }}
-                    onClick={() => {
-                      if (!isCompleted) {
-                        setEditingTask(task);
-                        setShowAdHocTaskForm(true);
-                      }
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                    }}
+                    onClick={() => handleRecordActivity(goal)}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)'; e.currentTarget.style.boxShadow = `0 15px 40px ${cardColors.shadow.match(/rgba\([^)]+\)/)?.[0] || 'rgba(0,0,0,0.3)'}`; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = cardColors.shadow; }}
                   >
-                    <div style={{
-                      position: 'absolute',
-                      top: 0,
-                      right: 0,
-                      fontSize: '40px',
-                      opacity: 0.1,
-                      transform: 'rotate(15deg)',
-                      marginTop: '10px',
-                      marginRight: '10px'
-                    }}>
-                      {isCompleted ? '✅' : '📋'}
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      marginBottom: '10px'
-                    }}>
-                      <h3 style={{
-                        margin: 0,
-                        fontSize: '22px',
-                        color: isCompleted ? '#2e7d32' : isOverdue ? '#c62828' : '#00838f',
-                        fontWeight: '600',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}>
-                        📋 {task.name}
+                    <div style={{ position: 'absolute', top: 0, right: 0, fontSize: '40px', opacity: 0.1, transform: 'rotate(15deg)', marginTop: '10px', marginRight: '10px' }}>{cardColors.emoji}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                      <h3 style={{ margin: 0, fontSize: '22px', color: cardColors.titleColor, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {cardColors.emoji} {goal.name || activity?.name || 'Unknown Activity'}
                       </h3>
-                      <div style={{
-                        padding: '8px 16px',
-                        borderRadius: '25px',
-                        backgroundColor: isCompleted ? '#4caf50' : isOverdue ? '#f44336' : '#17a2b8',
-                        color: 'white',
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        whiteSpace: 'nowrap'
-                      }}>
-                        {isCompleted ? 'Done' : isOverdue ? 'Overdue' : 'Task'}
+                      <div style={{ padding: '8px 16px', borderRadius: '25px', backgroundColor: status.color, color: 'white', fontSize: '14px', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                        {status.text}
                       </div>
                     </div>
-
-                    {task.description && (
-                      <p style={{
-                        margin: '0 0 15px 0',
-                        color: '#4b5563',
-                        fontSize: '16px',
-                        lineHeight: '1.5'
-                      }}>
-                        {task.description}
-                      </p>
-                    )}
-
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      fontSize: '14px',
-                      color: '#6b7280',
-                      backgroundColor: 'rgba(255,255,255,0.7)',
-                      padding: '12px 16px',
-                      borderRadius: '10px'
-                    }}>
+                    <p style={{ margin: '0 0 20px 0', color: '#4b5563', fontSize: '16px', lineHeight: '1.5' }}>
+                      {activity?.description || 'No description available'}
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: '#6b7280', backgroundColor: 'rgba(255,255,255,0.7)', padding: '12px 16px', borderRadius: '10px', marginTop: '10px' }}>
                       <div style={{ fontWeight: '500' }}>
-                        {targetDate && `Due: ${targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                        {goal.timesPerWeek && `📊 ${getProgressForGoal(goal.id).weekCount} of ${goal.timesPerWeek}/week`}
+                        {goal.minutesPerSession && ` • ⏱️ ${goal.minutesPerSession} min`}
+                        {(() => {
+                          const lp = getLatestProgress(goal.id);
+                          const ind = [];
+                          if (activity?.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && lp?.percentageCompleted !== undefined) ind.push(` • 📈 ${lp.percentageCompleted.toFixed(0)}% of ${goal.percentageGoal || 100}%`);
+                          if (activity?.progressReportingStyle?.progressCount && goal.progressCount && lp?.countCompleted !== undefined) ind.push(` • 📚 ${lp.countCompleted} of ${goal.progressCount} ${activity.progressCountName || 'items'}`);
+                          return ind.join('');
+                        })()}
                       </div>
-                      {!isCompleted && (
-                        <div style={{
-                          color: '#4f46e5',
-                          fontWeight: '600',
-                          fontSize: '13px'
-                        }}>
-                          ✏️ Mark Done
-                        </div>
-                      )}
+                      <div style={{ color: '#4f46e5', fontWeight: '600', fontSize: '13px' }}>
+                        {getProgressForGoal(goal.id).todayInstance ? '✏️ Edit' : '➕ Record'}
+                      </div>
                     </div>
                   </div>
                 );

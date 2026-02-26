@@ -10,6 +10,8 @@ interface ReportsProps {
   activities: Activity[];
   students: Person[];
   adHocTasks: AdHocTask[];
+  schoolYearStartMonth?: number;
+  schoolYearStartDay?: number;
   onClose: () => void;
   onEditActivity?: (instance: ActivityInstance) => void;
 }
@@ -20,13 +22,15 @@ const Reports: React.FC<ReportsProps> = ({
   activities,
   students,
   adHocTasks,
+  schoolYearStartMonth = 8,
+  schoolYearStartDay = 1,
   onClose,
   onEditActivity
 }) => {
   const [activityInstances, setActivityInstances] = useState<ActivityInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom' | 'all'>('week');
+  const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'year' | 'schoolYear' | 'custom' | 'all'>('week');
   const [activeTab, setActiveTab] = useState<'progress' | 'history' | 'transcript' | 'effort'>('progress');
   const [selectedWeek, setSelectedWeek] = useState<string>(() => {
     const today = new Date();
@@ -48,61 +52,145 @@ const Reports: React.FC<ReportsProps> = ({
   const [customEndDate, setCustomEndDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
+  const [selectedSchoolYear, setSelectedSchoolYear] = useState<string>(() => {
+    // Determine current school year based on schoolYearStartMonth/Day
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const syStart = new Date(currentYear, schoolYearStartMonth - 1, schoolYearStartDay);
+    // If we haven't reached this year's start yet, current school year started last year
+    if (now < syStart) {
+      return `${currentYear - 1}-${currentYear}`;
+    }
+    return `${currentYear}-${currentYear + 1}`;
+  });
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     id: string;
     name: string;
   } | null>(null);
 
-  // Generate week options (current week and past 8 weeks)
+  // Compute the data date range (earliest and latest activity instance dates)
+  const getDataRange = () => {
+    if (activityInstances.length === 0) return { earliest: new Date(), latest: new Date() };
+    let earliest = new Date(activityInstances[0].date);
+    let latest = new Date(activityInstances[0].date);
+    for (const inst of activityInstances) {
+      const d = new Date(inst.date);
+      if (d < earliest) earliest = d;
+      if (d > latest) latest = d;
+    }
+    return { earliest, latest };
+  };
+
+  // Generate week options spanning data range (plus current week)
   const getWeekOptions = () => {
-    const options = [];
+    const { earliest, latest } = getDataRange();
     const today = new Date();
+    const endBound = today > latest ? today : latest;
 
-    for (let i = 0; i < 9; i++) {
-      const weekStart = new Date(today);
-      const dayOfWeek = today.getDay();
-      weekStart.setDate(today.getDate() - dayOfWeek - (i * 7));
+    // Start from the Sunday on or before the earliest date
+    const firstWeekStart = new Date(earliest);
+    firstWeekStart.setDate(firstWeekStart.getDate() - firstWeekStart.getDay());
 
+    const options = [];
+    // Current week Sunday
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setDate(today.getDate() - today.getDay());
+
+    // Walk backwards from current week to earliest week
+    const cursor = new Date(currentWeekStart);
+    while (cursor >= firstWeekStart) {
+      const weekStart = new Date(cursor);
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 6);
 
       const startStr = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const endStr = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-      const label = i === 0 ? `This Week (${startStr} - ${endStr})` : `${startStr} - ${endStr}`;
+      const isThisWeek = weekStart.getTime() === currentWeekStart.getTime();
+      const label = isThisWeek ? `This Week (${startStr} - ${endStr})` : `${startStr} - ${endStr}`;
 
       options.push({
         value: weekStart.toISOString().split('T')[0],
-        label: label
+        label
       });
+
+      cursor.setDate(cursor.getDate() - 7);
     }
 
     return options;
   };
 
   const getMonthOptions = () => {
+    const { earliest, latest } = getDataRange();
     const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const endBound = now > latest ? now : latest;
+
+    const options = [];
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    return monthNames.map((name, index) => {
-      const year = index > currentMonth ? currentYear - 1 : currentYear;
-      const value = `${year}-${String(index + 1).padStart(2, '0')}`;
-      return { value, label: `${name} ${year}` };
-    });
+
+    // Start from the month of the latest/current date, go back to earliest
+    let year = endBound.getFullYear();
+    let month = endBound.getMonth();
+    const earliestYear = earliest.getFullYear();
+    const earliestMonth = earliest.getMonth();
+
+    while (year > earliestYear || (year === earliestYear && month >= earliestMonth)) {
+      const value = `${year}-${String(month + 1).padStart(2, '0')}`;
+      options.push({ value, label: `${monthNames[month]} ${year}` });
+      month--;
+      if (month < 0) { month = 11; year--; }
+    }
+
+    return options;
   };
 
   const getYearOptions = () => {
-    const yearsSet = new Set<number>();
-    activityInstances.forEach(instance => {
-      const year = new Date(instance.date).getFullYear();
-      yearsSet.add(year);
-    });
-    yearsSet.add(new Date().getFullYear());
-    return Array.from(yearsSet).sort((a, b) => b - a);
+    const { earliest, latest } = getDataRange();
+    const now = new Date();
+    const endYear = Math.max(now.getFullYear(), latest.getFullYear());
+    const startYear = earliest.getFullYear();
+    const years = [];
+    for (let y = endYear; y >= startYear; y--) {
+      years.push(y);
+    }
+    return years;
+  };
+
+  const getSchoolYearOptions = () => {
+    const { earliest, latest } = getDataRange();
+    const now = new Date();
+    const endBound = now > latest ? now : latest;
+
+    // Determine school year for a given date
+    const getSchoolYearStart = (d: Date) => {
+      const year = d.getFullYear();
+      const syThisYear = new Date(year, schoolYearStartMonth - 1, schoolYearStartDay);
+      return d >= syThisYear ? year : year - 1;
+    };
+
+    const latestSY = getSchoolYearStart(endBound);
+    const earliestSY = getSchoolYearStart(earliest);
+
+    const options = [];
+    for (let sy = latestSY; sy >= earliestSY; sy--) {
+      options.push({
+        value: `${sy}-${sy + 1}`,
+        label: `${sy}-${sy + 1}`
+      });
+    }
+    return options;
+  };
+
+  const getSchoolYearRange = (syValue: string) => {
+    const [startYear] = syValue.split('-').map(Number);
+    const start = new Date(startYear, schoolYearStartMonth - 1, schoolYearStartDay);
+    const end = new Date(startYear + 1, schoolYearStartMonth - 1, schoolYearStartDay);
+    end.setDate(end.getDate() - 1);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
   };
 
   const handleDelete = async (instanceId: string) => {
@@ -196,6 +284,14 @@ const Reports: React.FC<ReportsProps> = ({
           return instanceDate >= yearStart && instanceDate <= yearEnd;
         });
         break;
+      case 'schoolYear': {
+        const { start: syStart, end: syEnd } = getSchoolYearRange(selectedSchoolYear);
+        filtered = filtered.filter(instance => {
+          const instanceDate = new Date(instance.date);
+          return instanceDate >= syStart && instanceDate <= syEnd;
+        });
+        break;
+      }
       case 'custom':
         const customStart = new Date(customStartDate + 'T00:00:00');
         const customEnd = new Date(customEndDate + 'T23:59:59.999');
@@ -223,6 +319,11 @@ const Reports: React.FC<ReportsProps> = ({
       }
       case 'year':
         return 52;
+      case 'schoolYear': {
+        const { start: syS, end: syE } = getSchoolYearRange(selectedSchoolYear);
+        const syDays = Math.max(1, Math.ceil((syE.getTime() - syS.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        return Math.max(1, Math.ceil(syDays / 7));
+      }
       case 'custom': {
         const start = new Date(customStartDate);
         const end = new Date(customEndDate);
@@ -349,6 +450,10 @@ const Reports: React.FC<ReportsProps> = ({
         const yearEnd = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
         return checkDate >= yearStart && checkDate <= yearEnd;
       }
+      case 'schoolYear': {
+        const { start: syS, end: syE } = getSchoolYearRange(selectedSchoolYear);
+        return checkDate >= syS && checkDate <= syE;
+      }
       case 'custom': {
         const customStart = new Date(customStartDate + 'T00:00:00');
         const customEnd = new Date(customEndDate + 'T23:59:59.999');
@@ -366,6 +471,7 @@ const Reports: React.FC<ReportsProps> = ({
       case 'week': return 'this week';
       case 'month': return 'this month';
       case 'year': return 'this year';
+      case 'schoolYear': return 'this school year';
       case 'custom': return 'this period';
       case 'all': return 'total';
     }
@@ -453,6 +559,9 @@ const Reports: React.FC<ReportsProps> = ({
             <option value="week">Week of</option>
             <option value="month">Month</option>
             <option value="year">Year</option>
+            {!(schoolYearStartMonth === 1 && schoolYearStartDay === 1) && (
+              <option value="schoolYear">School Year</option>
+            )}
             <option value="custom">Custom</option>
             <option value="all">All Time</option>
           </select>
@@ -512,6 +621,26 @@ const Reports: React.FC<ReportsProps> = ({
               {getYearOptions().map(year => (
                 <option key={year} value={year}>
                   {year}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {dateRange === 'schoolYear' && (
+            <select
+              value={selectedSchoolYear}
+              onChange={(e) => setSelectedSchoolYear(e.target.value)}
+              style={{
+                padding: '8px',
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                minWidth: '150px'
+              }}
+            >
+              {getSchoolYearOptions().map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -918,6 +1047,10 @@ const Reports: React.FC<ReportsProps> = ({
                         return new Date(y, m - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                       }
                       case 'year': return String(selectedYear);
+                      case 'schoolYear': {
+                        const { start: syS, end: syE } = getSchoolYearRange(selectedSchoolYear);
+                        return `School Year ${selectedSchoolYear} (${fmt(syS)} - ${fmt(syE)})`;
+                      }
                       case 'custom': return `${fmt(new Date(customStartDate))} - ${fmt(new Date(customEndDate))}`;
                       case 'all': return 'All Time';
                     }
@@ -1013,7 +1146,7 @@ const Reports: React.FC<ReportsProps> = ({
                                   <th style={{ textAlign: 'left', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Goal</th>
                                   <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Times Worked</th>
                                   <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Attainment</th>
-                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Status</th>
+                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Completion Status</th>
                                 </tr>
                               </thead>
                               <tbody>

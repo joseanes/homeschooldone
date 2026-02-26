@@ -26,6 +26,8 @@ interface SettingsModalProps {
   publicDashboardId: string | null;
   allowMultipleRecordsPerDay: boolean;
   studentSortOrder: string;
+  schoolYearStartMonth: number;
+  schoolYearStartDay: number;
   adHocTasks: AdHocTask[];
   activeTab?: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks';
   onTabChange?: (tab: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks') => void;
@@ -38,6 +40,7 @@ interface SettingsModalProps {
   onSavePublicDashboard: (dashboardId: string | null) => void;
   onSaveMultipleRecords: (enabled: boolean) => void;
   onSaveStudentSortOrder: (order: string) => void;
+  onSaveSchoolYearStart: (month: number, day: number) => void;
   onEditTask: (task: AdHocTask) => void;
   onDeleteTask: (taskId: string) => void;
   onTasksUpdated: () => void;
@@ -69,6 +72,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   publicDashboardId,
   allowMultipleRecordsPerDay,
   studentSortOrder,
+  schoolYearStartMonth,
+  schoolYearStartDay,
   adHocTasks,
   activeTab: initialActiveTab,
   onTabChange,
@@ -77,6 +82,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onSavePublicDashboard,
   onSaveMultipleRecords,
   onSaveStudentSortOrder,
+  onSaveSchoolYearStart,
   onEditTask,
   onDeleteTask,
   onTasksUpdated,
@@ -96,6 +102,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks'>(initialActiveTab || 'general');
   const [sortOrder, setSortOrder] = useState(studentSortOrder || 'age-asc');
+  const [syMonth, setSyMonth] = useState(schoolYearStartMonth || 8);
+  const [syDay, setSyDay] = useState(schoolYearStartDay || 1);
   const [taskFilterStudent, setTaskFilterStudent] = useState('');
   const [taskFilterStatus, setTaskFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
   const [taskFilterFrom, setTaskFilterFrom] = useState('');
@@ -629,9 +637,69 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
             )}
+
+            {userRole === 'parent' && (
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px',
+                padding: '20px',
+                marginTop: '20px'
+              }}>
+                <h3 style={{ marginTop: 0, marginBottom: '15px' }}>📅 School Year Start</h3>
+                <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                  Set the start of your school year for reporting periods. Default is August 1st.
+                </p>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#555' }}>Month</label>
+                    <select
+                      value={syMonth}
+                      onChange={(e) => {
+                        const m = Number(e.target.value);
+                        setSyMonth(m);
+                        onSaveSchoolYearStart(m, syDay);
+                      }}
+                      style={{
+                        padding: '8px',
+                        fontSize: '14px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        minWidth: '140px'
+                      }}
+                    >
+                      {['January','February','March','April','May','June','July','August','September','October','November','December'].map((name, i) => (
+                        <option key={i + 1} value={i + 1}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#555' }}>Day</label>
+                    <select
+                      value={syDay}
+                      onChange={(e) => {
+                        const d = Number(e.target.value);
+                        setSyDay(d);
+                        onSaveSchoolYearStart(syMonth, d);
+                      }}
+                      style={{
+                        padding: '8px',
+                        fontSize: '14px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        minWidth: '70px'
+                      }}
+                    >
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
-        
+
       case 'students':
         return (
           <div>

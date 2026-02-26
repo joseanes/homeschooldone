@@ -32,6 +32,8 @@ export interface Homeschool {
   publicDashboardId?: string;
   allowMultipleRecordsPerDay?: boolean;
   studentSortOrder?: 'age-asc' | 'age-desc' | 'alpha' | 'workload';
+  schoolYearStartMonth?: number; // 1-12 (default 8 = August)
+  schoolYearStartDay?: number;   // 1-31 (default 1)
 }
 
 export interface Subject {

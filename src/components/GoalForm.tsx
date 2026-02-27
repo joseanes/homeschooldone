@@ -28,8 +28,8 @@ const GoalForm: React.FC<GoalFormProps> = ({
   const [targetPercentage, setTargetPercentage] = useState<number | ''>('');
   const [percentageGoal, setPercentageGoal] = useState<number | ''>('');
   const [targetCount, setTargetCount] = useState<number | ''>('');
-  const [startDate, setStartDate] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [studentDates, setStudentDates] = useState<{[studentId: string]: {startDate?: string; deadline?: string}}>({});
+  const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
 
   const selectedActivityData = activities.find(a => a.id === selectedActivity);
@@ -76,8 +76,21 @@ const GoalForm: React.FC<GoalFormProps> = ({
       if (selectedActivityData?.progressReportingStyle.progressCount && targetCount) {
         goalData.progressCount = Number(targetCount);
       }
-      if (startDate) goalData.startDate = new Date(startDate);
-      if (deadline) goalData.deadline = new Date(deadline);
+      if (description) goalData.description = description;
+
+      // Save per-student dates in studentCompletions
+      const studentCompletions: {[studentId: string]: {startDate?: Date; deadline?: Date}} = {};
+      Object.entries(studentDates).forEach(([sid, dates]) => {
+        if (dates.startDate || dates.deadline) {
+          studentCompletions[sid] = {
+            ...(dates.startDate && { startDate: new Date(dates.startDate) }),
+            ...(dates.deadline && { deadline: new Date(dates.deadline) }),
+          };
+        }
+      });
+      if (Object.keys(studentCompletions).length > 0) {
+        goalData.studentCompletions = studentCompletions;
+      }
 
       await addDoc(collection(db, 'goals'), goalData);
       onGoalAdded();
@@ -341,41 +354,73 @@ const GoalForm: React.FC<GoalFormProps> = ({
                 </div>
               )}
 
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>
-                  Start Date (optional)
-                </label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    fontSize: '16px',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px'
-                  }}
-                />
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                  Goals will not appear on dashboards before this date
+              {/* Per-Student Dates */}
+              {selectedStudents.length > 0 && (
+                <div style={{
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '8px',
+                  padding: '15px',
+                  marginBottom: '15px'
+                }}>
+                  <h4 style={{ marginTop: 0, marginBottom: '10px', fontSize: '14px', color: '#555' }}>Per-Student Dates (optional)</h4>
+                  <p style={{ fontSize: '12px', color: '#666', marginTop: 0, marginBottom: '10px' }}>
+                    Goals will not appear on dashboards before the start date.
+                  </p>
+                  {selectedStudents.map(sid => {
+                    const student = students.find(s => s.id === sid);
+                    if (!student) return null;
+                    return (
+                      <div key={sid} style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #ddd' }}>
+                        <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>{student.name}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: '#555' }}>Start Date</label>
+                            <input
+                              type="date"
+                              value={studentDates[sid]?.startDate || ''}
+                              onChange={(e) => setStudentDates(prev => ({
+                                ...prev,
+                                [sid]: { ...prev[sid], startDate: e.target.value }
+                              }))}
+                              style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: '#555' }}>Deadline</label>
+                            <input
+                              type="date"
+                              value={studentDates[sid]?.deadline || ''}
+                              onChange={(e) => setStudentDates(prev => ({
+                                ...prev,
+                                [sid]: { ...prev[sid], deadline: e.target.value }
+                              }))}
+                              style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+              )}
 
+              {/* Description */}
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '5px' }}>
-                  Deadline (optional)
+                  Description (optional)
                 </label>
-                <input
-                  type="date"
-                  value={deadline}
-                  onChange={(e) => setDeadline(e.target.value)}
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter a description for the transcript..."
+                  rows={3}
                   style={{
                     width: '100%',
                     padding: '8px',
-                    fontSize: '16px',
+                    fontSize: '14px',
                     border: '1px solid #ccc',
-                    borderRadius: '4px'
+                    borderRadius: '4px',
+                    resize: 'vertical'
                   }}
                 />
               </div>

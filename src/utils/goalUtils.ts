@@ -4,9 +4,11 @@ import { Goal, ActivityInstance, Activity } from '../types';
  * Helper function to check if a goal should be shown based on start date and student completion
  */
 export function isGoalActiveForStudent(goal: Goal, studentId: string, currentDate: Date = new Date()): boolean {
-  // Check start date
-  if (goal.startDate) {
-    const startDate = goal.startDate instanceof Date ? goal.startDate : new Date(goal.startDate);
+  // Check per-student start date first, then fall back to goal-level start date
+  const perStudentStart = goal.studentCompletions?.[studentId]?.startDate;
+  const effectiveStart = perStudentStart || goal.startDate;
+  if (effectiveStart) {
+    const startDate = effectiveStart instanceof Date ? effectiveStart : new Date(effectiveStart as any);
     if (currentDate < startDate) return false;
   }
   

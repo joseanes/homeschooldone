@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, doc, updateDoc, arrayRemove, arrayUnion, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { Homeschool, Person, Activity, Goal, AdHocTask } from '../types';
 import { formatLastActivity } from '../utils/activityTracking';
 import { generatePublicDashboardId } from '../utils/publicDashboard';
@@ -930,7 +931,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, textAlign: 'left' }}>
                             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{activity.name}</div>
                             <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
                               {activity.description}
@@ -941,20 +942,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 {activityGoals.map(goal => {
                                   const goalStudents = students.filter(s => goal.studentIds?.includes(s.id));
                                   return (
-                                    <div key={goal.id} style={{ 
-                                      fontSize: '11px', 
-                                      marginLeft: '8px',
+                                    <div key={goal.id} style={{
+                                      fontSize: '11px',
                                       marginBottom: '4px',
                                       display: 'flex',
                                       justifyContent: 'space-between',
                                       alignItems: 'center'
                                     }}>
-                                      <div>
+                                      <div style={{ textAlign: 'left' }}>
+                                        {goal.name && <div style={{ fontWeight: '600', fontSize: '12px', color: '#333' }}>{goal.name}</div>}
                                         • {goalStudents.map(s => s.name).join(', ')}
                                         {goal.timesPerWeek && ` - ${goal.timesPerWeek}x/week`}
                                         {goal.minutesPerSession && ` - ${goal.minutesPerSession}min`}
                                       </div>
-                                      <div style={{ display: 'flex', gap: '3px' }}>
+                                      <div style={{ display: 'flex', gap: '3px', flexShrink: 0, marginLeft: '8px' }}>
                                         <button
                                           onClick={() => { onEditGoal(goal, activity, goalStudents); onClose(); }}
                                           style={{
@@ -1173,25 +1174,51 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         )}
                       </div>
                       
-                      {userRole === 'parent' && user.id !== currentUserId && (
-                        <button
-                          onClick={() => handleRemoveUser(user.id, user.email || '', user.role)}
-                          disabled={removingUserId === user.id}
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: removingUserId === user.id ? '#999' : '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: removingUserId === user.id ? 'not-allowed' : 'pointer',
-                            fontSize: '12px'
-                          }}
-                        >
-                          {removingUserId === user.id 
-                            ? 'Processing...' 
-                            : user.status === 'invited' ? 'Revoke' : 'Delete'}
-                        </button>
-                      )}
+                      <div style={{ display: 'flex', gap: '4px', flexShrink: 0, marginLeft: '8px' }}>
+                        {userRole === 'parent' && user.email && user.status !== 'invited' && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await sendPasswordResetEmail(auth, user.email!);
+                                alert(`Password reset email sent to ${user.email}`);
+                              } catch (error: any) {
+                                alert(`Error sending reset email: ${error.message || 'Unknown error'}`);
+                              }
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#6c757d',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            Reset Password
+                          </button>
+                        )}
+                        {userRole === 'parent' && user.id !== currentUserId && (
+                          <button
+                            onClick={() => handleRemoveUser(user.id, user.email || '', user.role)}
+                            disabled={removingUserId === user.id}
+                            style={{
+                              padding: '4px 8px',
+                              backgroundColor: removingUserId === user.id ? '#999' : '#dc3545',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: removingUserId === user.id ? 'not-allowed' : 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            {removingUserId === user.id
+                              ? 'Processing...'
+                              : user.status === 'invited' ? 'Revoke' : 'Delete'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

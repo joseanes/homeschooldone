@@ -6,6 +6,7 @@ import DeleteConfirmation from './DeleteConfirmation';
 
 interface ReportsProps {
   homeschoolId: string;
+  homeschoolName?: string;
   goals: Goal[];
   activities: Activity[];
   students: Person[];
@@ -18,6 +19,7 @@ interface ReportsProps {
 
 const Reports: React.FC<ReportsProps> = ({
   homeschoolId,
+  homeschoolName = '',
   goals,
   activities,
   students,
@@ -1235,8 +1237,128 @@ const Reports: React.FC<ReportsProps> = ({
         )}
 
         {activeTab === 'transcript' && (
-          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666' }}>
-            <p style={{ fontSize: '16px' }}>Transcript view coming soon.</p>
+          <div>
+            {/* Print styles for Transcript */}
+            <style>{`
+              @media print {
+                body * { visibility: hidden; }
+                .transcript-print-area, .transcript-print-area * { visibility: visible; }
+                .transcript-print-area {
+                  position: absolute;
+                  left: 0;
+                  top: 0;
+                  width: 100%;
+                  padding: 10px 20px;
+                  box-sizing: border-box;
+                }
+                .no-print { display: none !important; }
+                .transcript-student-section {
+                  break-inside: avoid;
+                  page-break-inside: avoid;
+                  border: none !important;
+                  border-radius: 0 !important;
+                  padding: 10px 0 !important;
+                  margin-bottom: 10px !important;
+                }
+              }
+            `}</style>
+
+            {/* Print Transcript button */}
+            <div className="no-print" style={{ marginBottom: '16px', textAlign: 'right' }}>
+              <button
+                onClick={() => window.print()}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '16px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Print Transcript
+              </button>
+            </div>
+
+            <div className="transcript-print-area">
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '22px', color: '#333' }}>{homeschoolName} Transcript</h3>
+              </div>
+
+              {[...students]
+                .sort((a, b) => {
+                  if (a.dateOfBirth && b.dateOfBirth) {
+                    return new Date(b.dateOfBirth).getTime() - new Date(a.dateOfBirth).getTime();
+                  }
+                  return a.name.localeCompare(b.name);
+                })
+                .filter(student => selectedStudent === 'all' || student.id === selectedStudent)
+                .map(student => {
+                  const completedGoals = goals
+                    .filter(g =>
+                      g.studentIds?.includes(student.id) &&
+                      g.studentCompletions?.[student.id]?.completionDate
+                    )
+                    .sort((a, b) => {
+                      const actA = activities.find(act => act.id === a.activityId);
+                      const actB = activities.find(act => act.id === b.activityId);
+                      return (a.name || actA?.name || '').localeCompare(b.name || actB?.name || '');
+                    });
+
+                  return (
+                    <div key={student.id} className="transcript-student-section" style={{
+                      border: '2px solid #e0e0e0',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      marginBottom: '20px',
+                      backgroundColor: '#fff'
+                    }}>
+                      <h3 style={{ margin: '0 0 15px 0', fontSize: '20px', color: '#333', borderBottom: '2px solid #2196f3', paddingBottom: '8px' }}>
+                        {student.name}
+                      </h3>
+
+                      {completedGoals.length === 0 ? (
+                        <p style={{ color: '#999', fontSize: '14px' }}>No completed goals.</p>
+                      ) : (
+                        <div style={{ display: 'grid', gap: '0' }}>
+                          {completedGoals.map(goal => {
+                            const activity = activities.find(a => a.id === goal.activityId);
+                            const completion = goal.studentCompletions?.[student.id];
+                            const grade = completion?.grade;
+
+                            return (
+                              <div key={goal.id} style={{
+                                padding: '10px 0',
+                                borderBottom: '1px solid #f0f0f0',
+                                textAlign: 'left'
+                              }}>
+                                <div style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'baseline'
+                                }}>
+                                  <span style={{ fontWeight: '700', fontSize: '15px', color: '#333' }}>
+                                    {goal.name || activity?.name || 'Unnamed Goal'}
+                                  </span>
+                                  <span style={{ fontWeight: '700', fontSize: '15px', color: '#333', marginLeft: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                    {grade || 'Completed'}
+                                  </span>
+                                </div>
+                                {goal.description && (
+                                  <div style={{ fontSize: '13px', color: '#666', marginTop: '4px', textAlign: 'left' }}>
+                                    {goal.description}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
           </div>
         )}
 

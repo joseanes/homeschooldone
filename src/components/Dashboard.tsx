@@ -1660,6 +1660,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       {showReports && homeschool && (
         <Reports
           homeschoolId={homeschool.id}
+          homeschoolName={homeschool.name}
           goals={goals}
           activities={activities}
           students={students}

@@ -75,7 +75,8 @@ export interface Goal {
   percentageGoal?: number; // Target percentage completion (e.g., 95)
   homeschoolId: string;
   createdAt?: Date;
-  studentCompletions?: { [studentId: string]: { completionDate?: Date; grade?: string } };
+  description?: string; // Used in transcript reports
+  studentCompletions?: { [studentId: string]: { completionDate?: Date; grade?: string; startDate?: Date; deadline?: Date } };
 }
 
 export interface ActivityInstance {

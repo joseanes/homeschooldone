@@ -88,6 +88,13 @@ struct Activity: Codable, Identifiable {
 }
 
 // MARK: - Goal
+struct StudentCompletion: Codable {
+    let completionDate: Timestamp?
+    let grade: String?
+    let startDate: Timestamp?
+    let deadline: Timestamp?
+}
+
 struct Goal: Codable, Identifiable {
     @DocumentID var id: String?
     let activityId: String
@@ -95,7 +102,8 @@ struct Goal: Codable, Identifiable {
     let studentIds: [String]
     let sessionsPerWeek: Int
     let minutesPerSession: Int
-    
+    let studentCompletions: [String: StudentCompletion]?
+
     enum CodingKeys: String, CodingKey {
         case id
         case activityId
@@ -103,6 +111,11 @@ struct Goal: Codable, Identifiable {
         case studentIds
         case sessionsPerWeek
         case minutesPerSession
+        case studentCompletions
+    }
+
+    func isCompletedForStudent(_ studentId: String) -> Bool {
+        studentCompletions?[studentId]?.completionDate != nil
     }
 }
 

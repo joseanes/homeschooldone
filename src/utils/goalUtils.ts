@@ -12,13 +12,9 @@ export function isGoalActiveForStudent(goal: Goal, studentId: string, currentDat
     if (currentDate < startDate) return false;
   }
   
-  // Check student completion date
+  // If the goal has a completion date for this student, it's done — hide from dashboards
   if (goal.studentCompletions?.[studentId]?.completionDate) {
-    const completion = goal.studentCompletions[studentId].completionDate;
-    const completionDate = completion instanceof Date 
-      ? completion 
-      : new Date(completion!);
-    if (currentDate > completionDate) return false;
+    return false;
   }
   
   return true;

@@ -248,8 +248,9 @@ public class FirebaseService: ObservableObject {
     
     public func calculateStudentProgress() -> [StudentProgress] {
         return students.map { student in
+            let studentId = student.id ?? ""
             let studentGoals = goals.filter { goal in
-                goal.studentIds.contains(student.id ?? "")
+                goal.studentIds.contains(studentId) && !goal.isCompletedForStudent(studentId)
             }
             
             let todayCompletedGoalIds = Set(todayInstances.compactMap { instance in

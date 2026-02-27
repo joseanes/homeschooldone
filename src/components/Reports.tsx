@@ -1299,12 +1299,34 @@ const Reports: React.FC<ReportsProps> = ({
                     .filter(g =>
                       g.studentIds?.includes(student.id) &&
                       g.studentCompletions?.[student.id]?.completionDate
-                    )
-                    .sort((a, b) => {
+                    );
+
+                  // Group by subject
+                  const subjectGroups: { [subject: string]: typeof completedGoals } = {};
+                  completedGoals.forEach(goal => {
+                    const activity = activities.find(a => a.id === goal.activityId);
+                    const subject = activity?.subjectId || 'Other';
+                    if (!subjectGroups[subject]) subjectGroups[subject] = [];
+                    subjectGroups[subject].push(goal);
+                  });
+
+                  // Sort subjects alphabetically
+                  const sortedSubjects = Object.keys(subjectGroups).sort();
+
+                  // Sort goals within each subject alphabetically
+                  sortedSubjects.forEach(subject => {
+                    subjectGroups[subject].sort((a, b) => {
                       const actA = activities.find(act => act.id === a.activityId);
                       const actB = activities.find(act => act.id === b.activityId);
                       return (a.name || actA?.name || '').localeCompare(b.name || actB?.name || '');
                     });
+                  });
+
+                  const formatCompletionDate = (dateVal: any): string => {
+                    if (!dateVal) return '';
+                    const d = dateVal instanceof Date ? dateVal : dateVal.seconds ? new Date(dateVal.seconds * 1000) : new Date(dateVal);
+                    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  };
 
                   return (
                     <div key={student.id} className="transcript-student-section" style={{
@@ -1321,38 +1343,60 @@ const Reports: React.FC<ReportsProps> = ({
                       {completedGoals.length === 0 ? (
                         <p style={{ color: '#999', fontSize: '14px' }}>No completed goals.</p>
                       ) : (
-                        <div style={{ display: 'grid', gap: '0' }}>
-                          {completedGoals.map(goal => {
-                            const activity = activities.find(a => a.id === goal.activityId);
-                            const completion = goal.studentCompletions?.[student.id];
-                            const grade = completion?.grade;
-
-                            return (
-                              <div key={goal.id} style={{
-                                padding: '10px 0',
-                                borderBottom: '1px solid #f0f0f0',
+                        <div>
+                          {sortedSubjects.map(subject => (
+                            <div key={subject} style={{ marginBottom: '16px' }}>
+                              <div style={{
+                                fontSize: '14px',
+                                fontWeight: '700',
+                                color: '#2196f3',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                                padding: '8px 0 6px 0',
+                                borderBottom: '1px solid #e0e0e0',
                                 textAlign: 'left'
                               }}>
-                                <div style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'baseline'
-                                }}>
-                                  <span style={{ fontWeight: '700', fontSize: '15px', color: '#333' }}>
-                                    {goal.name || activity?.name || 'Unnamed Goal'}
-                                  </span>
-                                  <span style={{ fontWeight: '700', fontSize: '15px', color: '#333', marginLeft: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                    {grade || 'Completed'}
-                                  </span>
-                                </div>
-                                {goal.description && (
-                                  <div style={{ fontSize: '13px', color: '#666', marginTop: '4px', textAlign: 'left' }}>
-                                    {goal.description}
-                                  </div>
-                                )}
+                                {subject}
                               </div>
-                            );
-                          })}
+                              {subjectGroups[subject].map(goal => {
+                                const activity = activities.find(a => a.id === goal.activityId);
+                                const completion = goal.studentCompletions?.[student.id];
+                                const grade = completion?.grade;
+                                const completionDateStr = formatCompletionDate(completion?.completionDate);
+
+                                return (
+                                  <div key={goal.id} style={{
+                                    padding: '10px 0',
+                                    borderBottom: '1px solid #f0f0f0',
+                                    textAlign: 'left'
+                                  }}>
+                                    <div style={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'baseline'
+                                    }}>
+                                      <span style={{ fontWeight: '700', fontSize: '15px', color: '#333' }}>
+                                        {goal.name || activity?.name || 'Unnamed Goal'}
+                                      </span>
+                                      <span style={{ fontWeight: '700', fontSize: '15px', color: '#333', marginLeft: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                        {grade || 'Completed'}
+                                      </span>
+                                    </div>
+                                    {goal.description && (
+                                      <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>
+                                        {goal.description}
+                                      </div>
+                                    )}
+                                    {completionDateStr && (
+                                      <div style={{ fontSize: '12px', color: '#999', marginTop: '3px' }}>
+                                        Completed: {completionDateStr}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>

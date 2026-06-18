@@ -78,15 +78,15 @@ const Login: React.FC = () => {
     }
     try {
       await sendPasswordResetEmail(auth, email);
-      alert(`Password reset email sent to ${email}`);
-      setError('');
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
-        setError('No account found with this email');
-      } else {
+      // Don't reveal whether the email exists; only surface unexpected errors
+      if (error.code !== 'auth/user-not-found') {
         setError(error.message || 'Error sending reset email');
+        return;
       }
     }
+    alert('If an account exists for this email, a password reset link has been sent.');
+    setError('');
   };
 
   return (
@@ -95,7 +95,8 @@ const Login: React.FC = () => {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      minHeight: '100vh'
+      minHeight: '100vh',
+      backgroundColor: 'var(--hs-bg)'
     }}>
       <svg width="120" height="120" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '20px' }}>
         <path d="M14 43L40 19L66 43V67C66 70.3137 63.3137 73 60 73H20C16.6863 73 14 70.3137 14 67V43Z" fill="#F59E0B"/>
@@ -112,7 +113,7 @@ const Login: React.FC = () => {
         <span style={{ color: '#92400E' }}>Homeschool</span>{' '}
         <span style={{ color: '#16A34A' }}>Done</span>
       </h1>
-      <p style={{ fontSize: '18px', color: '#666', marginBottom: '30px' }}>Track your homeschool progress</p>
+      <p style={{ fontSize: '18px', color: 'var(--hs-text-secondary)', marginBottom: '30px' }}>Track your homeschool progress</p>
 
       {!showEmailForm ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
@@ -136,7 +137,7 @@ const Login: React.FC = () => {
             style={{
               padding: '10px 20px',
               fontSize: '16px',
-              backgroundColor: '#333',
+              backgroundColor: 'var(--hs-btn-neutral)',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -161,9 +162,11 @@ const Login: React.FC = () => {
                   width: '100%',
                   padding: '10px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  backgroundColor: 'var(--hs-bg-input)',
+                  color: 'var(--hs-text-primary)'
                 }}
               />
             </div>
@@ -178,9 +181,11 @@ const Login: React.FC = () => {
                   width: '100%',
                   padding: '10px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  backgroundColor: 'var(--hs-bg-input)',
+                  color: 'var(--hs-text-primary)'
                 }}
               />
             </div>
@@ -217,7 +222,7 @@ const Login: React.FC = () => {
                 width: '100%',
                 padding: '10px',
                 fontSize: '16px',
-                backgroundColor: loading ? '#999' : '#333',
+                backgroundColor: loading ? 'var(--hs-text-muted)' : 'var(--hs-btn-neutral)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -269,7 +274,7 @@ const Login: React.FC = () => {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#666',
+                color: 'var(--hs-text-secondary)',
                 cursor: 'pointer',
                 fontSize: '14px'
               }}

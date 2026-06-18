@@ -1,3 +1,137 @@
+:root {
+  color-scheme: light dark;
+
+  /* Structural backgrounds */
+  --hs-bg:              #ffffff;
+  --hs-bg-elevated:     #f0f4f8;
+  --hs-bg-card:         #f7f9fc;
+  --hs-bg-card-success: #f4f9f4;
+  --hs-bg-surface:      #f8f9fa;
+  --hs-bg-input:        #ffffff;
+
+  /* Borders */
+  --hs-border:         #dde3ea;
+  --hs-border-success: #a5d6a7;
+  --hs-border-input:   #cccccc;
+  --hs-border-light:   #dddddd;
+
+  /* Text */
+  --hs-text-primary:   #333333;
+  --hs-text-label:     #444444;
+  --hs-text-secondary: #666666;
+  --hs-text-muted:     #999999;
+
+  /* Student completion badge */
+  --hs-badge-bg:            #e0e0e0;
+  --hs-badge-text:           #555555;
+  --hs-badge-success-bg:    #a5d6a7;
+  --hs-badge-success-text:  #2e7d32;
+
+  /* Neutral action button (e.g. "Sign in with Email") */
+  --hs-btn-neutral: #374151;
+
+  /* Action link (e.g. "+ Record", "✏️ Edit") */
+  --hs-link-action: #4f46e5;
+
+  /* Goal pill badges (student dashboard) — always readable against badge bg */
+  --hs-goal-complete-badge: #2e7d32;
+  --hs-goal-today-badge:    #1565c0;
+  --hs-goal-progress-badge: #e65100;
+  --hs-goal-pending-badge:  #616161;
+
+  /* Goal card status */
+  --hs-goal-complete-bg:     #e8f5e9;
+  --hs-goal-complete-text:   #2e7d32;
+  --hs-goal-complete-border: #4caf50;
+
+  --hs-goal-today-bg:     #e3f2fd;
+  --hs-goal-today-text:   #1565c0;
+  --hs-goal-today-border: #2196f3;
+
+  --hs-goal-progress-bg:     #fff8e1;
+  --hs-goal-progress-text:   #f57c00;
+  --hs-goal-progress-border: #ffc107;
+
+  --hs-goal-pending-bg:     #f5f5f5;
+  --hs-goal-pending-text:   #616161;
+  --hs-goal-pending-border: #9e9e9e;
+
+  /* Task card status */
+  --hs-task-complete-bg:     #e8f5e9;
+  --hs-task-complete-text:   #2e7d32;
+  --hs-task-complete-border: #a5d6a7;
+  --hs-task-pending-bg:      #f5f5f5;
+  --hs-task-pending-text:    #666666;
+  --hs-task-pending-border:  #dddddd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Structural backgrounds */
+    --hs-bg:              #0f172a;
+    --hs-bg-elevated:     #1e293b;
+    --hs-bg-card:         #1e3048;
+    --hs-bg-card-success: #172d17;
+    --hs-bg-surface:      #1a2e45;
+    --hs-bg-input:        #1e293b;
+
+    /* Borders */
+    --hs-border:         #334155;
+    --hs-border-success: #2d5a2d;
+    --hs-border-input:   #475569;
+    --hs-border-light:   #334155;
+
+    /* Text */
+    --hs-text-primary:   #f1f5f9;
+    --hs-text-label:     #e8edf3;
+    --hs-text-secondary: #b8c8d8;
+    --hs-text-muted:     #7a8fa3;
+
+    /* Student completion badge */
+    --hs-badge-bg:           #374151;
+    --hs-badge-text:          #9ca3af;
+    --hs-badge-success-bg:   #1b4332;
+    --hs-badge-success-text: #6ee7b7;
+
+    /* Neutral action button */
+    --hs-btn-neutral: #64748b;
+
+    /* Action link */
+    --hs-link-action: #818cf8;
+
+    /* Goal pill badges — dark mode uses lighter colors, text flips to dark */
+    --hs-goal-complete-badge: #a5d6a7;
+    --hs-goal-today-badge:    #90caf9;
+    --hs-goal-progress-badge: #ffe082;
+    --hs-goal-pending-badge:  #94a3b8;
+
+    /* Goal card status */
+    --hs-goal-complete-bg:     rgba(76, 175, 80, 0.12);
+    --hs-goal-complete-text:   #a5d6a7;
+    --hs-goal-complete-border: rgba(76, 175, 80, 0.4);
+
+    --hs-goal-today-bg:     rgba(33, 150, 243, 0.12);
+    --hs-goal-today-text:   #90caf9;
+    --hs-goal-today-border: rgba(33, 150, 243, 0.4);
+
+    --hs-goal-progress-bg:     rgba(255, 193, 7, 0.10);
+    --hs-goal-progress-text:   #ffe082;
+    --hs-goal-progress-border: rgba(255, 193, 7, 0.4);
+
+    --hs-goal-pending-bg:     rgba(255, 255, 255, 0.06);
+    --hs-goal-pending-text:   #b8c8d8;
+    --hs-goal-pending-border: rgba(255, 255, 255, 0.28);
+
+    /* Task card status */
+    --hs-task-complete-bg:     rgba(76, 175, 80, 0.12);
+    --hs-task-complete-text:   #a5d6a7;
+    --hs-task-complete-border: rgba(76, 175, 80, 0.35);
+    --hs-task-pending-bg:      rgba(255, 255, 255, 0.04);
+    --hs-task-pending-text:    #94a3b8;
+    --hs-task-pending-border:  rgba(255, 255, 255, 0.10);
+  }
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -5,9 +139,22 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: var(--hs-bg);
+  color: var(--hs-text-primary);
+}
+
+#root {
+  min-height: 100vh;
+  background-color: var(--hs-bg);
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Student dashboard goal pill badge — text color flips with color scheme */
+.hs-goal-badge { color: white; }
+@media (prefers-color-scheme: dark) {
+  .hs-goal-badge { color: #0f172a; }
 }

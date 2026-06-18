@@ -1,11 +1,9 @@
-// Generate a random 8-character alphanumeric string for public dashboard URLs
+// Generate a cryptographically random 8-character alphanumeric string for public dashboard URLs
 export const generatePublicDashboardId = (): string => {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(b => chars[b % chars.length]).join('');
 };
 
 // Validate that a public dashboard ID format is correct

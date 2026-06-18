@@ -4,13 +4,14 @@ import { db } from '../firebase';
 import { ActivityInstance, Goal, Activity, Person } from '../types';
 import { updateStudentLastActivity, updateLastActivity } from '../utils/activityTracking';
 import { playAlarmSound } from '../utils/alarmSound';
-import { createUTCDateFromString, getStartOfDayUTC, getEndOfDayUTC, dateToFirestoreTimestamp, formatDateToString, formatDateToStringUTC, localDateTimeToFirestoreTimestamp, formatTimeToString } from '../utils/dateUtils';
+import { dateToFirestoreTimestamp, formatDateToStringUTC, localDateTimeToFirestoreTimestamp, formatTimeToString } from '../utils/dateUtils';
 
 interface ActivityInstanceFormProps {
   goals: Goal[];
   activities: Activity[];
   students: Person[];
   userId: string;
+  homeschoolId: string;
   preSelectedGoal?: string;
   preSelectedStudent?: string;
   existingInstance?: ActivityInstance;
@@ -26,6 +27,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
   activities,
   students,
   userId,
+  homeschoolId,
   preSelectedGoal = '',
   preSelectedStudent = '',
   existingInstance,
@@ -185,75 +187,36 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
     let cancelled: boolean = false;
 
     const checkExistingInstance = async () => {
-      console.log('=== ActivityInstanceForm: useEffect triggered ===');
-      console.log('Checking for existing instances with:', {
-        allowMultipleRecordsPerDay,
-        selectedGoal,
-        selectedStudent,
-        date,
-        existingInstance: !!existingInstance,
-        existingInstanceId: existingInstance?.id,
-        loadedExistingInstance: !!loadedExistingInstance,
-        loadedExistingInstanceId: loadedExistingInstance?.id
-      });
-      
-      // Check if all conditions are met for searching
-      if (!allowMultipleRecordsPerDay) {
-        console.log('Multiple records per day is disabled');
-        if (!selectedGoal) console.log('Missing selectedGoal');
-        if (!selectedStudent) console.log('Missing selectedStudent');
-        if (!date) console.log('Missing date');
-      }
-      
       if (!allowMultipleRecordsPerDay && selectedGoal && selectedStudent && date) {
-        console.log('ActivityInstanceForm: Searching for existing instance for', { selectedGoal, selectedStudent, date });
         try {
-          // First, let's debug by getting ALL instances for this goal/student combo
-          const debugQuery = query(
+          const instancesSnapshot = await getDocs(query(
             collection(db, 'activityInstances'),
             where('goalId', '==', selectedGoal),
             where('studentId', '==', selectedStudent)
-          );
-          const debugSnapshot = await getDocs(debugQuery);
-          console.log('DEBUG: All instances for this goal/student:', debugSnapshot.docs.length);
+          ));
           let matchingInstance: { doc: any; data: any } | null = null;
-          debugSnapshot.docs.forEach(doc => {
+          instancesSnapshot.docs.forEach(doc => {
             const data = doc.data();
             const instanceDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
             // Use UTC formatting since dates are stored as UTC in Firestore
             const instanceDateStringUTC = formatDateToStringUTC(instanceDate);
-            const instanceDateStringLocal = formatDateToString(instanceDate);
-            console.log('DEBUG: Instance', {
-              id: doc.id,
-              date: instanceDate,
-              dateStringUTC: instanceDateStringUTC,
-              dateStringLocal: instanceDateStringLocal,
-              dateISO: instanceDate.toISOString(),
-              rawDate: data.date,
-              matchesSelectedDate: instanceDateStringUTC === date
-            });
-            
-            // If we find a match, store it
             if (instanceDateStringUTC === date && !matchingInstance) {
               matchingInstance = { doc, data };
             }
           });
-          
+
           // Check if this effect has been cancelled
           if (cancelled) return;
-          
-          // If we found a matching instance through simple date string comparison, load it
+
           if (matchingInstance) {
-            console.log('DEBUG: Found matching instance through string comparison!', (matchingInstance as any).doc.id);
             const { doc, data } = matchingInstance as { doc: any; data: any };
-            
+
             // Skip if this is the same instance we're already editing
             if (existingInstance && doc.id === existingInstance.id) {
-              console.log('ActivityInstanceForm: Same instance already loaded, skipping');
               setLoadedExistingInstance(null);
               return;
             }
-            
+
             // Convert and load the instance
             const storedDate = data.date?.toDate ? data.date.toDate() : new Date(data.date);
             const instance: ActivityInstance = {
@@ -263,9 +226,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
               startTime: data.startTime?.toDate ? data.startTime.toDate() : data.startTime,
               endTime: data.endTime?.toDate ? data.endTime.toDate() : data.endTime
             } as ActivityInstance;
-            
-            // Populate form with existing data
-            console.log('ActivityInstanceForm: Populating form with matching instance');
+
             setDescription(instance.description || '');
             setDuration(instance.duration || '');
             // Use new percentageCompleted field if available, otherwise fallback to endingPercentage
@@ -273,7 +234,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
             setPercentageCompleted(percentage);
             setCountComplete(instance.countCompleted || '');
             setProgressCountCompleted(instance.countCompleted || 0);
-            
+
             // Convert times if they exist - use timezone-aware formatting
             if (instance.startTime) {
               setStartTime(formatTimeToString(instance.startTime, timezone));
@@ -281,46 +242,22 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
             if (instance.endTime) {
               setEndTime(formatTimeToString(instance.endTime, timezone));
             }
-            
-            // Store the instance for updating
-            setLoadedExistingInstance(instance);
-            console.log('ActivityInstanceForm: Instance loaded successfully', instance.id);
-            return; // Skip the date range query since we found it
-          }
-          
-          // Parse the date to get start and end of day in UTC
-          // Use utility functions for consistent date handling
-          const dateObj = createUTCDateFromString(date);
-          const startOfDay = getStartOfDayUTC(dateObj);
-          const endOfDay = getEndOfDayUTC(dateObj);
-          
-          console.log('Date range for query:', {
-            date,
-            dateObj: dateObj.toISOString(),
-            dateObjLocal: dateObj.toString(),
-            startOfDay: startOfDay.toISOString(),
-            endOfDay: endOfDay.toISOString(),
-            timezoneOffset: dateObj.getTimezoneOffset()
-          });
 
-          // Since we already found a match with simple date comparison above,
-          // we don't need to run the date range query anymore
-          console.log('ActivityInstanceForm: Skipping date range query since we already checked all instances');
-          
-          // If no match was found, clear the form
-          if (!matchingInstance) {
-            console.log('ActivityInstanceForm: No instances found for this date, clearing form');
-            setLoadedExistingInstance(null);
-            // Clear date-specific form fields when changing dates (unless we have an original existing instance)
-            // Note: Don't reset percentageCompleted or progressCountCompleted here — those are
-            // goal/student-dependent and managed by fetchLastProgress to avoid race conditions.
-            if (!existingInstance) {
-              setDescription('');
-              setDuration('');
-              setCountComplete('');
-              setStartTime('');
-              setEndTime('');
-            }
+            setLoadedExistingInstance(instance);
+            return;
+          }
+
+          // No match found — clear the form
+          setLoadedExistingInstance(null);
+          // Clear date-specific form fields when changing dates (unless we have an original existing instance)
+          // Note: Don't reset percentageCompleted or progressCountCompleted here — those are
+          // goal/student-dependent and managed by fetchLastProgress to avoid race conditions.
+          if (!existingInstance) {
+            setDescription('');
+            setDuration('');
+            setCountComplete('');
+            setStartTime('');
+            setEndTime('');
           }
         } catch (error) {
           console.error('Error checking for existing instance:', error);
@@ -410,6 +347,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       const activityInstanceData: any = {
         goalId: selectedGoal,
         studentId: selectedStudent,
+        homeschoolId,
         description,
         date: dateToFirestoreTimestamp(date, timezone),
         createdBy: userId
@@ -437,21 +375,12 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       }
 
       const instanceToUpdate = existingInstance || loadedExistingInstance;
-      console.log('ActivityInstanceForm: Saving activity', {
-        allowMultipleRecordsPerDay,
-        existingInstance: !!existingInstance,
-        loadedExistingInstance: !!loadedExistingInstance,
-        willUpdate: !!instanceToUpdate,
-        instanceId: instanceToUpdate?.id
-      });
-      
+
       if (instanceToUpdate) {
         // Update existing activity instance
-        console.log('ActivityInstanceForm: Updating existing instance', instanceToUpdate.id);
         await updateDoc(doc(db, 'activityInstances', instanceToUpdate.id), activityInstanceData);
       } else {
         // Create new activity instance
-        console.log('ActivityInstanceForm: Creating new instance');
         await addDoc(collection(db, 'activityInstances'), activityInstanceData);
 
         // Update goal progress (only for new instances)
@@ -493,7 +422,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '500px',
@@ -518,7 +447,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
             >
@@ -550,7 +479,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                   width: '100%',
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
               >
@@ -567,7 +496,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
           {selectedGoalData && selectedActivity && selectedStudent && (
             <>
               <div style={{ 
-                backgroundColor: '#f0f0f0', 
+                backgroundColor: 'var(--hs-bg-elevated)', 
                 padding: '10px', 
                 borderRadius: '4px',
                 marginBottom: '15px' 
@@ -592,16 +521,13 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                 <input
                   type="date"
                   value={date}
-                  onChange={(e) => {
-                    console.log('Date input changed:', e.target.value);
-                    setDate(e.target.value);
-                  }}
+                  onChange={(e) => setDate(e.target.value)}
                   required
                   style={{
                     width: '100%',
                     padding: '8px',
                     fontSize: '16px',
-                    border: '1px solid #ccc',
+                    border: '1px solid var(--hs-border-input)',
                     borderRadius: '4px'
                   }}
                 />
@@ -613,7 +539,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                     marginBottom: '15px',
                     textAlign: 'center',
                     padding: '20px',
-                    backgroundColor: selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 ? '#d4edda' : '#f0f0f0',
+                    backgroundColor: selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 ? 'var(--hs-bg-card-success)' : 'var(--hs-bg-elevated)',
                     borderRadius: '8px',
                     border: selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 ? '2px solid #28a745' : 'none'
                   }}>
@@ -656,9 +582,9 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                           width: '100%',
                           padding: '8px',
                           fontSize: '16px',
-                          border: '1px solid #ccc',
+                          border: '1px solid var(--hs-border-input)',
                           borderRadius: '4px',
-                          backgroundColor: timerRunning ? '#f0f0f0' : 'white'
+                          backgroundColor: timerRunning ? 'var(--hs-bg-elevated)' : 'var(--hs-bg-input)'
                         }}
                       />
                     </div>
@@ -675,9 +601,9 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                           width: '100%',
                           padding: '8px',
                           fontSize: '16px',
-                          border: '1px solid #ccc',
+                          border: '1px solid var(--hs-border-input)',
                           borderRadius: '4px',
-                          backgroundColor: timerRunning ? '#f0f0f0' : 'white'
+                          backgroundColor: timerRunning ? 'var(--hs-bg-elevated)' : 'var(--hs-bg-input)'
                         }}
                       />
                     </div>
@@ -696,13 +622,13 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                         width: '100%',
                         padding: '8px',
                         fontSize: '16px',
-                        border: '1px solid #ccc',
+                        border: '1px solid var(--hs-border-input)',
                         borderRadius: '4px'
                       }}
                       placeholder={selectedGoalData.minutesPerSession ? `Goal: ${selectedGoalData.minutesPerSession} minutes` : 'Enter duration'}
                     />
                     {startTime && endTime && (
-                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
                         Duration will be calculated from times
                       </div>
                     )}
@@ -716,10 +642,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                     Percent of Completion
                   </label>
                   <div style={{ 
-                    backgroundColor: '#f0f0f0', 
+                    backgroundColor: 'var(--hs-bg-elevated)', 
                     padding: '15px', 
                     borderRadius: '8px',
-                    border: '1px solid #ddd'
+                    border: '1px solid var(--hs-border-light)'
                   }}>
                     <div style={{
                       display: 'flex',
@@ -731,7 +657,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                         {percentageCompleted.toFixed(1)}%
                       </span>
                       {lastPercentageCompleted > 0 && (
-                        <span style={{ fontSize: '14px', color: '#666' }}>
+                        <span style={{ fontSize: '14px', color: 'var(--hs-text-secondary)' }}>
                           Last recorded: {lastPercentageCompleted.toFixed(1)}%
                         </span>
                       )}
@@ -759,7 +685,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                       justifyContent: 'space-between',
                       marginTop: '5px',
                       fontSize: '12px',
-                      color: '#666'
+                      color: 'var(--hs-text-secondary)'
                     }}>
                       <span>0%</span>
                       <span>{selectedGoalData.percentageGoal || 100}%</span>
@@ -767,9 +693,9 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                     {(selectedGoalData.dailyPercentageIncrease || selectedGoalData.percentageGoal) && (
                       <div style={{ 
                         fontSize: '14px', 
-                        color: '#666', 
+                        color: 'var(--hs-text-secondary)', 
                         marginTop: '10px',
-                        backgroundColor: '#fff',
+                        backgroundColor: 'var(--hs-bg)',
                         padding: '8px',
                         borderRadius: '4px',
                         border: '1px solid #e0e0e0'
@@ -795,10 +721,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                   {selectedGoalData.progressCount ? (
                     // Show slider when goal has a target
                     <div style={{ 
-                      backgroundColor: '#f0f0f0', 
+                      backgroundColor: 'var(--hs-bg-elevated)', 
                       padding: '15px', 
                       borderRadius: '8px',
-                      border: '1px solid #ddd'
+                      border: '1px solid var(--hs-border-light)'
                     }}>
                       <div style={{
                         display: 'flex',
@@ -810,7 +736,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                           {progressCountCompleted} / {selectedGoalData.progressCount}
                         </span>
                         {lastProgressCountCompleted > 0 && (
-                          <span style={{ fontSize: '14px', color: '#666' }}>
+                          <span style={{ fontSize: '14px', color: 'var(--hs-text-secondary)' }}>
                             Last recorded: {lastProgressCountCompleted}
                           </span>
                         )}
@@ -838,16 +764,16 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                         justifyContent: 'space-between',
                         marginTop: '5px',
                         fontSize: '12px',
-                        color: '#666'
+                        color: 'var(--hs-text-secondary)'
                       }}>
                         <span>0</span>
                         <span>{selectedGoalData.progressCount}</span>
                       </div>
                       <div style={{ 
                         fontSize: '14px', 
-                        color: '#666', 
+                        color: 'var(--hs-text-secondary)', 
                         marginTop: '10px',
-                        backgroundColor: '#fff',
+                        backgroundColor: 'var(--hs-bg)',
                         padding: '8px',
                         borderRadius: '4px',
                         border: '1px solid #e0e0e0'
@@ -866,7 +792,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                         width: '100%',
                         padding: '8px',
                         fontSize: '16px',
-                        border: '1px solid #ccc',
+                        border: '1px solid var(--hs-border-input)',
                         borderRadius: '4px'
                       }}
                       placeholder={`Number of ${selectedActivity.progressCountName || 'items'} completed`}
@@ -886,7 +812,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                     width: '100%',
                     padding: '8px',
                     fontSize: '16px',
-                    border: '1px solid #ccc',
+                    border: '1px solid var(--hs-border-input)',
                     borderRadius: '4px',
                     minHeight: '60px'
                   }}
@@ -920,7 +846,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
               style={{
                 padding: '10px 20px',
                 fontSize: '16px',
-                backgroundColor: '#666',
+                backgroundColor: 'var(--hs-btn-neutral)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',

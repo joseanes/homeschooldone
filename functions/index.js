@@ -37,24 +37,25 @@ exports.getPublicDashboard = onCall({cors: true}, async (request) => {
     }
 
     const homeschoolDoc = homeschoolSnapshot.docs[0];
-    const homeschoolData = {...homeschoolDoc.data(), id: homeschoolDoc.id};
+    const homeschoolRaw = homeschoolDoc.data();
+    const homeschoolId = homeschoolDoc.id;
 
     // Fetch students
     let students = [];
-    if (homeschoolData.studentIds && homeschoolData.studentIds.length > 0) {
+    if (homeschoolRaw.studentIds && homeschoolRaw.studentIds.length > 0) {
       const studentsSnapshot = await db.collection("people")
-          .where("__name__", "in", homeschoolData.studentIds)
+          .where("__name__", "in", homeschoolRaw.studentIds)
           .get();
 
       students = studentsSnapshot.docs.map((doc) => ({
-        ...doc.data(),
         id: doc.id,
+        name: doc.data().name,
       }));
     }
 
     // Fetch activities
     const activitiesSnapshot = await db.collection("activities")
-        .where("homeschoolId", "==", homeschoolData.id)
+        .where("homeschoolId", "==", homeschoolId)
         .get();
 
     const activities = activitiesSnapshot.docs.map((doc) => ({
@@ -64,7 +65,7 @@ exports.getPublicDashboard = onCall({cors: true}, async (request) => {
 
     // Fetch goals
     const goalsSnapshot = await db.collection("goals")
-        .where("homeschoolId", "==", homeschoolData.id)
+        .where("homeschoolId", "==", homeschoolId)
         .get();
 
     const goals = goalsSnapshot.docs.map((doc) => ({
@@ -72,9 +73,13 @@ exports.getPublicDashboard = onCall({cors: true}, async (request) => {
       id: doc.id,
     }));
 
-    // Return the dashboard data
+    // Return only display-safe fields — no UIDs, emails, or role arrays
     return {
-      homeschool: homeschoolData,
+      homeschool: {
+        id: homeschoolId,
+        name: homeschoolRaw.name,
+        dashboardSettings: homeschoolRaw.dashboardSettings,
+      },
       students,
       activities,
       goals,

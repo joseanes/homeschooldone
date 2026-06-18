@@ -172,7 +172,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // Get workload status and color
   const getWorkloadStatus = (actualMinutes: number, expectedMinutes: number) => {
-    if (!expectedMinutes) return { status: 'No target set', color: '#666', icon: '❓' };
+    if (!expectedMinutes) return { status: 'No target set', color: 'var(--hs-text-secondary)', icon: '❓' };
     
     const percentage = (actualMinutes / expectedMinutes) * 100;
     
@@ -197,7 +197,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setLoadingUsers(true);
     
     try {
-      console.log('Fetching users for homeschool:', homeschool);
       const allUsers: UserWithStatus[] = [];
       
       // Get all user IDs from homeschool
@@ -207,18 +206,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         ...(homeschool.observerIds || [])
       ];
       
-      console.log('All user IDs:', allUserIds);
-      
       // Fetch active users from people collection
       if (allUserIds.length > 0) {
         const peopleQuery = query(collection(db, 'people'), where('__name__', 'in', allUserIds));
         const peopleSnapshot = await getDocs(peopleQuery);
         
-        console.log('Found active users:', peopleSnapshot.docs.length);
-        
         peopleSnapshot.docs.forEach(doc => {
           const person = { ...doc.data(), id: doc.id } as Person;
-          console.log('Active user:', person);
           allUsers.push({ ...person, status: 'active' });
         });
       }
@@ -230,9 +224,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         ...(homeschool.tutorEmails || []),
         ...(homeschool.observerEmails || [])
       ];
-      
-      console.log('All emails:', allEmails);
-      console.log('Active emails:', Array.from(activeEmails));
       
       allEmails.forEach(email => {
         if (email && !activeEmails.has(email)) {
@@ -248,12 +239,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             status: 'invited' as const
           };
           
-          console.log('Adding invited user:', invitedUser);
           allUsers.push(invitedUser);
         }
       });
       
-      console.log('Final users list:', allUsers);
       setUsers(allUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -277,8 +266,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setRemovingUserId(userId);
 
     try {
-      console.log('Current homeschool data:', homeschool);
-      console.log('Removing user:', { userId, userEmail, userRole });
       
       const updates: any = {};
       
@@ -291,41 +278,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       const currentObserverEmails = [...(homeschool.observerEmails || [])];
       
       // Remove from appropriate arrays - rebuild them instead of using arrayRemove
-      console.log('Before filtering:', {
-        currentParentIds,
-        currentTutorIds, 
-        currentObserverIds,
-        currentParentEmails,
-        currentTutorEmails,
-        currentObserverEmails
-      });
       
       if (userRole === 'parent') {
         if (userId && !userId.startsWith('invited-')) {
           updates.parentIds = currentParentIds.filter(id => id !== userId);
-          console.log('Filtering parentIds:', currentParentIds, '→', updates.parentIds);
         }
         if (userEmail) {
           updates.parentEmails = currentParentEmails.filter(email => email !== userEmail);
-          console.log('Filtering parentEmails:', currentParentEmails, '→', updates.parentEmails);
         }
       } else if (userRole === 'tutor') {
         if (userId && !userId.startsWith('invited-')) {
           updates.tutorIds = currentTutorIds.filter(id => id !== userId);
-          console.log('Filtering tutorIds:', currentTutorIds, '→', updates.tutorIds);
         }
         if (userEmail) {
           updates.tutorEmails = currentTutorEmails.filter(email => email !== userEmail);
-          console.log('Filtering tutorEmails:', currentTutorEmails, '→', updates.tutorEmails);
         }
       } else if (userRole === 'observer') {
         if (userId && !userId.startsWith('invited-')) {
           updates.observerIds = currentObserverIds.filter(id => id !== userId);
-          console.log('Filtering observerIds:', currentObserverIds, '→', updates.observerIds);
         }
         if (userEmail) {
           updates.observerEmails = currentObserverEmails.filter(email => email !== userEmail);
-          console.log('Filtering observerEmails:', currentObserverEmails, '→', updates.observerEmails);
         }
       }
       
@@ -337,15 +310,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         return;
       }
       
-      console.log('Applying updates to homeschool document:', updates);
-      console.log('Homeschool document path:', `homeschools/${homeschool.id}`);
-      
       const homeschoolRef = doc(db, 'homeschools', homeschool.id);
       await updateDoc(homeschoolRef, updates);
       
-      console.log('Update completed, verifying...');
       const updatedDoc = await getDoc(homeschoolRef);
-      console.log('Updated document data:', updatedDoc.data());
       
       // Show success message
       alert(`Successfully ${actionText} ${userName}`);
@@ -355,11 +323,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       
       // Notify parent to refresh homeschool data
       if (onHomeschoolUpdate) {
-        console.log('Calling onHomeschoolUpdate to refresh parent data');
         onHomeschoolUpdate();
       }
       
-      console.log('User removal completed successfully');
     } catch (error: any) {
       console.error('Error removing user:', error);
       alert(`Failed to ${actionText} ${userName}: ${error.message || 'Unknown error'}`);
@@ -371,16 +337,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleChangeUserRole = async (userId: string, userEmail: string, oldRole: string, newRole: string) => {
-    console.log('handleChangeUserRole called with:', { userId, userEmail, oldRole, newRole });
     
     if (oldRole === newRole) {
-      console.log('No role change needed, closing modal');
       setEditingUserAccess(null);
       return;
     }
     
     try {
-      console.log('Changing role from', oldRole, 'to', newRole, 'for user:', { userId, userEmail });
       
       // Get current arrays and rebuild them correctly
       let parentIds = [...(homeschool.parentIds || [])];
@@ -389,17 +352,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       let parentEmails = [...(homeschool.parentEmails || [])];
       let tutorEmails = [...(homeschool.tutorEmails || [])];
       let observerEmails = [...(homeschool.observerEmails || [])];
-      
-      console.log('Before change:', { 
-        parentIds: parentIds, 
-        tutorIds: tutorIds, 
-        observerIds: observerIds, 
-        parentEmails: parentEmails, 
-        tutorEmails: tutorEmails, 
-        observerEmails: observerEmails,
-        userIdToChange: userId,
-        userEmailToChange: userEmail
-      });
       
       // Remove user from all arrays first
       if (userId && !userId.startsWith('invited-')) {
@@ -438,8 +390,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         }
       }
       
-      console.log('After change:', { parentIds, tutorIds, observerIds, parentEmails, tutorEmails, observerEmails });
-      
       const updates = {
         parentIds,
         tutorIds, 
@@ -449,12 +399,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         observerEmails
       };
       
-      console.log('Applying role change updates:', updates);
       await updateDoc(doc(db, 'homeschools', homeschool.id), updates);
       
       // Also update the user's role in the people collection
       if (userId && !userId.startsWith('invited-')) {
-        console.log('Updating role in people collection for user:', userId);
         await updateDoc(doc(db, 'people', userId), { role: newRole });
       }
       
@@ -474,14 +422,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleSave = () => {
-    console.log('SettingsModal: handleSave called with publicDashboard:', publicDashboard);
     onSaveSettings({
       cycleSeconds,
       startOfWeek,
       timezone
     });
     onSaveTimerAlarm(timerAlarm);
-    console.log('SettingsModal: About to call onSavePublicDashboard with:', publicDashboard);
     onSavePublicDashboard(publicDashboard);
     onSaveMultipleRecords(multipleRecords);
     onClose();
@@ -489,14 +435,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleGeneratePublicLink = () => {
     const newId = generatePublicDashboardId();
-    console.log('SettingsModal: Generated new public dashboard ID:', newId);
     setPublicDashboard(newId);
-    console.log('SettingsModal: Set local state to:', newId);
     onSavePublicDashboard(newId);
   };
 
   const handleDisablePublicLink = () => {
-    console.log('SettingsModal: Disabling public dashboard link');
     setPublicDashboard(null);
     onSavePublicDashboard(null);
   };
@@ -507,7 +450,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div>
             <div style={{
-              backgroundColor: '#f8f9fa',
+              backgroundColor: 'var(--hs-bg-surface)',
               borderRadius: '8px',
               padding: '20px',
               marginBottom: '20px'
@@ -561,12 +504,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </>
                 )}
                 {userRole !== 'parent' && (
-                  <p style={{ fontSize: '14px', color: '#666', fontStyle: 'italic' }}>
+                  <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', fontStyle: 'italic' }}>
                     Contact a parent to manage homeschool settings.
                   </p>
                 )}
               </div>
-              <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>
+              <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', margin: 0 }}>
                 {userRole === 'parent' ? 
                   'Manage your homeschool settings, invite users, and configure access.' :
                   'View homeschool information. Only parents can modify these settings.'
@@ -576,7 +519,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             
             {userRole === 'parent' && (
               <div style={{
-                backgroundColor: '#f8f9fa',
+                backgroundColor: 'var(--hs-bg-surface)',
                 borderRadius: '8px',
                 padding: '20px',
                 marginTop: '20px'
@@ -595,7 +538,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                     <span style={{ fontSize: '16px' }}>Multiple Records on a Day</span>
                   </label>
-                  <p style={{ fontSize: '14px', color: '#666', marginLeft: '25px', marginTop: '5px', marginBottom: 0 }}>
+                  <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginLeft: '25px', marginTop: '5px', marginBottom: 0 }}>
                     When enabled, allows recording the same activity multiple times per student per day.
                     When disabled, recording an activity that was already done today will edit the existing record.
                   </p>
@@ -605,14 +548,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {userRole === 'parent' && (
               <div style={{
-                backgroundColor: '#f8f9fa',
+                backgroundColor: 'var(--hs-bg-surface)',
                 borderRadius: '8px',
                 padding: '20px',
                 marginTop: '20px'
               }}>
                 <h3 style={{ marginTop: 0, marginBottom: '15px' }}>📊 Student Sorting</h3>
                 <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#555' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--hs-badge-text)' }}>
                     Sort students on the main page by:
                   </label>
                   <select
@@ -626,7 +569,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       maxWidth: '300px',
                       padding: '8px',
                       fontSize: '14px',
-                      border: '1px solid #ccc',
+                      border: '1px solid var(--hs-border-input)',
                       borderRadius: '4px'
                     }}
                   >
@@ -641,18 +584,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {userRole === 'parent' && (
               <div style={{
-                backgroundColor: '#f8f9fa',
+                backgroundColor: 'var(--hs-bg-surface)',
                 borderRadius: '8px',
                 padding: '20px',
                 marginTop: '20px'
               }}>
                 <h3 style={{ marginTop: 0, marginBottom: '15px' }}>📅 School Year Start</h3>
-                <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginBottom: '15px' }}>
                   Set the start of your school year for reporting periods. Default is August 1st.
                 </p>
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#555' }}>Month</label>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--hs-badge-text)' }}>Month</label>
                     <select
                       value={syMonth}
                       onChange={(e) => {
@@ -663,7 +606,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       style={{
                         padding: '8px',
                         fontSize: '14px',
-                        border: '1px solid #ccc',
+                        border: '1px solid var(--hs-border-input)',
                         borderRadius: '4px',
                         minWidth: '140px'
                       }}
@@ -674,7 +617,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: '#555' }}>Day</label>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--hs-badge-text)' }}>Day</label>
                     <select
                       value={syDay}
                       onChange={(e) => {
@@ -685,7 +628,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       style={{
                         padding: '8px',
                         fontSize: '14px',
-                        border: '1px solid #ccc',
+                        border: '1px solid var(--hs-border-input)',
                         borderRadius: '4px',
                         minWidth: '70px'
                       }}
@@ -705,7 +648,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div>
             <div style={{
-              backgroundColor: '#f8f9fa',
+              backgroundColor: 'var(--hs-bg-surface)',
               borderRadius: '8px',
               padding: '20px'
             }}>
@@ -729,7 +672,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
               </div>
               {students.length === 0 ? (
-                <p style={{ color: '#666', fontStyle: 'italic' }}>No students added yet</p>
+                <p style={{ color: 'var(--hs-text-secondary)', fontStyle: 'italic' }}>No students added yet</p>
               ) : (
                 <div style={{ maxHeight: '400px', overflow: 'auto' }}>
                   {students.map((student) => {
@@ -745,9 +688,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         style={{
                           padding: '12px',
                           marginBottom: '10px',
-                          backgroundColor: 'white',
+                          backgroundColor: 'var(--hs-bg)',
                           borderRadius: '6px',
-                          border: '1px solid #ddd'
+                          border: '1px solid var(--hs-border-light)'
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
@@ -790,10 +733,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             {expandedWorkload === student.id && (
                               <div style={{ 
                                 fontSize: '13px', 
-                                color: '#666',
+                                color: 'var(--hs-text-secondary)',
                                 marginTop: '8px',
                                 padding: '8px',
-                                backgroundColor: '#f8f9fa',
+                                backgroundColor: 'var(--hs-bg-surface)',
                                 borderRadius: '4px'
                               }}>
                                 <div style={{ marginBottom: '4px' }}>
@@ -872,7 +815,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div>
             <div style={{
-              backgroundColor: '#f8f9fa',
+              backgroundColor: 'var(--hs-bg-surface)',
               borderRadius: '8px',
               padding: '20px'
             }}>
@@ -914,7 +857,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
               {activities.length === 0 ? (
-                <p style={{ color: '#666', fontStyle: 'italic' }}>No activities created yet</p>
+                <p style={{ color: 'var(--hs-text-secondary)', fontStyle: 'italic' }}>No activities created yet</p>
               ) : (
                 <div style={{ maxHeight: '300px', overflow: 'auto' }}>
                   {activities.sort((a, b) => a.name.localeCompare(b.name)).map((activity) => {
@@ -925,15 +868,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         style={{
                           padding: '12px',
                           marginBottom: '12px',
-                          backgroundColor: 'white',
+                          backgroundColor: 'var(--hs-bg)',
                           borderRadius: '4px',
-                          border: '1px solid #ddd'
+                          border: '1px solid var(--hs-border-light)'
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                           <div style={{ flex: 1, textAlign: 'left' }}>
                             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{activity.name}</div>
-                            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                            <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginBottom: '8px' }}>
                               {activity.description}
                             </div>
                             {activityGoals.length > 0 && (
@@ -950,7 +893,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                       alignItems: 'center'
                                     }}>
                                       <div style={{ textAlign: 'left' }}>
-                                        {goal.name && <div style={{ fontWeight: '600', fontSize: '12px', color: '#333' }}>{goal.name}</div>}
+                                        {goal.name && <div style={{ fontWeight: '600', fontSize: '12px', color: 'var(--hs-text-primary)' }}>{goal.name}</div>}
                                         • {goalStudents.map(s => s.name).join(', ')}
                                         {goal.timesPerWeek && ` - ${goal.timesPerWeek}x/week`}
                                         {goal.minutesPerSession && ` - ${goal.minutesPerSession}min`}
@@ -1037,7 +980,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div>
             <div style={{
-              backgroundColor: '#f8f9fa',
+              backgroundColor: 'var(--hs-bg-surface)',
               borderRadius: '8px',
               padding: '20px'
             }}>
@@ -1062,9 +1005,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               
               {loadingUsers ? (
-                <p style={{ color: '#666', fontStyle: 'italic' }}>Loading users...</p>
+                <p style={{ color: 'var(--hs-text-secondary)', fontStyle: 'italic' }}>Loading users...</p>
               ) : users.length === 0 ? (
-                <p style={{ color: '#666', fontStyle: 'italic' }}>No users found</p>
+                <p style={{ color: 'var(--hs-text-secondary)', fontStyle: 'italic' }}>No users found</p>
               ) : (
                 <div style={{ maxHeight: '300px', overflow: 'auto' }}>
                   {users.map((user) => (
@@ -1076,9 +1019,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         alignItems: 'center',
                         padding: '12px',
                         marginBottom: '8px',
-                        backgroundColor: 'white',
+                        backgroundColor: 'var(--hs-bg)',
                         borderRadius: '4px',
-                        border: '1px solid #ddd'
+                        border: '1px solid var(--hs-border-light)'
                       }}
                     >
                       <div style={{ flex: 1 }}>
@@ -1086,14 +1029,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           <span style={{ fontWeight: '500' }}>{user.name || user.email}</span>
                           <span
                             onClick={() => {
-                              console.log('Role badge clicked:', { 
-                                userRole, 
-                                userId: user.id, 
-                                currentUserId, 
-                                canEdit: userRole === 'parent' && user.id !== currentUserId 
-                              });
                               if (userRole === 'parent' && user.id !== currentUserId) {
-                                console.log('Opening role change modal for user:', user);
                                 setEditingUserAccess({ userId: user.id, currentRole: user.role });
                               }
                             }}
@@ -1139,7 +1075,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 borderRadius: '12px',
                                 fontSize: '12px',
                                 fontWeight: '500',
-                                backgroundColor: '#fff3e0',
+                                backgroundColor: 'var(--hs-bg-surface)',
                                 color: '#f57c00'
                               }}
                             >
@@ -1161,14 +1097,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)' }}>
                           📧 {user.email}
                           {user.mobile && (
                             <span style={{ marginLeft: '12px' }}>📱 {user.mobile}</span>
                           )}
                         </div>
                         {user.lastActivity && (
-                          <div style={{ fontSize: '11px', color: '#999', fontStyle: 'italic', marginTop: '4px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--hs-text-muted)', fontStyle: 'italic', marginTop: '4px' }}>
                             Last active: {formatLastActivity(user.lastActivity)}
                           </div>
                         )}
@@ -1187,7 +1123,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             }}
                             style={{
                               padding: '4px 8px',
-                              backgroundColor: '#6c757d',
+                              backgroundColor: 'var(--hs-btn-neutral)',
                               color: 'white',
                               border: 'none',
                               borderRadius: '3px',
@@ -1224,7 +1160,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               )}
               
-              <p style={{ fontSize: '12px', color: '#666', marginTop: '15px', margin: '15px 0 0 0' }}>
+              <p style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '15px', margin: '15px 0 0 0' }}>
                 {userRole === 'parent' ? 
                   'Parents can manage all users and settings. Tutors can only assign goals. Observers have read-only access.' :
                   'View users who have access to this homeschool. Contact a parent to make changes.'
@@ -1237,7 +1173,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       case 'dashboard':
         return (
           <div style={{
-            backgroundColor: '#f8f9fa',
+            backgroundColor: 'var(--hs-bg-surface)',
             borderRadius: '8px',
             padding: '20px'
           }}>
@@ -1245,13 +1181,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               marginTop: 0, 
               marginBottom: '15px',
               fontSize: '18px',
-              color: '#333'
+              color: 'var(--hs-text-primary)'
             }}>
               📺 Dashboard Settings
             </h3>
             <p style={{
               fontSize: '14px',
-              color: '#666',
+              color: 'var(--hs-text-secondary)',
               marginBottom: '20px'
             }}>
               Configure the full-screen dashboard for display on TVs or monitors.
@@ -1268,7 +1204,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   fontSize: '14px',
                   fontWeight: '500',
                   marginBottom: '8px',
-                  color: '#333'
+                  color: 'var(--hs-text-primary)'
                 }}>
                   Cycle Time (seconds per student)
                 </label>
@@ -1281,7 +1217,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '1px solid #ddd',
+                    border: '1px solid var(--hs-border-light)',
                     borderRadius: '6px',
                     fontSize: '14px',
                     boxSizing: 'border-box'
@@ -1295,7 +1231,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   fontSize: '14px',
                   fontWeight: '500',
                   marginBottom: '8px',
-                  color: '#333'
+                  color: 'var(--hs-text-primary)'
                 }}>
                   Start of Week
                 </label>
@@ -1305,10 +1241,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '1px solid #ddd',
+                    border: '1px solid var(--hs-border-light)',
                     borderRadius: '6px',
                     fontSize: '14px',
-                    backgroundColor: 'white',
+                    backgroundColor: 'var(--hs-bg)',
                     cursor: 'pointer'
                   }}
                 >
@@ -1326,7 +1262,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   fontSize: '14px',
                   fontWeight: '500',
                   marginBottom: '8px',
-                  color: '#333'
+                  color: 'var(--hs-text-primary)'
                 }}>
                   Timezone
                 </label>
@@ -1336,10 +1272,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   style={{
                     width: '100%',
                     padding: '10px 12px',
-                    border: '1px solid #ddd',
+                    border: '1px solid var(--hs-border-light)',
                     borderRadius: '6px',
                     fontSize: '14px',
-                    backgroundColor: 'white',
+                    backgroundColor: 'var(--hs-bg)',
                     cursor: 'pointer'
                   }}
                 >
@@ -1355,7 +1291,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Public Dashboard Settings - TEMPORARILY HIDDEN */}
             {/* 
             <div style={{
-              backgroundColor: '#f8f9fa',
+              backgroundColor: 'var(--hs-bg-surface)',
               borderRadius: '8px',
               padding: '20px',
               marginTop: '20px'
@@ -1364,13 +1300,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 marginTop: 0, 
                 marginBottom: '15px',
                 fontSize: '18px',
-                color: '#333'
+                color: 'var(--hs-text-primary)'
               }}>
                 🔗 Public Dashboard Link
               </h3>
               <p style={{
                 fontSize: '14px',
-                color: '#666',
+                color: 'var(--hs-text-secondary)',
                 marginBottom: '20px'
               }}>
                 Share your dashboard publicly without requiring login. Anyone with the link can view the dashboard.
@@ -1378,8 +1314,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
               {publicDashboard ? (
                 <div style={{
-                  backgroundColor: 'white',
-                  border: '1px solid #ddd',
+                  backgroundColor: 'var(--hs-bg)',
+                  border: '1px solid var(--hs-border-light)',
                   borderRadius: '6px',
                   padding: '15px'
                 }}>
@@ -1408,7 +1344,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div style={{
                     fontFamily: 'monospace',
                     fontSize: '14px',
-                    backgroundColor: '#f8f9fa',
+                    backgroundColor: 'var(--hs-bg-surface)',
                     padding: '8px',
                     borderRadius: '4px',
                     border: '1px solid #e0e0e0',
@@ -1418,7 +1354,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                   <p style={{
                     fontSize: '12px',
-                    color: '#666',
+                    color: 'var(--hs-text-secondary)',
                     marginTop: '8px',
                     margin: '8px 0 0 0'
                   }}>
@@ -1430,7 +1366,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   textAlign: 'center',
                   padding: '20px'
                 }}>
-                  <p style={{ fontSize: '14px', color: '#666', marginBottom: '15px' }}>
+                  <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginBottom: '15px' }}>
                     Public link is currently disabled. Generate a link to share your dashboard publicly.
                   </p>
                   <button
@@ -1458,7 +1394,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       case 'timer':
         return (
           <div style={{
-            backgroundColor: '#f8f9fa',
+            backgroundColor: 'var(--hs-bg-surface)',
             borderRadius: '8px',
             padding: '20px'
           }}>
@@ -1466,7 +1402,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               marginTop: 0, 
               marginBottom: '15px',
               fontSize: '18px',
-              color: '#333'
+              color: 'var(--hs-text-primary)'
             }}>
               ⏰ Timer Settings
             </h3>
@@ -1492,7 +1428,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </label>
             <p style={{
               fontSize: '12px',
-              color: '#666',
+              color: 'var(--hs-text-secondary)',
               marginTop: '8px',
               marginLeft: '28px'
             }}>
@@ -1538,7 +1474,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         return (
           <div>
             <div style={{
-              backgroundColor: '#f8f9fa',
+              backgroundColor: 'var(--hs-bg-surface)',
               borderRadius: '8px',
               padding: '20px',
               marginBottom: '20px'
@@ -1548,7 +1484,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <select
                   value={taskFilterStudent}
                   onChange={(e) => setTaskFilterStudent(e.target.value)}
-                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }}
+                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                 >
                   <option value="">All Students</option>
                   {students.map(s => (
@@ -1558,7 +1494,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <select
                   value={taskFilterStatus}
                   onChange={(e) => setTaskFilterStatus(e.target.value as any)}
-                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }}
+                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                 >
                   <option value="all">All Statuses</option>
                   <option value="pending">Pending</option>
@@ -1570,7 +1506,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   onChange={(e) => setTaskFilterFrom(e.target.value)}
                   placeholder="From"
                   title="From date"
-                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }}
+                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                 />
                 <input
                   type="date"
@@ -1578,12 +1514,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   onChange={(e) => setTaskFilterTo(e.target.value)}
                   placeholder="To"
                   title="To date"
-                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px' }}
+                  style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                 />
                 {(taskFilterStudent || taskFilterStatus !== 'all' || taskFilterFrom || taskFilterTo) && (
                   <button
                     onClick={() => { setTaskFilterStudent(''); setTaskFilterStatus('all'); setTaskFilterFrom(''); setTaskFilterTo(''); }}
-                    style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', backgroundColor: '#fff' }}
+                    style={{ padding: '6px 10px', fontSize: '13px', border: '1px solid var(--hs-border-input)', borderRadius: '4px', cursor: 'pointer', backgroundColor: 'var(--hs-bg)' }}
                   >
                     Clear Filters
                   </button>
@@ -1592,7 +1528,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             {filteredTasks.length === 0 ? (
-              <p style={{ color: '#666', textAlign: 'center', padding: '30px 0' }}>
+              <p style={{ color: 'var(--hs-text-secondary)', textAlign: 'center', padding: '30px 0' }}>
                 {adHocTasks.length === 0 ? 'No tasks have been created yet.' : 'No tasks match the selected filters.'}
               </p>
             ) : (
@@ -1600,12 +1536,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #ddd' }}>
-                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Task Name</th>
-                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Student</th>
-                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Start</th>
-                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Target</th>
-                      <th style={{ textAlign: 'left', padding: '8px 6px', color: '#555' }}>Status</th>
-                      <th style={{ textAlign: 'right', padding: '8px 6px', color: '#555' }}>Actions</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--hs-badge-text)' }}>Task Name</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--hs-badge-text)' }}>Student</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--hs-badge-text)' }}>Start</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--hs-badge-text)' }}>Target</th>
+                      <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--hs-badge-text)' }}>Status</th>
+                      <th style={{ textAlign: 'right', padding: '8px 6px', color: 'var(--hs-badge-text)' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1617,7 +1553,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           <td style={{ padding: '8px 6px', fontWeight: '500' }}>
                             {task.name}
                             {task.description && (
-                              <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>{task.description}</div>
+                              <div style={{ fontSize: '11px', color: 'var(--hs-text-muted)', marginTop: '2px' }}>{task.description}</div>
                             )}
                           </td>
                           <td style={{ padding: '8px 6px' }}>{studentName}</td>
@@ -1689,7 +1625,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 zIndex: 2000
               }}>
                 <div style={{
-                  backgroundColor: 'white',
+                  backgroundColor: 'var(--hs-bg)',
                   padding: '30px',
                   borderRadius: '8px',
                   maxWidth: '400px',
@@ -1719,7 +1655,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => setTaskToDelete(null)}
                       style={{
                         padding: '8px 16px',
-                        backgroundColor: '#6c757d',
+                        backgroundColor: 'var(--hs-btn-neutral)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '4px',
@@ -1755,7 +1691,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         borderRadius: '12px',
         padding: '30px',
         maxWidth: '900px',
@@ -1779,7 +1715,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               border: 'none',
               fontSize: '28px',
               cursor: 'pointer',
-              color: '#666',
+              color: 'var(--hs-text-secondary)',
               padding: '0',
               width: '32px',
               height: '32px',
@@ -1819,11 +1755,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 padding: '10px 16px',
                 border: 'none',
                 borderBottom: activeTab === tab.id ? '2px solid #007bff' : '2px solid transparent',
-                backgroundColor: activeTab === tab.id ? '#f8f9fa' : 'transparent',
+                backgroundColor: activeTab === tab.id ? 'var(--hs-bg-surface)' : 'transparent',
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: activeTab === tab.id ? '600' : 'normal',
-                color: activeTab === tab.id ? '#007bff' : '#666'
+                color: activeTab === tab.id ? '#007bff' : 'var(--hs-text-secondary)'
               }}
             >
               {tab.label}
@@ -1845,12 +1781,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             onClick={onClose}
             style={{
               padding: '10px 20px',
-              border: '1px solid #ddd',
-              backgroundColor: 'white',
+              border: '1px solid var(--hs-border-light)',
+              backgroundColor: 'var(--hs-bg)',
               borderRadius: '6px',
               fontSize: '14px',
               cursor: 'pointer',
-              color: '#333'
+              color: 'var(--hs-text-primary)'
             }}
           >
             Close
@@ -1890,7 +1826,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           zIndex: 2000
         }}>
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: 'var(--hs-bg)',
             padding: '30px',
             borderRadius: '8px',
             maxWidth: '400px',
@@ -1917,7 +1853,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 width: '100%',
                 padding: '8px',
                 fontSize: '14px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 marginBottom: '20px'
               }}
@@ -1935,7 +1871,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 disabled={removingUserId === userToRemove.userId}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: '#666',
+                  backgroundColor: 'var(--hs-btn-neutral)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
@@ -1990,7 +1926,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         >
           <div 
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--hs-bg)',
               padding: '30px',
               borderRadius: '8px',
               maxWidth: '500px',
@@ -2010,7 +1946,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   key={role}
                   type="button"
                   onClick={() => {
-                    console.log('Role button clicked:', role);
                     setEditingUserAccess(prev => prev ? { ...prev, currentRole: role } : null);
                   }}
                   style={{
@@ -2022,7 +1957,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     border: editingUserAccess.currentRole === role ? '2px solid #007bff' : '1px solid #ddd',
                     borderRadius: '6px',
                     backgroundColor: editingUserAccess.currentRole === role ? '#e3f2fd' : 'white',
-                    color: editingUserAccess.currentRole === role ? '#1976d2' : '#333',
+                    color: editingUserAccess.currentRole === role ? '#1976d2' : 'var(--hs-text-primary)',
                     cursor: 'pointer',
                     textAlign: 'left',
                     fontWeight: editingUserAccess.currentRole === role ? '600' : 'normal'
@@ -2031,7 +1966,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <span style={{ textTransform: 'capitalize' }}>{role}</span>
-                      <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
                         {role === 'parent' && 'Full access to all settings and data'}
                         {role === 'tutor' && 'Can assign goals and track progress'}  
                         {role === 'observer' && 'Read-only access to view progress'}
@@ -2049,12 +1984,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  console.log('Cancel clicked');
                   setEditingUserAccess(null);
                 }}
                 style={{
                   padding: '10px 20px',
-                  backgroundColor: '#666',
+                  backgroundColor: 'var(--hs-btn-neutral)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
@@ -2066,15 +2000,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  console.log('Save Role clicked');
                   const user = users.find(u => u.id === editingUserAccess.userId);
                   if (user) {
-                    console.log('Calling handleChangeUserRole with:', {
-                      userId: editingUserAccess.userId,
-                      email: user.email,
-                      oldRole: user.role,
-                      newRole: editingUserAccess.currentRole
-                    });
                     handleChangeUserRole(
                       editingUserAccess.userId, 
                       user.email || '', 

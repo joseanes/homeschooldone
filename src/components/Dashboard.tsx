@@ -134,7 +134,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     if (!homeschool?.id) return;
     
     try {
-      console.log('Dashboard: Saving publicDashboardId:', dashboardId, 'to homeschool:', homeschool.id);
       const updates: any = {};
       if (dashboardId) {
         updates.publicDashboardId = dashboardId;
@@ -142,11 +141,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         updates.publicDashboardId = null;
       }
       
-      console.log('Dashboard: About to update Firestore document with:', updates);
       await updateDoc(doc(db, 'homeschools', homeschool.id), updates);
-      console.log('Dashboard: Successfully updated Firestore document');
       setPublicDashboardId(dashboardId);
-      console.log('Dashboard: Set local state publicDashboardId to:', dashboardId);
     } catch (error) {
       console.error('Error saving public dashboard setting:', error);
     }
@@ -196,69 +192,39 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   useEffect(() => {
     // Check for pending invitations and activate them
     const activateInvitations = async () => {
-      if (!user.email) {
-        console.log('No user email found for invitation activation');
-        return;
-      }
-      
-      console.log(`Checking for pending invitations for ${user.email}`);
-      
+      if (!user.email) return;
+
       try {
-        // Find homeschools where user's email is in invitation arrays
-        const allHomeschoolsQuery = query(collection(db, 'homeschools'));
-        const homeschoolsSnapshot = await getDocs(allHomeschoolsQuery);
-        
-        console.log(`Found ${homeschoolsSnapshot.docs.length} homeschools to check`);
-        
-        for (const homeschoolDoc of homeschoolsSnapshot.docs) {
-          const homeschoolData = homeschoolDoc.data() as Homeschool;
-          const homeschoolId = homeschoolDoc.id;
-          let needsUpdate = false;
-          const updates: any = {};
-          
-          console.log(`Checking homeschool ${homeschoolId}:`, {
-            parentEmails: homeschoolData.parentEmails,
-            tutorEmails: homeschoolData.tutorEmails,
-            observerEmails: homeschoolData.observerEmails
-          });
-          
-          // Check each role type
-          if (homeschoolData.parentEmails?.includes(user.email)) {
-            console.log(`Found ${user.email} in parentEmails, activating as parent`);
-            updates.parentEmails = arrayRemove(user.email);
-            updates.parentIds = arrayUnion(user.uid);
-            needsUpdate = true;
-          }
-          
-          if (homeschoolData.tutorEmails?.includes(user.email)) {
-            console.log(`Found ${user.email} in tutorEmails, activating as tutor`);
-            updates.tutorEmails = arrayRemove(user.email);
-            updates.tutorIds = arrayUnion(user.uid);
-            needsUpdate = true;
-          }
-          
-          if (homeschoolData.observerEmails?.includes(user.email)) {
-            console.log(`Found ${user.email} in observerEmails, activating as observer`);
-            updates.observerEmails = arrayRemove(user.email);
-            updates.observerIds = arrayUnion(user.uid);
-            needsUpdate = true;
-          }
-          
-          if (needsUpdate) {
-            console.log(`Updating homeschool ${homeschoolId} with:`, updates);
-            await updateDoc(doc(db, 'homeschools', homeschoolId), updates);
-            console.log(`Successfully activated invitation for ${user.email} in homeschool ${homeschoolId}`);
-          }
-        }
-        
-        if (!homeschoolsSnapshot.docs.some(doc => {
-          const data = doc.data() as Homeschool;
-          return (user.email && data.parentEmails?.includes(user.email)) || 
-                 (user.email && data.tutorEmails?.includes(user.email)) || 
-                 (user.email && data.observerEmails?.includes(user.email));
-        })) {
-          console.log(`No pending invitations found for ${user.email}`);
-        }
+        const [parentSnap, tutorSnap, observerSnap] = await Promise.all([
+          getDocs(query(collection(db, 'homeschools'), where('parentEmails', 'array-contains', user.email))),
+          getDocs(query(collection(db, 'homeschools'), where('tutorEmails', 'array-contains', user.email))),
+          getDocs(query(collection(db, 'homeschools'), where('observerEmails', 'array-contains', user.email))),
+        ]);
+
+        const updates: Promise<void>[] = [];
+
+        parentSnap.docs.forEach(d => {
+          updates.push(updateDoc(doc(db, 'homeschools', d.id), {
+            parentEmails: arrayRemove(user.email),
+            parentIds: arrayUnion(user.uid),
+          }));
+        });
+
+        tutorSnap.docs.forEach(d => {
+          updates.push(updateDoc(doc(db, 'homeschools', d.id), {
+            tutorEmails: arrayRemove(user.email),
+            tutorIds: arrayUnion(user.uid),
+          }));
+        });
+
+        observerSnap.docs.forEach(d => {
+          updates.push(updateDoc(doc(db, 'homeschools', d.id), {
+            observerEmails: arrayRemove(user.email),
+            observerIds: arrayUnion(user.uid),
+          }));
+        });
+
+        await Promise.all(updates);
       } catch (error) {
         console.error('Error activating invitations:', error);
       }
@@ -270,7 +236,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         // First, activate any pending invitations
         await activateInvitations();
         // Check all possible role arrays for this user
-        console.log(`Searching for homeschools for user ${user.uid} (${user.email})`);
         
         const queries = [
           { query: query(collection(db, 'homeschools'), where('parentIds', 'array-contains', user.uid)), role: 'parent' },
@@ -282,37 +247,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         let userRole = null;
         
         // First check if user is a student by looking in people collection
-        console.log('Checking if user is a student...');
-        console.log('User email:', user.email);
-        
-        // Debug: Check all people in collection to see if email matches
-        console.log('=== DEBUGGING: Checking all people records ===');
-        const allPeopleQuery = query(collection(db, 'people'));
-        const allPeopleSnapshot = await getDocs(allPeopleQuery);
-        console.log(`Total people in database: ${allPeopleSnapshot.docs.length}`);
-        allPeopleSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          console.log(`Person ${doc.id}: email="${data.email}", role="${data.role}", name="${data.name}"`);
-          if (data.email === user.email) {
-            console.log('*** MATCH FOUND ***');
-          }
-        });
-        console.log('=== END DEBUG ===');
         
         const studentQuery = query(collection(db, 'people'), where('email', '==', user.email || ''));
         const studentSnapshot = await getDocs(studentQuery);
-        
-        console.log(`Found ${studentSnapshot.docs.length} people with email ${user.email}`);
         
         if (!studentSnapshot.empty) {
           // If multiple records exist, prioritize student role
           let studentRecord: { data: any; id: string } | null = null;
           for (const doc of studentSnapshot.docs) {
             const data = doc.data();
-            console.log('Checking record:', doc.id, 'role:', data.role, 'name:', data.name);
             if (data.role === 'student') {
               studentRecord = { data, id: doc.id };
-              console.log('Found student role record:', doc.id);
               break;
             }
           }
@@ -320,71 +265,45 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           // If no student role found, use first record
           if (!studentRecord) {
             studentRecord = { data: studentSnapshot.docs[0].data(), id: studentSnapshot.docs[0].id };
-            console.log('No student role found, using first record:', studentRecord.id);
           }
           
           if (studentRecord) {
             const studentData = studentRecord.data;
-            console.log('Using record:', studentRecord.id, 'with role:', studentData.role);
             
             if (studentData.role === 'student') {
-              console.log(`User is a student: ${studentRecord.id}`);
               // Find homeschool that contains this student
               const homeschoolQuery = query(collection(db, 'homeschools'), where('studentIds', 'array-contains', studentRecord.id));
               const homeschoolSnapshot = await getDocs(homeschoolQuery);
-              
-              console.log(`Found ${homeschoolSnapshot.docs.length} homeschools containing student ${studentRecord.id}`);
-              
-              // Debug: Check all homeschools to see student assignments
-              console.log('=== DEBUGGING: Checking all homeschool student assignments ===');
-              const allHomeschoolsQuery = query(collection(db, 'homeschools'));
-              const allHomeschoolsSnapshot = await getDocs(allHomeschoolsQuery);
-              allHomeschoolsSnapshot.docs.forEach(doc => {
-                const data = doc.data();
-                console.log(`Homeschool ${doc.id} (${data.name}): studentIds=`, data.studentIds);
-                if (data.studentIds && studentRecord && data.studentIds.includes(studentRecord.id)) {
-                  console.log(`*** STUDENT IS ASSIGNED TO THIS HOMESCHOOL ***`);
-                }
-              });
-              console.log('=== END HOMESCHOOL DEBUG ===');
               
               if (!homeschoolSnapshot.empty) {
                 const data = homeschoolSnapshot.docs[0].data() as Homeschool;
                 homeschoolData = { ...data, id: homeschoolSnapshot.docs[0].id };
                 userRole = 'student';
-                console.log(`Found homeschool access as student: ${homeschoolData.id}`);
-                console.log('Homeschool data:', homeschoolData);
                 
                 // Set the current student info
                 setCurrentStudent({ ...studentData, id: studentRecord.id } as Person);
               } else {
-                console.log('No homeschool found containing this student ID');
               }
             } else {
-              console.log(`User role is not student, it is: ${studentData.role}`);
             }
           }
         } else {
-          console.log('No student found with this email in people collection');
         }
         
         // If not a student, check parent/tutor/observer roles
         if (!homeschoolData) {
           for (const { query: q, role } of queries) {
-            console.log(`Checking ${role} access...`);
             const querySnapshot = await getDocs(q);
             if (!querySnapshot.empty) {
               const data = querySnapshot.docs[0].data() as Homeschool;
               homeschoolData = { ...data, id: querySnapshot.docs[0].id };
               userRole = role;
-              console.log(`Found homeschool access as ${role}: ${homeschoolData.id}`);
               break;
             }
           }
         }
         
         if (!homeschoolData) {
-          console.log('No homeschool access found for user');
         }
         
         // Check if we have a saved homeschool preference
@@ -395,12 +314,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           const allHomeschools: Array<{ data: Homeschool; role: string }> = [];
           
           for (const { query: q, role } of queries) {
-            console.log(`Checking ${role} access...`);
             const querySnapshot = await getDocs(q);
             querySnapshot.docs.forEach(doc => {
               const data = doc.data() as Homeschool;
               allHomeschools.push({ data: { ...data, id: doc.id }, role });
-              console.log(`Found homeschool access as ${role}: ${doc.id} (${data.name})`);
             });
           }
           
@@ -411,7 +328,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               if (savedHomeschool) {
                 homeschoolData = savedHomeschool.data;
                 userRole = savedHomeschool.role;
-                console.log(`Using saved homeschool preference: ${homeschoolData.id}`);
               }
             }
             
@@ -419,13 +335,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             if (!homeschoolData) {
               homeschoolData = allHomeschools[0].data;
               userRole = allHomeschools[0].role;
-              console.log(`Using first available homeschool: ${homeschoolData.id}`);
             }
           }
         }
         
         if (!homeschoolData) {
-          console.log('No homeschool access found for user');
         }
         
         if (homeschoolData) {
@@ -545,7 +459,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         return instanceDateLocal.getTime() === todayStart.getTime();
       });
       
-      
       setTodayInstances(todayFiltered);
     } catch (error) {
       console.error('Error fetching today instances:', error);
@@ -590,7 +503,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
       
-
       // First get all goal IDs for this homeschool
       const goalsSnapshot = await getDocs(
         query(collection(db, 'goals'), where('homeschoolId', '==', homeschool.id))
@@ -630,8 +542,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         return instanceDate >= startOfWeek && instanceDate <= endOfWeek;
       });
       
-
-
       setWeekInstances(instances);
     } catch (error) {
       console.error('Error fetching week instances:', error);
@@ -708,9 +618,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     if (weeklyComplete) {
       return {
         status: 'weekly-complete',
-        color: '#4caf50',
-        backgroundColor: '#e8f5e9',
-        textColor: '#2e7d32',
+        color: 'var(--hs-goal-complete-border)',
+        backgroundColor: 'var(--hs-goal-complete-bg)',
+        textColor: 'var(--hs-goal-complete-text)',
         text: '✓',
         label: 'Weekly Complete'
       };
@@ -719,9 +629,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     if (progress.today > 0) {
       return {
         status: 'done-today',
-        color: '#2196f3',
-        backgroundColor: '#e3f2fd',
-        textColor: '#1565c0',
+        color: 'var(--hs-goal-today-border)',
+        backgroundColor: 'var(--hs-goal-today-bg)',
+        textColor: 'var(--hs-goal-today-text)',
         text: '✔',
         label: 'Done Today'
       };
@@ -730,9 +640,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     if (weeklyCount > 0) {
       return {
         status: 'progress-week',
-        color: '#ffc107',
-        backgroundColor: '#fff8e1',
-        textColor: '#f57c00',
+        color: 'var(--hs-goal-progress-border)',
+        backgroundColor: 'var(--hs-goal-progress-bg)',
+        textColor: 'var(--hs-goal-progress-text)',
         text: '◐',
         label: 'Progress This Week'
       };
@@ -740,9 +650,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
 
     return {
       status: 'pending',
-      color: '#9e9e9e',
-      backgroundColor: '#f5f5f5',
-      textColor: '#616161',
+      color: 'var(--hs-goal-pending-border)',
+      backgroundColor: 'var(--hs-goal-pending-bg)',
+      textColor: 'var(--hs-goal-pending-text)',
       text: '○',
       label: 'Pending'
     };
@@ -840,7 +750,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
 
   const createHomeschool = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log('Creating homeschool with name:', homeschoolName);
     
     if (!homeschoolName.trim()) {
       alert('Please enter a homeschool name');
@@ -857,11 +766,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         createdBy: user.uid,
         createdAt: new Date()
       };
-      console.log('Attempting to create document:', newHomeschool);
 
-      console.log('About to call addDoc...');
       const docRef = await addDoc(collection(db, 'homeschools'), newHomeschool);
-      console.log('Document created with ID:', docRef.id);
       
       setHomeschool({ ...newHomeschool, id: docRef.id });
       setShowCreateForm(false);
@@ -883,7 +789,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         gap: '20px'
       }}>
         <div style={{ fontSize: '18px' }}>Loading HomeschoolDone...</div>
-        <div style={{ fontSize: '14px', color: '#666' }}>
+        <div style={{ fontSize: '14px', color: 'var(--hs-text-secondary)' }}>
           Please wait while we set up your dashboard
         </div>
       </div>
@@ -904,7 +810,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         textAlign: 'center'
       }}>
         <h2 style={{ color: '#dc3545' }}>Student Access Issue</h2>
-        <p style={{ color: '#666', maxWidth: '500px' }}>
+        <p style={{ color: 'var(--hs-text-secondary)', maxWidth: '500px' }}>
           We found your student account ({user.email}), but you don't seem to be assigned to any homeschool.
           Please contact your teacher or parent to make sure you've been properly added to the homeschool system.
         </p>
@@ -921,7 +827,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         >
           Sign Out
         </button>
-        <div style={{ fontSize: '12px', color: '#999', marginTop: '20px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--hs-text-muted)', marginTop: '20px' }}>
           Debug info: Found student record but no homeschool assignment
         </div>
       </div>
@@ -964,7 +870,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                   width: '100%',
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
                 placeholder="e.g., Smith Family Homeschool"
@@ -992,7 +898,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               style={{
                 padding: '10px 20px',
                 fontSize: '16px',
-                backgroundColor: '#666',
+                backgroundColor: 'var(--hs-btn-neutral)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
@@ -1009,7 +915,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
 
   // If user is a student, show student dashboard
   if (userRole === 'student' && currentStudent && homeschool) {
-    console.log('Dashboard: Rendering StudentDashboard for:', currentStudent.name, 'in homeschool:', homeschool.name);
     return (
       <StudentDashboard
         student={currentStudent}
@@ -1017,13 +922,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         onSignOut={onSignOut}
       />
     );
-  }
-
-  // Debug logging for student access issues
-  if (userRole === 'student') {
-    console.log('Dashboard: Student role detected but missing data:');
-    console.log('- currentStudent:', currentStudent);
-    console.log('- homeschool:', homeschool);
   }
 
   return (
@@ -1038,14 +936,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             <path d="M32 53L38 59L50 47" stroke="#16A34A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ margin: 0, fontSize: '28px', color: '#333' }}>{homeschool.name}</h1>
+            <h1 style={{ margin: 0, fontSize: '28px', color: 'var(--hs-text-primary)' }}>{homeschool.name}</h1>
             <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setShowHomeschoolSwitcher(!showHomeschoolSwitcher)}
                 style={{
                   padding: '6px',
                   backgroundColor: 'transparent',
-                  border: '1px solid #ddd',
+                  border: '1px solid var(--hs-border-light)',
                   borderRadius: '4px',
                   cursor: 'pointer',
                   display: 'flex',
@@ -1167,7 +1065,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             style={{
               padding: '8px 14px',
               fontSize: '14px',
-              backgroundColor: '#666',
+              backgroundColor: 'var(--hs-btn-neutral)',
               color: 'white',
               border: 'none',
               borderRadius: '6px',
@@ -1219,7 +1117,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             Dashboard
           </button>
           {goals.length === 0 && (
-            <span style={{ fontSize: '13px', color: '#999', marginLeft: '8px' }}>
+            <span style={{ fontSize: '13px', color: 'var(--hs-text-muted)', marginLeft: '8px' }}>
               Set up students, activities and goals first
             </span>
           )}
@@ -1228,15 +1126,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
 
       {/* Today's Progress Overview - Grouped by Student */}
       <div style={{
-        backgroundColor: '#f0f4f8',
-        border: '1px solid #dde3ea',
+        backgroundColor: 'var(--hs-bg-elevated)',
+        border: '1px solid var(--hs-border)',
         borderRadius: '10px',
         padding: '20px',
         marginBottom: '20px'
       }}>
-        <h3 style={{ margin: '0 0 16px 0', color: '#444' }} title="Overview of today's activity and weekly goal progress for each student">Today's Progress</h3>
+        <h3 style={{ margin: '0 0 16px 0', color: 'var(--hs-text-label)' }} title="Overview of today's activity and weekly goal progress for each student">Today's Progress</h3>
         {goals.length === 0 ? (
-          <p style={{ color: '#666' }}>No goals assigned yet</p>
+          <p style={{ color: 'var(--hs-text-secondary)' }}>No goals assigned yet</p>
         ) : (
           <div style={{ display: 'grid', gap: '20px' }}>
             {[...students].sort((a, b) => {
@@ -1309,11 +1207,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
 
               return (
                 <div key={student.id} style={{
-                  border: '1px solid #dde3ea',
+                  border: '1px solid var(--hs-border)',
                   borderRadius: '10px',
                   padding: '16px',
-                  backgroundColor: allCompleted ? '#f4f9f4' : '#f7f9fc',
-                  borderColor: allCompleted ? '#a5d6a7' : '#dde3ea'
+                  backgroundColor: allCompleted ? 'var(--hs-bg-card-success)' : 'var(--hs-bg-card)',
+                  borderColor: allCompleted ? 'var(--hs-border-success)' : 'var(--hs-border)'
                 }}>
                   <div style={{
                     display: 'flex',
@@ -1324,7 +1222,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                     <h4 style={{
                       margin: 0,
                       fontSize: '16px',
-                      color: '#444',
+                      color: 'var(--hs-text-label)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px'
@@ -1359,8 +1257,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                         style={{
                           padding: '4px 10px',
                           borderRadius: '12px',
-                          backgroundColor: allCompleted ? '#a5d6a7' : '#e0e0e0',
-                          color: allCompleted ? '#2e7d32' : '#555',
+                          backgroundColor: allCompleted ? 'var(--hs-badge-success-bg)' : 'var(--hs-badge-bg)',
+                          color: allCompleted ? 'var(--hs-badge-success-text)' : 'var(--hs-badge-text)',
                           fontSize: '12px',
                           fontWeight: '600'
                         }}
@@ -1463,9 +1361,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                             }}
                             style={{
                               display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
-                              backgroundColor: isCompleted ? '#e8f5e9' : '#f5f5f5',
-                              color: isCompleted ? '#2e7d32' : '#666',
-                              borderRadius: '6px', border: `1px solid ${isCompleted ? '#a5d6a7' : '#ddd'}`,
+                              backgroundColor: isCompleted ? 'var(--hs-task-complete-bg)' : 'var(--hs-task-pending-bg)',
+                              color: isCompleted ? 'var(--hs-task-complete-text)' : 'var(--hs-task-pending-text)',
+                              borderRadius: '6px', border: `1px solid ${isCompleted ? 'var(--hs-task-complete-border)' : 'var(--hs-task-pending-border)'}`,
                               cursor: isCompleted ? 'default' : 'pointer', transition: 'all 0.2s ease',
                               fontSize: '13px', lineHeight: '1.3'
                             }}
@@ -1588,6 +1486,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           activities={activities}
           students={students}
           userId={user.uid}
+          homeschoolId={homeschool?.id ?? ''}
           preSelectedGoal={preSelectedGoal}
           preSelectedStudent={preSelectedStudent}
           existingInstance={editingActivityInstance || undefined}

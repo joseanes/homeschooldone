@@ -8,7 +8,11 @@ export function isGoalActiveForStudent(goal: Goal, studentId: string, currentDat
   const perStudentStart = goal.studentCompletions?.[studentId]?.startDate;
   const effectiveStart = perStudentStart || goal.startDate;
   if (effectiveStart) {
-    const startDate = effectiveStart instanceof Date ? effectiveStart : new Date(effectiveStart as any);
+    const startDate = effectiveStart instanceof Date
+      ? effectiveStart
+      : (effectiveStart as any)?.toDate
+        ? (effectiveStart as any).toDate()
+        : new Date(effectiveStart as any);
     if (currentDate < startDate) return false;
   }
   

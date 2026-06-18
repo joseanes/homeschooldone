@@ -147,47 +147,45 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     // Check if weekly requirement is met
     const weeklyComplete = goal.timesPerWeek && weeklyCount >= goal.timesPerWeek;
     
-    // If weekly requirement is met, show as completed (green)
     if (weeklyComplete) {
-      return { 
-        status: 'weekly-complete', 
-        color: '#4caf50', // Green
-        backgroundColor: '#e8f5e9', // Light green background
-        textColor: '#2e7d32',
+      return {
+        status: 'weekly-complete',
+        color: 'var(--hs-goal-complete-border)',
+        backgroundColor: 'var(--hs-goal-complete-bg)',
+        textColor: 'var(--hs-goal-complete-text)',
+        badgeBg: 'var(--hs-goal-complete-badge)',
         text: 'Weekly Complete ✓'
       };
     }
-    
-    // Check if there's progress TODAY
+
     if (todayCount > 0) {
-      // Has progress today but weekly not complete - show as done today (blue)
-      return { 
-        status: 'done-today', 
-        color: '#2196f3', // Blue
-        backgroundColor: '#e3f2fd', // Light blue background
-        textColor: '#1565c0',
+      return {
+        status: 'done-today',
+        color: 'var(--hs-goal-today-border)',
+        backgroundColor: 'var(--hs-goal-today-bg)',
+        textColor: 'var(--hs-goal-today-text)',
+        badgeBg: 'var(--hs-goal-today-badge)',
         text: 'Done Today'
       };
     }
-    
-    // Check if there's progress THIS WEEK (but not today)
+
     if (weeklyCount > 0) {
-      // Has progress this week but not today - show as progress this week (yellow)
-      return { 
-        status: 'progress-week', 
-        color: '#ffc107', // Yellow/Amber
-        backgroundColor: '#fff8e1', // Light yellow background
-        textColor: '#f57c00',
+      return {
+        status: 'progress-week',
+        color: 'var(--hs-goal-progress-border)',
+        backgroundColor: 'var(--hs-goal-progress-bg)',
+        textColor: 'var(--hs-goal-progress-text)',
+        badgeBg: 'var(--hs-goal-progress-badge)',
         text: 'Progress This Week'
       };
     }
-    
-    // Default: not done this week (gray)
-    return { 
-      status: 'pending', 
-      color: '#9e9e9e', // Gray
-      backgroundColor: '#f5f5f5', // Light gray background
-      textColor: '#616161',
+
+    return {
+      status: 'pending',
+      color: 'var(--hs-goal-pending-border)',
+      backgroundColor: 'var(--hs-goal-pending-bg)',
+      textColor: 'var(--hs-goal-pending-text)',
+      badgeBg: 'var(--hs-goal-pending-badge)',
       text: 'Pending'
     };
   };
@@ -387,17 +385,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
       {/* Today's Goals */}
       <div style={{
-        backgroundColor: '#fff',
+        backgroundColor: 'var(--hs-bg-card)',
         borderRadius: '15px',
         padding: '30px',
         marginBottom: '20px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-        background: 'linear-gradient(135deg, #fff 0%, #f8fffe 100%)'
+        boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
           <h2 style={{
             margin: 0,
-            color: '#2c3e50',
+            color: 'var(--hs-text-primary)',
             fontSize: '32px',
             fontWeight: '700',
             display: 'flex',
@@ -431,7 +428,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
           <div style={{
             textAlign: 'center',
             padding: '40px',
-            color: '#666',
+            color: 'var(--hs-text-secondary)',
             fontSize: '16px'
           }}>
             No activities assigned to you yet. Check with your teacher or parent.
@@ -506,10 +503,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           {isCompleted ? 'Done' : 'Task'}
                         </div>
                       </div>
-                      {task.description && <p style={{ margin: '0 0 15px 0', color: '#4b5563', fontSize: '16px', lineHeight: '1.5' }}>{task.description}</p>}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: '#6b7280', backgroundColor: 'rgba(255,255,255,0.7)', padding: '12px 16px', borderRadius: '10px' }}>
+                      {task.description && <p style={{ margin: '0 0 15px 0', color: 'var(--hs-text-secondary)', fontSize: '16px', lineHeight: '1.5' }}>{task.description}</p>}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: 'var(--hs-text-label)', borderTop: '1px solid var(--hs-border)', paddingTop: '12px', marginTop: '4px' }}>
                         <div style={{ fontWeight: '500' }}>{targetDate && `Due: ${targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}</div>
-                        {!isCompleted && <div style={{ color: '#4f46e5', fontWeight: '600', fontSize: '13px' }}>✏️ Mark Done</div>}
+                        {!isCompleted && <div style={{ color: 'var(--hs-link-action)', fontWeight: '600', fontSize: '13px' }}>✏️ Mark Done</div>}
                       </div>
                     </div>
                   );
@@ -521,10 +518,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 const status = getStatusForGoal(goal);
                 const cardColors = (() => {
                   switch (status.status) {
-                    case 'weekly-complete': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(76, 175, 80, 0.2)', emoji: '✅', titleColor: status.textColor };
-                    case 'done-today': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(33, 150, 243, 0.2)', emoji: '✔️', titleColor: status.textColor };
-                    case 'progress-week': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(255, 193, 7, 0.2)', emoji: '📝', titleColor: status.textColor };
-                    default: return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(158, 158, 158, 0.1)', emoji: '⏳', titleColor: status.textColor };
+                    case 'weekly-complete': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(76, 175, 80, 0.2)', emoji: '✅', titleColor: 'var(--hs-text-primary)' };
+                    case 'done-today': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(33, 150, 243, 0.2)', emoji: '✔️', titleColor: 'var(--hs-text-primary)' };
+                    case 'progress-week': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(255, 193, 7, 0.2)', emoji: '📝', titleColor: 'var(--hs-text-primary)' };
+                    default: return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(158, 158, 158, 0.1)', emoji: '⏳', titleColor: 'var(--hs-text-primary)' };
                   }
                 })();
 
@@ -546,14 +543,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       <h3 style={{ margin: 0, fontSize: '22px', color: cardColors.titleColor, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {cardColors.emoji} {goal.name || activity?.name || 'Unknown Activity'}
                       </h3>
-                      <div style={{ padding: '8px 16px', borderRadius: '25px', backgroundColor: status.color, color: 'white', fontSize: '14px', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+                      <div className="hs-goal-badge" style={{ padding: '8px 16px', borderRadius: '25px', backgroundColor: status.badgeBg, fontSize: '14px', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
                         {status.text}
                       </div>
                     </div>
-                    <p style={{ margin: '0 0 20px 0', color: '#4b5563', fontSize: '16px', lineHeight: '1.5' }}>
+                    <p style={{ margin: '0 0 20px 0', color: 'var(--hs-text-secondary)', fontSize: '16px', lineHeight: '1.5' }}>
                       {activity?.description || 'No description available'}
                     </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: '#6b7280', backgroundColor: 'rgba(255,255,255,0.7)', padding: '12px 16px', borderRadius: '10px', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: 'var(--hs-text-label)', borderTop: '1px solid var(--hs-border)', paddingTop: '12px', marginTop: '10px' }}>
                       <div style={{ fontWeight: '500' }}>
                         {goal.timesPerWeek && `📊 ${getProgressForGoal(goal.id).weekCount} of ${goal.timesPerWeek}/week`}
                         {goal.minutesPerSession && ` • ⏱️ ${goal.minutesPerSession} min`}
@@ -565,7 +562,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           return ind.join('');
                         })()}
                       </div>
-                      <div style={{ color: '#4f46e5', fontWeight: '600', fontSize: '13px' }}>
+                      <div style={{ color: 'var(--hs-link-action)', fontWeight: '600', fontSize: '13px' }}>
                         {getProgressForGoal(goal.id).todayInstance ? '✏️ Edit' : '➕ Record'}
                       </div>
                     </div>
@@ -627,6 +624,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
           existingInstance={editingInstance || undefined}
           timezone={timezone}
           allowMultipleRecordsPerDay={homeschool.allowMultipleRecordsPerDay || false}
+          homeschoolId={homeschool.id}
           onClose={handleActivityFormClose}
           onActivityRecorded={handleActivityFormClose}
         />

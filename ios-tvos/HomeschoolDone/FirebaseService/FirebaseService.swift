@@ -15,7 +15,10 @@ public class FirebaseService: ObservableObject {
     @Published public var students: [Person] = []
     @Published public var activities: [Activity] = []
     @Published public var goals: [Goal] = []
+    /// Activity instances in the current dashboard week (goal status badges).
     @Published public var weekInstances: [ActivityInstance] = []
+    /// Activity instances from the last five weeks (Last 7 Days and Weekly Completion charts).
+    @Published public var recentInstances: [ActivityInstance] = []
     @Published public var isLoading = false
     @Published public var error: String?
 
@@ -195,14 +198,10 @@ public class FirebaseService: ObservableObject {
                             self?.markDataLoaded("students")
                             return
                         }
-                        do {
-                            let students = try documents.map { try $0.data(as: Person.self) }
-                            print("✅ Loaded \(students.count) students")
-                            self?.students = students
-                            self?.markDataLoaded("students")
-                        } catch {
-                            print("❌ Error parsing students: \(error)")
-                        }
+                        let students = FirebaseService.decodeAll(documents, as: Person.self)
+                        print("✅ Loaded \(students.count) students")
+                        self?.students = students
+                        self?.markDataLoaded("students")
                     }
                 }
             listeners.append(studentsListener)
@@ -224,14 +223,10 @@ public class FirebaseService: ObservableObject {
                         self?.markDataLoaded("activities")
                         return
                     }
-                    do {
-                        let activities = try documents.map { try $0.data(as: Activity.self) }
-                        print("✅ Loaded \(activities.count) activities")
-                        self?.activities = activities
-                        self?.markDataLoaded("activities")
-                    } catch {
-                        print("❌ Error parsing activities: \(error)")
-                    }
+                    let activities = FirebaseService.decodeAll(documents, as: Activity.self)
+                    print("✅ Loaded \(activities.count) activities")
+                    self?.activities = activities
+                    self?.markDataLoaded("activities")
                 }
             }
         listeners.append(activitiesListener)
@@ -250,25 +245,40 @@ public class FirebaseService: ObservableObject {
                         self?.markDataLoaded("goals")
                         return
                     }
-                    do {
-                        let goals = try documents.map { try $0.data(as: Goal.self) }
-                        print("✅ Loaded \(goals.count) goals")
-                        self?.goals = goals
-                        self?.markDataLoaded("goals")
-                    } catch {
-                        print("❌ Error parsing goals: \(error)")
-                    }
+                    let goals = FirebaseService.decodeAll(documents, as: Goal.self)
+                    print("✅ Loaded \(goals.count) goals")
+                    self?.goals = goals
+                    self?.markDataLoaded("goals")
                 }
             }
         listeners.append(goalsListener)
     }
 
-    // MARK: - Activity Instances (Week)
+    /// Decodes each document, skipping (and logging) any that don't match the
+    /// model, so one malformed document can't blank a whole list or leave the
+    /// app stuck loading.
+    private static func decodeAll<T: Decodable>(_ documents: [QueryDocumentSnapshot], as type: T.Type) -> [T] {
+        documents.compactMap { document in
+            do {
+                return try document.data(as: T.self)
+            } catch {
+                print("❌ Skipping \(T.self) \(document.documentID): \(error)")
+                return nil
+            }
+        }
+    }
+
+    // MARK: - Activity Instances
+
+    /// Number of days of history loaded for the charts: the weekly chart shows
+    /// the current week plus the 3 before it, so 35 days always covers it.
+    private static let chartHistoryDays = 35
 
     public func fetchWeekInstances() async {
         let goalIds = goals.compactMap { $0.id }
         guard !goalIds.isEmpty else {
             weekInstances = []
+            recentInstances = []
             return
         }
 
@@ -285,11 +295,13 @@ public class FirebaseService: ObservableObject {
         let dayOfWeek = calendar.component(.weekday, from: today) - 1 // 0=Sun,1=Mon...
         let daysFromStart = (dayOfWeek - startOfWeekDay + 7) % 7
         guard let weekStart = calendar.date(byAdding: .day, value: -daysFromStart, to: today),
-              let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) else {
+              let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart),
+              let historyStart = calendar.date(byAdding: .day, value: -Self.chartHistoryDays, to: today) else {
             return
         }
+        let rangeStart = min(historyStart, weekStart)
 
-        print("📅 Fetching week instances: \(weekStart) to \(weekEnd)")
+        print("📅 Fetching activity instances: \(rangeStart) to \(weekEnd)")
 
         var allInstances: [ActivityInstance] = []
 
@@ -298,7 +310,7 @@ public class FirebaseService: ObservableObject {
         do {
             let snapshot = try await db.collection("activityInstances")
                 .whereField("homeschoolId", isEqualTo: homeschool?.id ?? "")
-                .whereField("date", isGreaterThanOrEqualTo: Timestamp(date: weekStart))
+                .whereField("date", isGreaterThanOrEqualTo: Timestamp(date: rangeStart))
                 .whereField("date", isLessThan: Timestamp(date: weekEnd))
                 .getDocuments()
 
@@ -310,11 +322,17 @@ public class FirebaseService: ObservableObject {
                 }
             }
         } catch {
+            // Keep showing the last good data; the refresh loop retries.
             print("❌ Error fetching activity instances: \(error)")
+            return
         }
 
-        print("✅ Fetched \(allInstances.count) week instances")
-        weekInstances = allInstances
+        recentInstances = allInstances
+        weekInstances = allInstances.filter { instance in
+            let date = instance.date.dateValue()
+            return date >= weekStart && date < weekEnd
+        }
+        print("✅ Fetched \(allInstances.count) recent instances, \(weekInstances.count) this week")
     }
 
     private func startInstanceRefresh() {
@@ -339,6 +357,7 @@ public class FirebaseService: ObservableObject {
         activities = []
         goals = []
         weekInstances = []
+        recentInstances = []
         initialDataLoaded.removeAll()
         instanceRefreshTask?.cancel()
         instanceRefreshTask = nil

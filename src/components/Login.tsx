@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../firebase';
 
 const Login: React.FC = () => {
@@ -40,7 +40,10 @@ const Login: React.FC = () => {
           setLoading(false);
           return;
         }
-        await createUserWithEmailAndPassword(auth, email, password);
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        // Invitations are only accepted for verified email addresses.
+        await sendEmailVerification(credential.user).catch(err =>
+          console.error('Error sending verification email:', err));
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }

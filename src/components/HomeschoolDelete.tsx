@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { doc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, writeBatch, deleteDoc, DocumentReference } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool } from '../types';
 
@@ -21,50 +21,28 @@ const HomeschoolDelete: React.FC<HomeschoolDeleteProps> = ({ homeschool, onClose
     }
 
     setDeleting(true);
-    const batch = writeBatch(db);
 
     try {
       // Delete all related data
       console.log('Starting homeschool deletion...');
 
-      // 1. Delete all students
-      const studentsQuery = query(collection(db, 'people'), where('__name__', 'in', homeschool.studentIds || []));
-      if (homeschool.studentIds && homeschool.studentIds.length > 0) {
-        const studentsSnapshot = await getDocs(studentsQuery);
-        studentsSnapshot.docs.forEach(doc => {
-          batch.delete(doc.ref);
-        });
+      // Students, activities, goals, ad-hoc tasks and activity instances all
+      // carry homeschoolId (Firestore rules require queries to be scoped by it).
+      const refs: DocumentReference[] = [];
+      for (const name of ['people', 'activities', 'goals', 'adHocTasks', 'activityInstances']) {
+        const snapshot = await getDocs(query(collection(db, name), where('homeschoolId', '==', homeschool.id)));
+        snapshot.docs.forEach(d => refs.push(d.ref));
       }
 
-      // 2. Delete all activities
-      const activitiesQuery = query(collection(db, 'activities'), where('homeschoolId', '==', homeschool.id));
-      const activitiesSnapshot = await getDocs(activitiesQuery);
-      activitiesSnapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-
-      // 3. Delete all goals
-      const goalsQuery = query(collection(db, 'goals'), where('homeschoolId', '==', homeschool.id));
-      const goalsSnapshot = await getDocs(goalsQuery);
-      const goalIds = goalsSnapshot.docs.map(doc => doc.id);
-      goalsSnapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-      });
-
-      // 4. Delete all activity instances for these goals
-      if (goalIds.length > 0) {
-        const instancesQuery = query(collection(db, 'activityInstances'), where('goalId', 'in', goalIds));
-        const instancesSnapshot = await getDocs(instancesQuery);
-        instancesSnapshot.docs.forEach(doc => {
-          batch.delete(doc.ref);
-        });
+      // Commit in chunks (batches are capped at 500 writes). The homeschool
+      // itself goes last: rules check membership against it on every delete.
+      const chunkSize = 400;
+      for (let i = 0; i < refs.length; i += chunkSize) {
+        const batch = writeBatch(db);
+        refs.slice(i, i + chunkSize).forEach(ref => batch.delete(ref));
+        await batch.commit();
       }
-
-      // 5. Delete the homeschool itself
-      batch.delete(doc(db, 'homeschools', homeschool.id));
-
-      // Execute all deletions
-      await batch.commit();
+      await deleteDoc(doc(db, 'homeschools', homeschool.id));
 
       console.log('Homeschool deletion completed');
       onDeleted();

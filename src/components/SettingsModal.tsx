@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc, arrayRemove, arrayUnion, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayRemove, arrayUnion, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { Homeschool, Person, Activity, Goal, AdHocTask } from '../types';
@@ -206,16 +206,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         ...(homeschool.observerIds || [])
       ];
       
-      // Fetch active users from people collection
-      if (allUserIds.length > 0) {
-        const peopleQuery = query(collection(db, 'people'), where('__name__', 'in', allUserIds));
-        const peopleSnapshot = await getDocs(peopleQuery);
-        
-        peopleSnapshot.docs.forEach(doc => {
-          const person = { ...doc.data(), id: doc.id } as Person;
-          allUsers.push({ ...person, status: 'active' });
-        });
-      }
+      // Fetch active users' profiles. The role comes from the homeschool's
+      // membership lists, not the profile (a person can hold different roles
+      // in different homeschools).
+      const roleOf = (userId: string): Person['role'] =>
+        homeschool.parentIds?.includes(userId) ? 'parent' :
+        homeschool.tutorIds?.includes(userId) ? 'tutor' : 'observer';
+      const profiles = await Promise.all(
+        Array.from(new Set(allUserIds)).map(userId => getDoc(doc(db, 'people', userId)))
+      );
+      profiles.forEach(profile => {
+        if (profile.exists()) {
+          const person = { ...profile.data(), id: profile.id } as Person;
+          allUsers.push({ ...person, role: roleOf(profile.id), status: 'active' });
+        }
+      });
       
       // Add invited users (emails without corresponding people records)
       const activeEmails = new Set(allUsers.map(u => u.email).filter(Boolean));
@@ -400,11 +405,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       };
       
       await updateDoc(doc(db, 'homeschools', homeschool.id), updates);
-      
-      // Also update the user's role in the people collection
-      if (userId && !userId.startsWith('invited-')) {
-        await updateDoc(doc(db, 'people', userId), { role: newRole });
-      }
       
       alert(`Successfully changed role to ${newRole}`);
       await fetchUsers();

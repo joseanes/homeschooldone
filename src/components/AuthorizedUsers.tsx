@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { doc, updateDoc, arrayRemove, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayRemove, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool, Person } from '../types';
 import DeleteConfirmation from './DeleteConfirmation';
@@ -102,33 +102,18 @@ const AuthorizedUsers: React.FC<AuthorizedUsersProps> = ({
             continue;
           }
 
-          // Try to find user in people collection by email or other identifier
-          // For now, we'll check both document ID and email field
-          const q1 = query(collection(db, 'people'), where('email', '==', userId));
-          const snapshot1 = await getDocs(q1);
-          
-          if (!snapshot1.empty) {
-            const userData = snapshot1.docs[0].data();
-            userList.push({ 
-              ...userData, 
-              id: userId,
-              status: 'active' 
-            } as UserWithStatus);
-            continue;
-          }
-
-          // If not found by email, try by document ID
-          const q2 = query(collection(db, 'people'), where('__name__', '==', userId));
-          const snapshot2 = await getDocs(q2);
-          
-          if (!snapshot2.empty) {
-            const userData = snapshot2.docs[0].data();
-            userList.push({ 
-              ...userData, 
-              id: userId,
-              status: 'active' 
-            } as UserWithStatus);
-            continue;
+          // Member UIDs have a profile document; emails are pending invitations.
+          if (!userId.includes('@')) {
+            const profile = await getDoc(doc(db, 'people', userId));
+            if (profile.exists()) {
+              userList.push({
+                ...profile.data(),
+                id: userId,
+                role: getUserRole(userId) as any,
+                status: 'active'
+              } as UserWithStatus);
+              continue;
+            }
           }
 
           // If user not found in database, they might be invited but haven't signed up yet

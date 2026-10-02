@@ -6,12 +6,14 @@ import { ActivityInstance, Goal, Activity, Person } from '../types';
  * Fetches all activity instances for a student within a date range
  */
 export async function fetchActivityInstancesForStudent(
+  homeschoolId: string,
   studentId: string,
   startDate?: Date,
   endDate?: Date
 ): Promise<ActivityInstance[]> {
   try {
     const constraints: QueryConstraint[] = [
+      where('homeschoolId', '==', homeschoolId),
       where('studentId', '==', studentId)
     ];
     
@@ -44,6 +46,7 @@ export async function fetchActivityInstancesForStudent(
  * Fetches all activity instances for multiple goals
  */
 export async function fetchActivityInstancesForGoals(
+  homeschoolId: string,
   goalIds: string[]
 ): Promise<ActivityInstance[]> {
   if (goalIds.length === 0) return [];
@@ -56,6 +59,7 @@ export async function fetchActivityInstancesForGoals(
     for (const chunk of chunks) {
       const instanceQuery = query(
         collection(db, 'activityInstances'),
+        where('homeschoolId', '==', homeschoolId),
         where('goalId', 'in', chunk)
       );
       
@@ -128,7 +132,7 @@ export async function fetchStudentsForHomeschool(homeschoolId: string): Promise<
   try {
     const studentsQuery = query(
       collection(db, 'people'),
-      where('homeschoolIds', 'array-contains', homeschoolId)
+      where('homeschoolId', '==', homeschoolId)
     );
     
     const snapshot = await getDocs(studentsQuery);
@@ -172,12 +176,12 @@ export async function fetchCompleteStudentData(
     
     // Fetch today's instances
     const todayInstances = todayStart && todayEnd 
-      ? await fetchActivityInstancesForStudent(studentId, todayStart, todayEnd)
+      ? await fetchActivityInstancesForStudent(homeschoolId, studentId, todayStart, todayEnd)
       : [];
     
     // Fetch week's instances
     const weekInstances = weekStart && weekEnd
-      ? await fetchActivityInstancesForStudent(studentId, weekStart, weekEnd)
+      ? await fetchActivityInstancesForStudent(homeschoolId, studentId, weekStart, weekEnd)
       : [];
     
     return {

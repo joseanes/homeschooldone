@@ -310,7 +310,7 @@ struct Last7DaysBarChart: View {
             let weekday = calendar.component(.weekday, from: day) // 1=Sun..7=Sat
             let letter = dayLetters[weekday - 1]
 
-            let count = firebaseService.weekInstances.filter { instance in
+            let count = firebaseService.recentInstances.filter { instance in
                 let instanceDate = instance.date.dateValue()
                 return instance.studentId == (student.id ?? "") &&
                        instanceDate >= day && instanceDate < nextDay
@@ -382,7 +382,7 @@ struct WeeklyCompletionChart: View {
             var completedGoals = 0
             for goal in studentGoals {
                 let target = goal.weeklyTarget ?? 1
-                let count = firebaseService.weekInstances.filter { instance in
+                let count = firebaseService.recentInstances.filter { instance in
                     let d = instance.date.dateValue()
                     return instance.goalId == (goal.id ?? "") &&
                            instance.studentId == studentId &&

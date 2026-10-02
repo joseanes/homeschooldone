@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, arrayRemove, arrayUnion, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, arrayRemove, Timestamp } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../firebase';
 import { Homeschool, Person, Activity, Goal, ActivityInstance, AdHocTask } from '../types';
 import { isGoalActiveForStudent } from '../utils/goalUtils';
 import { getWeekStart, getWeekEnd } from '../utils/dateUtils';
@@ -190,41 +191,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   };
 
   useEffect(() => {
-    // Check for pending invitations and activate them
+    // Accept pending invitations and link student records for this user's
+    // verified email. This runs server-side: Firestore rules do not let
+    // clients edit the membership lists of homeschools they don't belong to.
     const activateInvitations = async () => {
       if (!user.email) return;
 
       try {
-        const [parentSnap, tutorSnap, observerSnap] = await Promise.all([
-          getDocs(query(collection(db, 'homeschools'), where('parentEmails', 'array-contains', user.email))),
-          getDocs(query(collection(db, 'homeschools'), where('tutorEmails', 'array-contains', user.email))),
-          getDocs(query(collection(db, 'homeschools'), where('observerEmails', 'array-contains', user.email))),
-        ]);
-
-        const updates: Promise<void>[] = [];
-
-        parentSnap.docs.forEach(d => {
-          updates.push(updateDoc(doc(db, 'homeschools', d.id), {
-            parentEmails: arrayRemove(user.email),
-            parentIds: arrayUnion(user.uid),
-          }));
-        });
-
-        tutorSnap.docs.forEach(d => {
-          updates.push(updateDoc(doc(db, 'homeschools', d.id), {
-            tutorEmails: arrayRemove(user.email),
-            tutorIds: arrayUnion(user.uid),
-          }));
-        });
-
-        observerSnap.docs.forEach(d => {
-          updates.push(updateDoc(doc(db, 'homeschools', d.id), {
-            observerEmails: arrayRemove(user.email),
-            observerIds: arrayUnion(user.uid),
-          }));
-        });
-
-        await Promise.all(updates);
+        // Pick up a verification completed since the token was issued.
+        if (!user.emailVerified) {
+          await user.reload();
+          if (user.emailVerified) await user.getIdToken(true);
+        }
+        await httpsCallable(functions, 'acceptInvitations')();
       } catch (error) {
         console.error('Error activating invitations:', error);
       }
@@ -246,50 +225,29 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         let homeschoolData = null;
         let userRole = null;
         
-        // First check if user is a student by looking in people collection
-        
-        const studentQuery = query(collection(db, 'people'), where('email', '==', user.email || ''));
-        const studentSnapshot = await getDocs(studentQuery);
-        
-        if (!studentSnapshot.empty) {
-          // If multiple records exist, prioritize student role
-          let studentRecord: { data: any; id: string } | null = null;
-          for (const doc of studentSnapshot.docs) {
-            const data = doc.data();
-            if (data.role === 'student') {
-              studentRecord = { data, id: doc.id };
-              break;
-            }
+        // First check if user is a linked student account
+        const studentHomeschools = await getDocs(
+          query(collection(db, 'homeschools'), where('studentUids', 'array-contains', user.uid))
+        );
+
+        if (!studentHomeschools.empty) {
+          const hsDoc = studentHomeschools.docs[0];
+          const studentSnapshot = await getDocs(query(
+            collection(db, 'people'),
+            where('homeschoolId', '==', hsDoc.id),
+            where('authUid', '==', user.uid)
+          ));
+
+          if (!studentSnapshot.empty) {
+            const studentDoc = studentSnapshot.docs[0];
+            homeschoolData = { ...(hsDoc.data() as Homeschool), id: hsDoc.id };
+            userRole = 'student';
+
+            // Set the current student info
+            setCurrentStudent({ ...studentDoc.data(), id: studentDoc.id } as Person);
           }
-          
-          // If no student role found, use first record
-          if (!studentRecord) {
-            studentRecord = { data: studentSnapshot.docs[0].data(), id: studentSnapshot.docs[0].id };
-          }
-          
-          if (studentRecord) {
-            const studentData = studentRecord.data;
-            
-            if (studentData.role === 'student') {
-              // Find homeschool that contains this student
-              const homeschoolQuery = query(collection(db, 'homeschools'), where('studentIds', 'array-contains', studentRecord.id));
-              const homeschoolSnapshot = await getDocs(homeschoolQuery);
-              
-              if (!homeschoolSnapshot.empty) {
-                const data = homeschoolSnapshot.docs[0].data() as Homeschool;
-                homeschoolData = { ...data, id: homeschoolSnapshot.docs[0].id };
-                userRole = 'student';
-                
-                // Set the current student info
-                setCurrentStudent({ ...studentData, id: studentRecord.id } as Person);
-              } else {
-              }
-            } else {
-            }
-          }
-        } else {
         }
-        
+
         // If not a student, check parent/tutor/observer roles
         if (!homeschoolData) {
           for (const { query: q, role } of queries) {
@@ -427,15 +385,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     if (!homeschool) return;
     
     try {
-      const goalIds = goals.map(g => g.id);
-      if (goalIds.length === 0) {
+      if (goals.length === 0) {
         setTodayInstances([]);
         return;
       }
 
       const q = query(
         collection(db, 'activityInstances'),
-        where('goalId', 'in', goalIds)
+        where('homeschoolId', '==', homeschool.id)
       );
       
       const snapshot = await getDocs(q);
@@ -503,39 +460,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       endOfWeek.setDate(startOfWeek.getDate() + 6);
       endOfWeek.setHours(23, 59, 59, 999);
       
-      // First get all goal IDs for this homeschool
-      const goalsSnapshot = await getDocs(
-        query(collection(db, 'goals'), where('homeschoolId', '==', homeschool.id))
-      );
-      const homeschoolGoalIds = goalsSnapshot.docs.map(doc => doc.id);
-      
-      if (homeschoolGoalIds.length === 0) {
-        setWeekInstances([]);
-        return;
-      }
-      
-      // Query activity instances for these goals (handle 'in' query limitation of 10 items)
-      let allInstances: ActivityInstance[] = [];
-      
-      // Split goal IDs into chunks of 10 (Firestore 'in' query limit)
-      const chunkSize = 10;
-      for (let i = 0; i < homeschoolGoalIds.length; i += chunkSize) {
-        const chunk = homeschoolGoalIds.slice(i, i + chunkSize);
-        const instancesQuery = query(
-          collection(db, 'activityInstances'),
-          where('goalId', 'in', chunk)
-        );
-        
-        const querySnapshot = await getDocs(instancesQuery);
-        const chunkInstances = querySnapshot.docs.map(doc => ({
-          ...doc.data(),
-          id: doc.id,
-          date: doc.data().date?.toDate ? doc.data().date.toDate() : new Date(doc.data().date)
-        } as ActivityInstance));
-        
-        allInstances = [...allInstances, ...chunkInstances];
-      }
-      
+      const querySnapshot = await getDocs(query(
+        collection(db, 'activityInstances'),
+        where('homeschoolId', '==', homeschool.id)
+      ));
+      const allInstances = querySnapshot.docs.map(doc => ({
+        ...doc.data(),
+        id: doc.id,
+        date: doc.data().date?.toDate ? doc.data().date.toDate() : new Date(doc.data().date)
+      } as ActivityInstance));
+
       // Filter for current week in memory
       const instances = allInstances.filter(instance => {
         const instanceDate = instance.date instanceof Date ? instance.date : new Date(instance.date);
@@ -692,12 +626,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       const { type, id } = deleteConfirmation;
 
       if (type === 'student') {
+        const linkedUid = students.find(s => s.id === id)?.authUid;
+
         // Delete student document
         await deleteDoc(doc(db, 'people', id));
         
-        // Remove student ID from homeschool
+        // Remove student ID (and the linked student account's access) from homeschool
         await updateDoc(doc(db, 'homeschools', homeschool.id), {
-          studentIds: arrayRemove(id)
+          studentIds: arrayRemove(id),
+          ...(linkedUid ? { studentUids: arrayRemove(linkedUid) } : {})
         });
         
         // Update local state

@@ -9,6 +9,10 @@ export interface Person {
   lastActivity?: Date | any; // Last time user performed any action
   // Students of different ages and abilities do different daily hours of education
   dailyWorkHoursGoal?: number; // Daily educational hours goal for students
+  // Student records only: owning homeschool, and the auth UID of the student's
+  // account once linked by the acceptInvitations Cloud Function.
+  homeschoolId?: string;
+  authUid?: string;
 }
 
 export interface Homeschool {
@@ -21,6 +25,7 @@ export interface Homeschool {
   tutorEmails?: string[];
   observerEmails?: string[];
   studentIds: string[];
+  studentUids?: string[]; // auth UIDs of linked student accounts (set server-side)
   createdBy: string;
   createdAt: Date;
   dashboardSettings?: {
@@ -89,6 +94,7 @@ export interface ActivityInstance {
   date: Date;
   createdBy: string;
   studentId: string;
+  homeschoolId?: string;
   startingPercentage?: number;
   endingPercentage?: number;
   percentageCompleted?: number; // Single percentage value

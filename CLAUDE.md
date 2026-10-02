@@ -30,6 +30,13 @@ npm --prefix functions run lint              # Lint functions
 npm --prefix functions run serve             # Local functions emulator
 ```
 
+### Firestore rules, functions & migration tests (emulator, needs Java 11+)
+```bash
+npm ci --prefix functions && npm ci --prefix tests/firestore
+npm --prefix tests/firestore test   # runs under demo-homeschooldone; never touches live data
+```
+Deploy order for rules changes: see `docs/firestore-rules-rollout.md`.
+
 ### iOS/tvOS
 Open `ios-tvos/HomeschoolDone.xcodeproj` in Xcode. Targets: `HomeschoolDone-iOS` (iOS 15+) and `HomeschoolDone-tvOS` (tvOS 15+).
 
@@ -64,7 +71,9 @@ Open `ios-tvos/HomeschoolDone.xcodeproj` in Xcode. Targets: `HomeschoolDone-iOS`
 - `publicDashboard.ts` — Public dashboard ID generation/validation
 
 ### Cloud Functions (`functions/`)
-- `index.js` — Single callable function `getPublicDashboard` that serves public dashboard data without auth
+- `index.js` — Callable functions: `getPublicDashboard` (public dashboard data without auth, display fields only) and `acceptInvitations` (accepts email invitations and links student accounts for verified emails)
+- `src/` — Function handlers (testable with the Admin SDK against the emulator)
+- `migrations/` — One-off Admin SDK data migrations (dry run by default; not deployed)
 
 ### iOS/tvOS (`ios-tvos/`)
 - **SwiftUI** apps sharing code via `SharedModels/` and `FirebaseService/` (singleton pattern)
@@ -73,8 +82,11 @@ Open `ios-tvos/HomeschoolDone.xcodeproj` in Xcode. Targets: `HomeschoolDone-iOS`
 
 ## Firestore Data Model
 
-`homeschools` → has `studentIds`, `parentIds`, `tutorIds`, `observerIds`, `dashboardSettings`
-`people` → role-based (parent|tutor|observer|student), linked to homeschools
+Security rules (`firestore.rules`) grant access per homeschool from the membership arrays only (`parentIds`, `tutorIds`, `observerIds`, `studentUids`); `people.role` is display-only. Every per-homeschool document carries `homeschoolId`, and **every client query must filter on `homeschoolId`** (or on the caller's own UID), or the rules reject it.
+
+`homeschools` → has `studentIds`, `studentUids`, `parentIds`, `tutorIds`, `observerIds`, pending `*Emails` invitations, `dashboardSettings`
+`people` → account profiles (doc ID = auth UID) and student records (`role: 'student'`, `homeschoolId`, `authUid` once linked)
 `activities` → belong to homeschool, have `progressReportingStyle` (percentage|times|count)
 `goals` → link activity to students, have deadlines and completion tracking per student
-`activityInstances` → individual logged entries with time tracking and progress data
+`activityInstances` → individual logged entries with time tracking and progress data (carry `homeschoolId`)
+`adHocTasks` → one-off tasks per student

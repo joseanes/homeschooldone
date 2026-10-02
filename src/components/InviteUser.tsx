@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { doc, updateDoc, arrayUnion, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool } from '../types';
 import InvitationDialog from './InvitationDialog';
@@ -37,30 +37,11 @@ const InviteUser: React.FC<InviteUserProps> = ({ homeschool, currentUserName = '
         ...(homeschool.observerEmails || [])
       ];
       
-      const allExistingIds = [
-        ...homeschool.parentIds,
-        ...homeschool.tutorIds,
-        ...homeschool.observerIds
-      ];
-      
       // Check if email already invited
       if (allExistingEmails.includes(emailToAdd)) {
         alert('This email has already been invited to the homeschool.');
         setSending(false);
         return;
-      }
-      
-      // Check if user with this email already has access (by checking people collection)
-      const peopleQuery = query(collection(db, 'people'), where('email', '==', emailToAdd));
-      const peopleSnapshot = await getDocs(peopleQuery);
-      
-      if (!peopleSnapshot.empty) {
-        const existingUser = peopleSnapshot.docs[0];
-        if (allExistingIds.includes(existingUser.id)) {
-          alert('This user already has access to the homeschool.');
-          setSending(false);
-          return;
-        }
       }
       
       // Prepare invitation details FIRST

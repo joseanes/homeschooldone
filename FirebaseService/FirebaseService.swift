@@ -52,9 +52,9 @@ public class FirebaseService: ObservableObject {
     }
 
     deinit {
-        Task { @MainActor in
-            removeAllListeners()
-        }
+        listeners.forEach { $0.remove() }
+        listeners.removeAll()
+        instanceRefreshTask?.cancel()
     }
 
     // MARK: - Authentication
@@ -401,8 +401,9 @@ public class FirebaseService: ObservableObject {
 
     public func calculateStudentProgress() -> [StudentProgress] {
         return students.map { student in
+            let studentId = student.id ?? ""
             let studentGoals = goals.filter { goal in
-                goal.studentIds.contains(student.id ?? "")
+                goal.studentIds.contains(studentId) && !goal.isCompletedForStudent(studentId)
             }
 
             // Count goals with weekly-complete status (matches web badge)

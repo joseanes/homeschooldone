@@ -102,6 +102,13 @@ public struct Activity: Codable, Identifiable {
 }
 
 // MARK: - Goal
+public struct StudentCompletion: Codable {
+    public let completionDate: Timestamp?
+    public let grade: String?
+    public let startDate: Timestamp?
+    public let deadline: Timestamp?
+}
+
 public struct Goal: Codable, Identifiable {
     @DocumentID public var id: String?
     public let name: String?
@@ -111,6 +118,7 @@ public struct Goal: Codable, Identifiable {
     public let timesPerWeek: Int?
     public let sessionsPerWeek: Int?
     public let minutesPerSession: Int?
+    public let studentCompletions: [String: StudentCompletion]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -121,11 +129,17 @@ public struct Goal: Codable, Identifiable {
         case timesPerWeek
         case sessionsPerWeek
         case minutesPerSession
+        case studentCompletions
     }
 
     /// The weekly session target, checking both field names
     public var weeklyTarget: Int? {
         timesPerWeek ?? sessionsPerWeek
+    }
+
+    /// Check if the goal is completed for a specific student
+    public func isCompletedForStudent(_ studentId: String) -> Bool {
+        studentCompletions?[studentId]?.completionDate != nil
     }
 }
 

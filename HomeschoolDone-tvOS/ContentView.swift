@@ -1,6 +1,8 @@
 import SwiftUI
 import Combine
 import FirebaseAuth
+import FirebaseCore
+import UIKit
 
 struct ContentView: View {
     @StateObject private var firebaseService = FirebaseService.shared
@@ -87,6 +89,9 @@ struct ContentView: View {
         .onReceive(timer) { _ in
             cycleThroughStudents()
         }
+        .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = true
+        }
     }
 
     private func cycleThroughStudents() {
@@ -157,14 +162,9 @@ struct HeaderView: View {
 
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(homeschoolName)
-                    .font(.system(size: 48, weight: .bold))
-                    .foregroundColor(.white)
-                Text("Dashboard")
-                    .font(.system(size: 32, weight: .medium))
-                    .foregroundColor(.gray)
-            }
+            Text(homeschoolName)
+                .font(.system(size: 48, weight: .bold))
+                .foregroundColor(.white)
 
             Spacer()
 
@@ -183,16 +183,21 @@ struct HeaderView: View {
                 }
             }
 
-            Button(action: { firebaseService.signOut() }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                        .font(.system(size: 20))
-                    Text("Sign Out")
-                        .font(.system(size: 18, weight: .medium))
-                }
-                .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
+            HStack(spacing: 6) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 18))
+                    .foregroundColor(Color(red: 0.13, green: 0.59, blue: 0.95))
+                Text("Sign Out")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color(red: 0.85, green: 0.65, blue: 0.13))
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color(red: 0.22, green: 0.22, blue: 0.28))
+            .cornerRadius(8)
+            .onLongPressGesture(minimumDuration: 0.5) {
+                firebaseService.signOut()
+            }
             .padding(.leading, 20)
         }
         .onReceive(timer) { _ in
@@ -227,38 +232,51 @@ struct StudentProgressView: View {
             let totalHeight = geometry.size.height
 
             HStack(alignment: .top, spacing: spacing) {
-                // Left side - Student info with circular progress
-                VStack(spacing: 30) {
+                // Left side - Student info with circular progress + bar charts
+                VStack(spacing: 0) {
                     Text(student.name)
                         .font(.system(size: 56, weight: .bold))
                         .foregroundColor(Color(red: 0.4, green: 0.8, blue: 0.6))
+
+                    Spacer()
 
                     // Circular progress chart
                     ZStack {
                         Circle()
                             .stroke(Color.gray.opacity(0.3), lineWidth: 16)
-                            .frame(width: 250, height: 250)
+                            .frame(width: 220, height: 220)
 
                         Circle()
                             .trim(from: 0, to: completionPercentage)
                             .stroke(Color(red: 0.3, green: 0.69, blue: 0.31), style: StrokeStyle(lineWidth: 16, lineCap: .round))
-                            .frame(width: 250, height: 250)
+                            .frame(width: 220, height: 220)
                             .rotationEffect(.degrees(-90))
                             .animation(.easeInOut(duration: 1.0), value: completionPercentage)
 
-                        VStack(spacing: 8) {
+                        VStack(spacing: 4) {
                             Text("\(progress.completedToday)/\(progress.totalGoals)")
-                                .font(.system(size: 48, weight: .bold))
+                                .font(.system(size: 42, weight: .bold))
                                 .foregroundColor(.white)
+                            Text("\(Int(completionPercentage * 100))%")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundColor(Color(red: 0.3, green: 0.69, blue: 0.31))
                             Text("This Week")
-                                .font(.system(size: 22))
+                                .font(.system(size: 18))
                                 .foregroundColor(.gray)
                         }
                     }
 
-                    Text("\(Int(completionPercentage * 100))% Complete")
-                        .font(.system(size: 28, weight: .medium))
-                        .foregroundColor(.white)
+                    Spacer()
+
+                    // Last 7 Days bar chart
+                    Last7DaysBarChart(student: student)
+                        .environmentObject(firebaseService)
+
+                    Spacer()
+
+                    // Weekly completion bar chart
+                    WeeklyCompletionChart(student: student)
+                        .environmentObject(firebaseService)
                 }
                 .frame(width: leftWidth)
 
@@ -273,6 +291,148 @@ struct StudentProgressView: View {
                 .environmentObject(firebaseService)
             }
         }
+    }
+}
+
+struct Last7DaysBarChart: View {
+    let student: Person
+    @EnvironmentObject var firebaseService: FirebaseService
+
+    private var dailyCounts: [(letter: String, count: Int)] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let dayLetters = ["S", "M", "T", "W", "T", "F", "S"]
+
+        var result: [(String, Int)] = []
+        for daysBack in (0..<7).reversed() {
+            guard let day = calendar.date(byAdding: .day, value: -daysBack, to: today) else { continue }
+            let nextDay = calendar.date(byAdding: .day, value: 1, to: day)!
+            let weekday = calendar.component(.weekday, from: day) // 1=Sun..7=Sat
+            let letter = dayLetters[weekday - 1]
+
+            let count = firebaseService.weekInstances.filter { instance in
+                let instanceDate = instance.date.dateValue()
+                return instance.studentId == (student.id ?? "") &&
+                       instanceDate >= day && instanceDate < nextDay
+            }.count
+
+            result.append((letter, count))
+        }
+        return result
+    }
+
+    var body: some View {
+        let counts = dailyCounts
+        let maxCount = max(1, counts.map(\.count).max() ?? 1)
+
+        VStack(spacing: 8) {
+            Text("Last 7 Days")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.gray)
+
+            HStack(alignment: .bottom, spacing: 10) {
+                ForEach(Array(counts.enumerated()), id: \.offset) { _, day in
+                    VStack(spacing: 4) {
+                        if day.count > 0 {
+                            Text("\(day.count)")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                        }
+
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(day.count > 0
+                                ? Color(red: 0.3, green: 0.69, blue: 0.31)
+                                : Color.gray.opacity(0.3))
+                            .frame(width: 30, height: max(6, CGFloat(day.count) / CGFloat(maxCount) * 100))
+
+                        Text(day.letter)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .frame(height: 140)
+        }
+        .padding(.top, 10)
+    }
+}
+
+struct WeeklyCompletionChart: View {
+    let student: Person
+    @EnvironmentObject var firebaseService: FirebaseService
+
+    private var weeklyData: [(label: String, percentage: Double)] {
+        let calendar = Calendar.current
+        let today = Date()
+        let studentId = student.id ?? ""
+        let studentGoals = firebaseService.goals.filter { $0.studentIds.contains(studentId) && !$0.isCompletedForStudent(studentId) }
+        guard !studentGoals.isEmpty else { return [] }
+
+        var result: [(String, Double)] = []
+
+        // Current week + 3 previous weeks (4 total), oldest first
+        for weeksBack in (0..<4).reversed() {
+            guard let weekStart = calendar.date(byAdding: .weekOfYear, value: -weeksBack, to: today) else { continue }
+            let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: weekStart)?.start ?? weekStart
+            let endOfWeek = calendar.date(byAdding: .weekOfYear, value: 1, to: startOfWeek) ?? weekStart
+
+            let weekNum = calendar.component(.weekOfYear, from: startOfWeek)
+            let label = "W\(weekNum)"
+
+            var completedGoals = 0
+            for goal in studentGoals {
+                let target = goal.weeklyTarget ?? 1
+                let count = firebaseService.weekInstances.filter { instance in
+                    let d = instance.date.dateValue()
+                    return instance.goalId == (goal.id ?? "") &&
+                           instance.studentId == studentId &&
+                           d >= startOfWeek && d < endOfWeek
+                }.count
+                if count >= target {
+                    completedGoals += 1
+                }
+            }
+
+            let pct = Double(completedGoals) / Double(studentGoals.count) * 100.0
+            result.append((label, pct))
+        }
+        return result
+    }
+
+    var body: some View {
+        let data = weeklyData
+        guard !data.isEmpty else { return AnyView(EmptyView()) }
+
+        return AnyView(
+            VStack(spacing: 8) {
+                Text("Weekly Completion")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.gray)
+
+                HStack(alignment: .bottom, spacing: 12) {
+                    ForEach(Array(data.enumerated()), id: \.offset) { _, week in
+                        VStack(spacing: 4) {
+                            Text("\(Int(week.percentage))%")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(week.percentage >= 100
+                                    ? Color(red: 0.3, green: 0.69, blue: 0.31)
+                                    : week.percentage > 0
+                                        ? Color(red: 0.13, green: 0.59, blue: 0.95)
+                                        : Color.gray.opacity(0.3))
+                                .frame(width: 44, height: max(6, CGFloat(week.percentage) / 100.0 * 80))
+
+                            Text(week.label)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                    }
+                }
+                .frame(height: 120)
+            }
+        )
     }
 }
 
@@ -345,7 +505,8 @@ struct GoalsGridView: View {
                     GoalCardView(
                         goal: goal,
                         student: student,
-                        activity: activities.first { $0.id == goal.activityId }
+                        activity: activities.first { $0.id == goal.activityId },
+                        cardHeight: cardHeight
                     )
                     .environmentObject(firebaseService)
                     .frame(height: cardHeight)
@@ -361,8 +522,15 @@ struct GoalCardView: View {
     let goal: Goal
     let student: Person
     let activity: Activity?
+    let cardHeight: CGFloat
 
     @EnvironmentObject var firebaseService: FirebaseService
+
+    // Scale factor: 1.0 at 200pt, scales up for larger cards, down for smaller
+    private var scale: CGFloat {
+        let base: CGFloat = 200
+        return min(1.6, max(0.8, cardHeight / base))
+    }
 
     var body: some View {
         let status = firebaseService.getGoalStatus(goalId: goal.id ?? "", studentId: student.id ?? "")
@@ -374,14 +542,14 @@ struct GoalCardView: View {
 
                 // Icon
                 Image(systemName: activityIcon(for: activity?.name ?? ""))
-                    .font(.system(size: 36))
+                    .font(.system(size: 36 * scale))
                     .foregroundColor(statusAccentColor(for: status.status))
 
                 Spacer(minLength: 8)
 
                 // Goal name
                 Text(goalDisplayName)
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 22 * scale, weight: .semibold))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -392,7 +560,7 @@ struct GoalCardView: View {
                 // Weekly progress
                 if let target = goal.weeklyTarget, target > 0 {
                     Text("\(status.weeklyCount)/\(target) wk")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 16 * scale, weight: .medium))
                         .foregroundColor(.gray)
                 }
 
@@ -400,7 +568,7 @@ struct GoalCardView: View {
 
                 // Status badge
                 Text(statusText(for: status.status))
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 16 * scale, weight: .semibold))
                     .foregroundColor(statusTextColor(for: status.status))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 4)
@@ -423,12 +591,13 @@ struct GoalCardView: View {
 
             // Green checkmark for weekly complete
             if status.status == .weeklyComplete {
+                let checkSize: CGFloat = 36 * scale
                 ZStack {
                     Circle()
                         .fill(Color(red: 0.30, green: 0.69, blue: 0.31))
-                        .frame(width: 40, height: 40)
+                        .frame(width: checkSize, height: checkSize)
                     Image(systemName: "checkmark")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 18 * scale, weight: .bold))
                         .foregroundColor(.white)
                 }
                 .offset(x: -8, y: 8)

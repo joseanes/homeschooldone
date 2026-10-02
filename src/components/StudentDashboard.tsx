@@ -18,6 +18,7 @@ import {
   getWeekEnd 
 } from '../utils/dateUtils';
 import { fetchCompleteStudentData } from '../utils/activityUtils';
+import { buttonRole } from '../utils/a11y';
 
 interface StudentDashboardProps {
   student: Person;
@@ -475,15 +476,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <div
                       key={`task-${task.id}`}
                       style={{
-                        border: isCompleted ? '2px solid #4caf50' : '2px solid var(--hs-border-light)',
+                        border: isCompleted ? '2px solid var(--hs-goal-complete-border)' : '2px solid var(--hs-task-pending-border)',
                         borderRadius: '15px', padding: '25px',
-                        background: isCompleted ? '#e8f5e9' : '#f5f5f5',
+                        background: isCompleted ? 'var(--hs-task-complete-bg)' : 'var(--hs-task-pending-bg)',
                         cursor: isCompleted ? 'default' : 'pointer',
                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         boxShadow: isCompleted ? '0 4px 15px rgba(76, 175, 80, 0.2)' : '0 4px 15px rgba(0, 0, 0, 0.08)',
                         position: 'relative', overflow: 'hidden'
                       }}
-                      onClick={() => { if (!isCompleted) { setEditingTask(task); setShowAdHocTaskForm(true); } }}
+                      {...(!isCompleted && buttonRole(() => { setEditingTask(task); setShowAdHocTaskForm(true); }))}
                       onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; }}
                     >
@@ -534,7 +535,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       boxShadow: cardColors.shadow, position: 'relative', overflow: 'hidden'
                     }}
-                    onClick={() => handleRecordActivity(goal)}
+                    {...buttonRole(() => handleRecordActivity(goal))}
                     onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)'; e.currentTarget.style.boxShadow = `0 15px 40px ${cardColors.shadow.match(/rgba\([^)]+\)/)?.[0] || 'rgba(0,0,0,0.3)'}`; }}
                     onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = cardColors.shadow; }}
                   >

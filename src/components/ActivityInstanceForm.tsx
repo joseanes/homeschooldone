@@ -416,10 +416,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
       <h2>{existingInstance || loadedExistingInstance ? 'Edit Activity' : 'Record Activity'}</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="activity-instance-form-select-goal" style={{ display: 'block', marginBottom: '5px' }}>
             Select Goal *
           </label>
-          <select
+          <select id="activity-instance-form-select-goal"
             value={selectedGoal}
             onChange={(e) => {
               setSelectedGoal(e.target.value);
@@ -451,10 +451,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
 
         {selectedGoalData && goalStudents.length > 0 && (
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="activity-instance-form-select-student" style={{ display: 'block', marginBottom: '5px' }}>
               Select Student *
             </label>
-            <select
+            <select id="activity-instance-form-select-student"
               value={selectedStudent}
               onChange={(e) => setSelectedStudent(e.target.value)}
               required
@@ -498,10 +498,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
             </div>
 
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
+              <label htmlFor="activity-instance-form-date" style={{ display: 'block', marginBottom: '5px' }}>
                 Date *
               </label>
-              <input
+              <input id="activity-instance-form-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -545,10 +545,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>
+                    <label htmlFor="activity-instance-form-start-time" style={{ display: 'block', marginBottom: '5px' }}>
                       Start Time
                     </label>
-                    <input
+                    <input id="activity-instance-form-start-time"
                       type="time"
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
@@ -564,10 +564,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px' }}>
+                    <label htmlFor="activity-instance-form-end-time" style={{ display: 'block', marginBottom: '5px' }}>
                       End Time
                     </label>
-                    <input
+                    <input id="activity-instance-form-end-time"
                       type="time"
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
@@ -585,10 +585,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                 </div>
 
                 <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>
+                  <label htmlFor="activity-instance-form-duration-minutes" style={{ display: 'block', marginBottom: '5px' }}>
                     Duration (minutes)
                   </label>
-                  <input
+                  <input id="activity-instance-form-duration-minutes"
                     type="number"
                     value={duration}
                     onChange={(e) => setDuration(e.target.value ? Number(e.target.value) : '')}
@@ -613,7 +613,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
 
             {selectedActivity.progressReportingStyle.percentageCompletion && (
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '10px' }}>
+                <label htmlFor="activity-instance-form-percent" style={{ display: 'block', marginBottom: '10px' }}>
                   Percent of Completion
                 </label>
                 <div style={{ 
@@ -638,6 +638,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                     )}
                   </div>
                   <input
+                    id="activity-instance-form-percent"
                     type="range"
                     min="0"
                     max={selectedGoalData.percentageGoal || 100}
@@ -689,7 +690,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
 
             {selectedActivity.progressReportingStyle.progressCount && (
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '10px' }}>
+                <label htmlFor="activity-instance-form-count" style={{ display: 'block', marginBottom: '10px' }}>
                   {selectedActivity.progressCountName || 'Count'} Completed
                 </label>
                 {selectedGoalData.progressCount ? (
@@ -716,6 +717,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                       )}
                     </div>
                     <input
+                      id="activity-instance-form-count"
                       type="range"
                       min="0"
                       max={selectedGoalData.progressCount}
@@ -757,6 +759,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                 ) : (
                   // Show regular input when no goal target
                   <input
+                    id="activity-instance-form-count"
                     type="number"
                     value={countComplete}
                     onChange={(e) => setCountComplete(e.target.value ? Number(e.target.value) : '')}
@@ -775,10 +778,10 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
             )}
 
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
+              <label htmlFor="activity-instance-form-notes-optional" style={{ display: 'block', marginBottom: '5px' }}>
                 Notes (optional)
               </label>
-              <textarea
+              <textarea id="activity-instance-form-notes-optional"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 style={{

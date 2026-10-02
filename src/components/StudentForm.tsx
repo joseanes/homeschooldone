@@ -110,10 +110,10 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
         <h2>Add Student</h2>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-form-student-name" style={{ display: 'block', marginBottom: '5px' }}>
               Student Name *
             </label>
-            <input
+            <input id="student-form-student-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -130,10 +130,10 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
           </div>
           
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-form-email-address-optional" style={{ display: 'block', marginBottom: '5px' }}>
               Email Address (optional)
             </label>
-            <input
+            <input id="student-form-email-address-optional"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -183,10 +183,10 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
           </div>
           
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-form-mobile-number-optional" style={{ display: 'block', marginBottom: '5px' }}>
               Mobile Number (optional)
             </label>
-            <input
+            <input id="student-form-mobile-number-optional"
               type="tel"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
@@ -205,10 +205,10 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
           </div>
           
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-form-date-of-birth-optional" style={{ display: 'block', marginBottom: '5px' }}>
               Date of Birth (optional)
             </label>
-            <input
+            <input id="student-form-date-of-birth-optional"
               type="date"
               value={dateOfBirth}
               onChange={(e) => setDateOfBirth(e.target.value)}
@@ -223,10 +223,10 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
           </div>
           
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-form-daily-work-hours-goal-optional" style={{ display: 'block', marginBottom: '5px' }}>
               Daily Work Hours Goal (optional)
             </label>
-            <input
+            <input id="student-form-daily-work-hours-goal-optional"
               type="number"
               value={dailyWorkHoursGoal}
               onChange={(e) => setDailyWorkHoursGoal(e.target.value)}

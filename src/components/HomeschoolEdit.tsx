@@ -39,10 +39,10 @@ const HomeschoolEdit: React.FC<HomeschoolEditProps> = ({ homeschool, onClose, on
       <h2>Edit Homeschool</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="homeschool-edit-homeschool-name" style={{ display: 'block', marginBottom: '5px' }}>
             Homeschool Name *
           </label>
-          <input
+          <input id="homeschool-edit-homeschool-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}

@@ -6,6 +6,7 @@ import { Homeschool, Person, Activity, Goal, AdHocTask } from '../types';
 import { formatLastActivity } from '../utils/activityTracking';
 import { generatePublicDashboardId } from '../utils/publicDashboard';
 import Modal from './Modal';
+import { buttonRole } from '../utils/a11y';
 
 interface UserWithStatus extends Person {
   status: 'active' | 'invited';
@@ -556,10 +557,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               }}>
                 <h3 style={{ marginTop: 0, marginBottom: '15px' }}>📊 Student Sorting</h3>
                 <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--hs-badge-text)' }}>
+                  <label htmlFor="settings-modal-sort-students-on-the-main-page" style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--hs-badge-text)' }}>
                     Sort students on the main page by:
                   </label>
-                  <select
+                  <select id="settings-modal-sort-students-on-the-main-page"
                     value={sortOrder}
                     onChange={(e) => {
                       setSortOrder(e.target.value);
@@ -596,8 +597,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </p>
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--hs-badge-text)' }}>Month</label>
-                    <select
+                    <label htmlFor="settings-modal-month" style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--hs-badge-text)' }}>Month</label>
+                    <select id="settings-modal-month"
                       value={syMonth}
                       onChange={(e) => {
                         const m = Number(e.target.value);
@@ -618,8 +619,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--hs-badge-text)' }}>Day</label>
-                    <select
+                    <label htmlFor="settings-modal-day" style={{ display: 'block', marginBottom: '5px', fontSize: '14px', color: 'var(--hs-badge-text)' }}>Day</label>
+                    <select id="settings-modal-day"
                       value={syDay}
                       onChange={(e) => {
                         const d = Number(e.target.value);
@@ -711,7 +712,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                               }}>
                                 {workloadStatus.icon} {workloadStatus.status}
                                 <span
-                                  onClick={() => setExpandedWorkload(expandedWorkload === student.id ? null : student.id)}
+                                  {...buttonRole(() => setExpandedWorkload(expandedWorkload === student.id ? null : student.id))}
                                   style={{
                                     cursor: 'pointer',
                                     marginLeft: '4px',
@@ -1029,11 +1030,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                           <span style={{ fontWeight: '500' }}>{user.name || user.email}</span>
                           <span
-                            onClick={() => {
-                              if (userRole === 'parent' && user.id !== currentUserId) {
-                                setEditingUserAccess({ userId: user.id, currentRole: user.role });
-                              }
-                            }}
+                            {...(userRole === 'parent' && user.id !== currentUserId && buttonRole(() => {
+                              setEditingUserAccess({ userId: user.id, currentRole: user.role });
+                            }))}
                             title={userRole === 'parent' && user.id !== currentUserId ? 'Click to change role' : ''}
                             style={{
                               padding: '2px 8px',
@@ -1200,7 +1199,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               gap: '20px'
             }}>
               <div>
-                <label style={{
+                <label htmlFor="settings-modal-cycle-time-seconds-per-student" style={{
                   display: 'block',
                   fontSize: '14px',
                   fontWeight: '500',
@@ -1209,7 +1208,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 }}>
                   Cycle Time (seconds per student)
                 </label>
-                <input
+                <input id="settings-modal-cycle-time-seconds-per-student"
                   type="number"
                   min="3"
                   max="300"
@@ -1227,7 +1226,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               <div>
-                <label style={{
+                <label htmlFor="settings-modal-start-of-week" style={{
                   display: 'block',
                   fontSize: '14px',
                   fontWeight: '500',
@@ -1236,7 +1235,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 }}>
                   Start of Week
                 </label>
-                <select
+                <select id="settings-modal-start-of-week"
                   value={startOfWeek}
                   onChange={(e) => setStartOfWeek(parseInt(e.target.value))}
                   style={{
@@ -1258,7 +1257,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               <div>
-                <label style={{
+                <label htmlFor="settings-modal-timezone" style={{
                   display: 'block',
                   fontSize: '14px',
                   fontWeight: '500',
@@ -1267,7 +1266,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 }}>
                   Timezone
                 </label>
-                <select
+                <select id="settings-modal-timezone"
                   value={timezone}
                   onChange={(e) => setTimezone(e.target.value)}
                   style={{

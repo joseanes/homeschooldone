@@ -1,5 +1,8 @@
 # Firebase API keys
 
+> **Status: on hold.** Nothing in this document needs doing yet. The one step
+> that matters now is deploying the security rules (PR #1).
+
 GitGuardian flags the Google API keys in this repository. Here is what they are,
 what the real exposure is, and the plan to close it.
 

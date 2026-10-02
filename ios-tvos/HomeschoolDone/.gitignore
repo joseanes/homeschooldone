@@ -2,3 +2,4 @@
 xcuserdata/
 # Unused local clone; Firebase is resolved via Swift Package Manager
 firebase-ios-sdk/
+build/

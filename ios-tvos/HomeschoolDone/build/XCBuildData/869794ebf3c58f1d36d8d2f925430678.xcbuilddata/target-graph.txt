@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-Target 'HomeschoolDone-tvOS' in project 'HomeschoolDone' (no dependencies)

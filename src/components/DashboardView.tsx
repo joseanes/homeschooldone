@@ -49,6 +49,13 @@ const activityIcon = (activityName: string): string => {
   return '⭐';
 };
 
+// TV-first sizing in vw, with a pixel floor so text stays readable on phones
+// and laptops; on a 1920px-wide TV the vw value is always the larger one.
+const vw = (v: number) => `max(${Math.round(Math.max(11, v * 8))}px, ${v}vw)`;
+
+const NARROW_QUERY = '(max-width: 700px)';
+const matchesNarrow = () => typeof window.matchMedia === 'function' && window.matchMedia(NARROW_QUERY).matches;
+
 const DashboardView: React.FC<DashboardViewProps> = ({
   homeschool,
   students,
@@ -65,6 +72,16 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const [studentsProgress, setStudentsProgress] = useState<StudentProgress[]>([]);
   const [allWeekInstances, setAllWeekInstances] = useState<ActivityInstance[]>([]);
   const [loading, setLoading] = useState(true);
+  // Phones: stack the panels and scroll instead of the fixed TV layout
+  const [isNarrow, setIsNarrow] = useState(matchesNarrow);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia(NARROW_QUERY);
+    const onChange = () => setIsNarrow(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
 
   // Note: isGoalActiveForStudent is now imported from utils/goalUtils
 
@@ -313,18 +330,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       color: 'white',
       display: 'flex',
       flexDirection: 'column',
-      padding: '40px'
+      padding: isNarrow ? '16px' : '40px',
+      overflowY: isNarrow ? 'auto' : undefined
     }}>
       {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '12px',
         marginBottom: '2vh'
       }}>
-        <h1 style={{ margin: 0, fontSize: '2.2vw' }}>{homeschool.name} Dashboard</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ fontSize: '1.1vw', opacity: 0.8 }}>
+        <h1 style={{ margin: 0, fontSize: vw(2.2) }}>{homeschool.name} Dashboard</h1>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: isNarrow ? '12px' : '20px' }}>
+          <div style={{ fontSize: vw(1.1), opacity: 0.8 }}>
             Student {currentStudentIndex + 1} of {students.length} • Auto-cycling every {cycleSeconds}s
           </div>
           {!isPublic && (
@@ -348,30 +368,31 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Student Progress - Horizontal Layout */}
       <div style={{
-        flex: 1,
+        flex: isNarrow ? 'none' : 1,
         display: 'flex',
+        flexDirection: isNarrow ? 'column' : 'row',
         alignItems: 'stretch',
-        gap: '30px',
-        height: 'calc(100vh - 140px)',
-        overflow: 'hidden'
+        gap: isNarrow ? '16px' : '30px',
+        height: isNarrow ? 'auto' : 'calc(100vh - 140px)',
+        overflow: isNarrow ? 'visible' : 'hidden'
       }}>
         {/* Left Side - Student Name and Progress Circle */}
         <div style={{
           backgroundColor: '#16213e',
           borderRadius: '20px',
-          padding: '30px',
+          padding: isNarrow ? '20px' : '30px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          width: '280px',
+          width: isNarrow ? 'auto' : '280px',
           flexShrink: 0,
           boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
         }}>
           {/* Student Name */}
           <h2 style={{
             margin: '0 0 2vh 0',
-            fontSize: '2.8vw',
+            fontSize: vw(2.8),
             textAlign: 'center',
             background: 'linear-gradient(45deg, #4caf50, #2196f3)',
             WebkitBackgroundClip: 'text',
@@ -384,8 +405,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Progress Circle */}
           <div style={{ marginBottom: '2vh' }}>
             <div style={{
-              width: '14vw',
-              height: '14vw',
+              width: isNarrow ? '160px' : '14vw',
+              height: isNarrow ? '160px' : '14vw',
               borderRadius: '50%',
               background: `conic-gradient(#4caf50 ${progressPercentage * 3.6}deg, #333 ${progressPercentage * 3.6}deg)`,
               display: 'flex',
@@ -394,8 +415,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
               position: 'relative'
             }}>
               <div style={{
-                width: '11.5vw',
-                height: '11.5vw',
+                width: isNarrow ? '130px' : '11.5vw',
+                height: isNarrow ? '130px' : '11.5vw',
                 borderRadius: '50%',
                 backgroundColor: '#1a1a2e',
                 display: 'flex',
@@ -403,21 +424,21 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 justifyContent: 'center',
                 flexDirection: 'column'
               }}>
-                <div style={{ fontSize: '2.8vw', fontWeight: 'bold' }}>
+                <div style={{ fontSize: vw(2.8), fontWeight: 'bold' }}>
                   {currentProgress.completedToday}/{currentProgress.totalGoals}
                 </div>
-                <div style={{ fontSize: '1.1vw', fontWeight: '500', color: '#4caf50' }}>
+                <div style={{ fontSize: vw(1.1), fontWeight: '500', color: '#4caf50' }}>
                   {Math.round(progressPercentage)}%
                 </div>
-                <div style={{ fontSize: '1vw', opacity: 0.8 }}>This Week</div>
+                <div style={{ fontSize: vw(1), opacity: 0.8 }}>This Week</div>
               </div>
             </div>
           </div>
 
           {/* Last 7 Days bar chart */}
           <div style={{ width: '100%', marginTop: '2vh' }}>
-            <div style={{ fontSize: '0.9vw', opacity: 0.7, textAlign: 'center', marginBottom: '0.8vh' }}>Last 7 Days</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '6vh', justifyContent: 'center' }}>
+            <div style={{ fontSize: vw(0.9), opacity: 0.7, textAlign: 'center', marginBottom: '0.8vh' }}>Last 7 Days</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', justifyContent: 'center' }}>
               {(() => {
                 const dayLetters = ['S','M','T','W','T','F','S'];
                 const studentId = currentProgress.student.id;
@@ -438,14 +459,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 const maxCount = Math.max(1, ...days.map(d => d.count));
                 return days.map((day, idx) => (
                   <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', maxWidth: '24px' }}>
-                    {day.count > 0 && <span style={{ fontSize: '0.7vw', opacity: 0.8 }}>{day.count}</span>}
+                    {day.count > 0 && <span style={{ fontSize: vw(0.7), opacity: 0.8 }}>{day.count}</span>}
                     <div style={{
                       width: '100%',
                       height: day.count > 0 ? Math.max(4, (day.count / maxCount) * 40) : 4,
                       backgroundColor: day.count > 0 ? (day.isToday ? '#2196f3' : '#4caf50') : 'rgba(255,255,255,0.1)',
                       borderRadius: '2px'
                     }} />
-                    <span style={{ fontSize: '0.65vw', opacity: day.isToday ? 1 : 0.5, color: day.isToday ? '#2196f3' : 'white' }}>{day.letter}</span>
+                    <span style={{ fontSize: vw(0.65), opacity: day.isToday ? 1 : 0.5, color: day.isToday ? '#2196f3' : 'white' }}>{day.letter}</span>
                   </div>
                 ));
               })()}
@@ -454,8 +475,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Weekly Completion chart - last 5 weeks */}
           <div style={{ width: '100%', marginTop: '1.5vh' }}>
-            <div style={{ fontSize: '0.9vw', opacity: 0.7, textAlign: 'center', marginBottom: '0.8vh' }}>Weekly Completion</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '6vh', justifyContent: 'center' }}>
+            <div style={{ fontSize: vw(0.9), opacity: 0.7, textAlign: 'center', marginBottom: '0.8vh' }}>Weekly Completion</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', justifyContent: 'center' }}>
               {(() => {
                 const studentId = currentProgress.student.id;
                 const studentGoals = goals.filter(g => g.studentIds?.includes(studentId) && isGoalActiveForStudent(g, studentId));
@@ -492,14 +513,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
                 return weeks.map((week, idx) => (
                   <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', maxWidth: '36px' }}>
-                    {week.pct > 0 && <span style={{ fontSize: '0.7vw', opacity: 0.8 }}>{Math.round(week.pct)}%</span>}
+                    {week.pct > 0 && <span style={{ fontSize: vw(0.7), opacity: 0.8 }}>{Math.round(week.pct)}%</span>}
                     <div style={{
                       width: '100%',
                       height: week.pct > 0 ? Math.max(4, (week.pct / 100) * 40) : 4,
                       backgroundColor: week.pct >= 100 ? '#4caf50' : week.pct > 0 ? '#2196f3' : 'rgba(255,255,255,0.1)',
                       borderRadius: '2px'
                     }} />
-                    <span style={{ fontSize: '0.65vw', color: week.isCurrent ? '#2196f3' : 'white', opacity: week.isCurrent ? 1 : 0.5 }}>W{week.weekNum}</span>
+                    <span style={{ fontSize: vw(0.65), color: week.isCurrent ? '#2196f3' : 'white', opacity: week.isCurrent ? 1 : 0.5 }}>W{week.weekNum}</span>
                   </div>
                 ));
               })()}
@@ -516,11 +537,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
+          overflow: isNarrow ? 'visible' : 'hidden',
           minWidth: 0
         }}>
           <h3 style={{
-            fontSize: '2vw',
+            fontSize: vw(2),
             marginBottom: '1.2vh',
             textAlign: 'center',
             background: 'linear-gradient(45deg, #4caf50, #2196f3)',
@@ -534,11 +555,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div style={{
             display: 'grid',
-            gap: `${goalCount <= 4 ? 1.2 : 0.8}vw`,
-            gridTemplateColumns: `repeat(${cols}, 1fr)`,
+            gap: isNarrow ? '10px' : `${goalCount <= 4 ? 1.2 : 0.8}vw`,
+            gridTemplateColumns: `repeat(${isNarrow ? Math.min(cols, 2) : cols}, 1fr)`,
             gridAutoRows: '1fr',
-            flex: 1,
-            overflow: 'hidden'
+            flex: isNarrow ? 'none' : 1,
+            overflow: isNarrow ? 'visible' : 'hidden'
           }}>
             {/* Sort goals: gray (pending) first, then yellow (progress week), then blue (done today), then green (weekly complete) */}
             {[...currentProgress.todayGoals].sort((a, b) => {
@@ -624,9 +645,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                 <div
                   key={goal.id}
                   style={{
-                    padding: `${1.5 * scale}vh ${1.0 * scale}vw`,
+                    padding: isNarrow ? '12px 8px' : `${1.5 * scale}vh ${1.0 * scale}vw`,
                     backgroundColor: cardBg,
-                    borderRadius: '0.6vw',
+                    borderRadius: 'max(6px, 0.6vw)',
                     border: `1px solid ${cardBorder}`,
                     display: 'flex',
                     flexDirection: 'column',
@@ -638,11 +659,11 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                     textAlign: 'center'
                   }}
                 >
-                  <div style={{ fontSize: `${2.2 * scale}vw`, lineHeight: 1 }}>
+                  <div style={{ fontSize: vw(2.2 * scale), lineHeight: 1 }}>
                     {icon}
                   </div>
                   <div style={{
-                    fontSize: `${1.2 * scale}vw`,
+                    fontSize: vw(1.2 * scale),
                     fontWeight: '600',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -651,12 +672,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({
                   }}>
                     {goal.name || activity?.name}
                   </div>
-                  <div style={{ fontSize: `${0.9 * scale}vw`, opacity: 0.7 }}>
+                  <div style={{ fontSize: vw(0.9 * scale), opacity: 0.7 }}>
                     {goal.timesPerWeek && `${weeklyCount}/${goal.timesPerWeek} wk`}
                     {goal.minutesPerSession && `${goal.timesPerWeek ? ' · ' : ''}${goal.minutesPerSession} min`}
                   </div>
                   <div style={{
-                    fontSize: `${0.85 * scale}vw`,
+                    fontSize: vw(0.85 * scale),
                     fontWeight: '500',
                     opacity: 0.9
                   }}>

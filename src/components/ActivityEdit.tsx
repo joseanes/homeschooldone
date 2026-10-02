@@ -70,7 +70,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
       zIndex: 2000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '500px',
@@ -93,7 +93,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., Piano Practice, 4th Grade Math"
@@ -113,7 +113,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., Music, Mathematics, Science"
@@ -131,7 +131,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 minHeight: '60px'
               }}
@@ -143,7 +143,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
             <label style={{ display: 'block', marginBottom: '10px' }}>
               How to Track Progress:
             </label>
-            <p style={{ fontSize: '14px', color: '#666', marginTop: '-5px', marginBottom: '10px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginTop: '-5px', marginBottom: '10px' }}>
               Times/Week always tracked.
             </p>
             
@@ -196,7 +196,7 @@ const ActivityEdit: React.FC<ActivityEditProps> = ({ activity, onClose, onUpdate
                   width: '100%',
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px',
                   marginTop: '8px'
                 }}

@@ -360,7 +360,7 @@ const Reports: React.FC<ReportsProps> = ({
   // Get status color for a goal based on period progress
   const getGoalStatusForPeriod = (goalId: string, studentId: string) => {
     const progress = getPeriodGoalProgress(goalId, studentId);
-    if (!progress) return { color: '#9e9e9e', backgroundColor: '#f5f5f5', textColor: '#616161', text: 'No Data' };
+    if (!progress) return { color: '#9e9e9e', backgroundColor: 'var(--hs-bg-surface)', textColor: '#616161', text: 'No Data' };
 
     if (progress.target > 0 && progress.count >= progress.target) {
       return { color: '#4caf50', backgroundColor: '#e8f5e9', textColor: '#2e7d32', text: 'Complete' };
@@ -376,7 +376,7 @@ const Reports: React.FC<ReportsProps> = ({
       return { color: '#ffc107', backgroundColor: '#fff8e1', textColor: '#f57c00', text: 'In Progress' };
     }
 
-    return { color: '#9e9e9e', backgroundColor: '#f5f5f5', textColor: '#616161', text: 'Pending' };
+    return { color: '#9e9e9e', backgroundColor: 'var(--hs-bg-surface)', textColor: '#616161', text: 'Pending' };
   };
 
   const formatDuration = (minutes: number) => {
@@ -503,7 +503,7 @@ const Reports: React.FC<ReportsProps> = ({
       zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         width: '90%',
@@ -536,7 +536,7 @@ const Reports: React.FC<ReportsProps> = ({
             style={{
               padding: '8px',
               fontSize: '16px',
-              border: '1px solid #ccc',
+              border: '1px solid var(--hs-border-input)',
               borderRadius: '4px'
             }}
           >
@@ -554,7 +554,7 @@ const Reports: React.FC<ReportsProps> = ({
             style={{
               padding: '8px',
               fontSize: '16px',
-              border: '1px solid #ccc',
+              border: '1px solid var(--hs-border-input)',
               borderRadius: '4px'
             }}
           >
@@ -576,7 +576,7 @@ const Reports: React.FC<ReportsProps> = ({
               style={{
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 minWidth: '200px'
               }}
@@ -596,7 +596,7 @@ const Reports: React.FC<ReportsProps> = ({
               style={{
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 minWidth: '200px'
               }}
@@ -616,7 +616,7 @@ const Reports: React.FC<ReportsProps> = ({
               style={{
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 minWidth: '120px'
               }}
@@ -636,7 +636,7 @@ const Reports: React.FC<ReportsProps> = ({
               style={{
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 minWidth: '150px'
               }}
@@ -658,7 +658,7 @@ const Reports: React.FC<ReportsProps> = ({
                 style={{
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
               />
@@ -670,7 +670,7 @@ const Reports: React.FC<ReportsProps> = ({
                 style={{
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
               />
@@ -693,7 +693,7 @@ const Reports: React.FC<ReportsProps> = ({
                 padding: '10px 20px',
                 fontSize: '15px',
                 fontWeight: activeTab === tab.key ? 'bold' : 'normal',
-                color: activeTab === tab.key ? '#2196f3' : '#666',
+                color: activeTab === tab.key ? '#2196f3' : 'var(--hs-text-secondary)',
                 backgroundColor: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === tab.key ? '3px solid #2196f3' : '3px solid transparent',
@@ -711,7 +711,7 @@ const Reports: React.FC<ReportsProps> = ({
         {activeTab === 'progress' && (
           <div>
             {goals.length === 0 ? (
-              <p style={{ color: '#666' }}>No goals assigned yet.</p>
+              <p style={{ color: 'var(--hs-text-secondary)' }}>No goals assigned yet.</p>
             ) : (
               <div style={{ display: 'grid', gap: '20px' }}>
                 {[...students]
@@ -772,7 +772,7 @@ const Reports: React.FC<ReportsProps> = ({
                           <h4 style={{
                             margin: 0,
                             fontSize: '18px',
-                            color: '#333',
+                            color: 'var(--hs-text-primary)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px'
@@ -895,7 +895,7 @@ const Reports: React.FC<ReportsProps> = ({
             </div>
             <div style={{ maxHeight: '400px', overflow: 'auto' }}>
               {filteredInstances.length === 0 ? (
-                <p style={{ color: '#666' }}>No activities recorded for this period.</p>
+                <p style={{ color: 'var(--hs-text-secondary)' }}>No activities recorded for this period.</p>
               ) : (
                 filteredInstances.map(instance => {
                   const goal = goals.find(g => g.id === instance.goalId);
@@ -907,7 +907,7 @@ const Reports: React.FC<ReportsProps> = ({
                   return (
                     <div key={instance.id} style={{
                       padding: '15px',
-                      border: '1px solid #eee',
+                      border: '1px solid var(--hs-border-light)',
                       borderRadius: '4px',
                       marginBottom: '10px'
                     }}>
@@ -970,7 +970,7 @@ const Reports: React.FC<ReportsProps> = ({
                       )}
 
                       {instance.description && (
-                        <div style={{ color: '#666', fontSize: '14px', marginTop: '5px' }}>
+                        <div style={{ color: 'var(--hs-text-secondary)', fontSize: '14px', marginTop: '5px' }}>
                           Notes: {instance.description}
                         </div>
                       )}
@@ -1034,8 +1034,8 @@ const Reports: React.FC<ReportsProps> = ({
             <div className="effort-print-area">
               {/* Report Title */}
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '22px', color: '#333' }}>Effort Summary</h3>
-                <div style={{ fontSize: '14px', color: '#666' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '22px', color: 'var(--hs-text-primary)' }}>Effort Summary</h3>
+                <div style={{ fontSize: '14px', color: 'var(--hs-text-secondary)' }}>
                   {(() => {
                     const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     switch (dateRange) {
@@ -1124,18 +1124,18 @@ const Reports: React.FC<ReportsProps> = ({
                       borderRadius: '12px',
                       padding: '20px',
                       marginBottom: '20px',
-                      backgroundColor: '#fff'
+                      backgroundColor: 'var(--hs-bg)'
                     }}>
-                      <h3 style={{ margin: '0 0 15px 0', fontSize: '20px', color: '#333', borderBottom: '2px solid #2196f3', paddingBottom: '8px' }}>
+                      <h3 style={{ margin: '0 0 15px 0', fontSize: '20px', color: 'var(--hs-text-primary)', borderBottom: '2px solid #2196f3', paddingBottom: '8px' }}>
                         {student.name}
                       </h3>
 
                       <div style={{ display: 'flex', gap: '20px' }}>
                         {/* Left Column - Goals & Progress (2/3) */}
                         <div style={{ flex: 2, minWidth: 0 }}>
-                          <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#555' }}>Goals &amp; Progress</h4>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: 'var(--hs-text-label)' }}>Goals &amp; Progress</h4>
                           {sortedSubjects.length === 0 ? (
-                            <p style={{ color: '#999', fontSize: '14px' }}>No goals assigned.</p>
+                            <p style={{ color: 'var(--hs-text-muted)', fontSize: '14px' }}>No goals assigned.</p>
                           ) : (
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
                               <colgroup>
@@ -1145,11 +1145,11 @@ const Reports: React.FC<ReportsProps> = ({
                                 <col style={{ width: '22%' }} />
                               </colgroup>
                               <thead>
-                                <tr style={{ borderBottom: '2px solid #ddd' }}>
-                                  <th style={{ textAlign: 'left', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Goal</th>
-                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Times Worked</th>
-                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Attainment</th>
-                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: '#666', fontWeight: '600' }}>Completion Status</th>
+                                <tr style={{ borderBottom: '2px solid var(--hs-border-light)' }}>
+                                  <th style={{ textAlign: 'left', padding: '6px 8px', color: 'var(--hs-text-secondary)', fontWeight: '600' }}>Goal</th>
+                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: 'var(--hs-text-secondary)', fontWeight: '600' }}>Times Worked</th>
+                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: 'var(--hs-text-secondary)', fontWeight: '600' }}>Attainment</th>
+                                  <th style={{ textAlign: 'center', padding: '6px 8px', color: 'var(--hs-text-secondary)', fontWeight: '600' }}>Completion Status</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1166,13 +1166,13 @@ const Reports: React.FC<ReportsProps> = ({
                                       </tr>
                                       {subjectRows.map(({ goal, activity, timesWorked, target, attainment, status, statusColor }) => (
                                         <tr key={goal.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                                          <td style={{ padding: '8px', color: '#333', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                                          <td style={{ padding: '8px', color: 'var(--hs-text-primary)', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                                             {goal.name || activity?.name || 'Unnamed Goal'}
                                           </td>
-                                          <td style={{ padding: '8px', textAlign: 'center', color: '#333' }}>
+                                          <td style={{ padding: '8px', textAlign: 'center', color: 'var(--hs-text-primary)' }}>
                                             {target > 0 ? `${timesWorked}/${target}` : `${timesWorked}`}
                                           </td>
-                                          <td style={{ padding: '8px', textAlign: 'center', color: '#333' }}>
+                                          <td style={{ padding: '8px', textAlign: 'center', color: 'var(--hs-text-primary)' }}>
                                             {attainment}
                                           </td>
                                           <td style={{ padding: '8px', textAlign: 'center' }}>
@@ -1201,9 +1201,9 @@ const Reports: React.FC<ReportsProps> = ({
 
                         {/* Right Column - Tasks and Activities (1/3) */}
                         <div style={{ flex: 1, borderLeft: '1px solid #e0e0e0', paddingLeft: '20px', minWidth: 0 }}>
-                          <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: '#555' }}>Tasks and Activities</h4>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '16px', color: 'var(--hs-text-label)' }}>Tasks and Activities</h4>
                           {studentTasks.length === 0 ? (
-                            <p style={{ color: '#999', fontSize: '14px' }}>No tasks recorded for this period.</p>
+                            <p style={{ color: 'var(--hs-text-muted)', fontSize: '14px' }}>No tasks recorded for this period.</p>
                           ) : (
                             <div style={{ display: 'grid', gap: '10px' }}>
                               {studentTasks.map(task => {
@@ -1212,15 +1212,15 @@ const Reports: React.FC<ReportsProps> = ({
                                 return (
                                   <div key={task.id} style={{
                                     padding: '10px',
-                                    backgroundColor: '#f8f9fa',
+                                    backgroundColor: 'var(--hs-bg-surface)',
                                     borderRadius: '6px',
                                     border: '1px solid #e9ecef'
                                   }}>
-                                    <div style={{ fontWeight: '500', fontSize: '14px', color: '#333' }}>{task.name}</div>
+                                    <div style={{ fontWeight: '500', fontSize: '14px', color: 'var(--hs-text-primary)' }}>{task.name}</div>
                                     {task.description && (
-                                      <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{task.description}</div>
+                                      <div style={{ fontSize: '13px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>{task.description}</div>
                                     )}
-                                    <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                                    <div style={{ fontSize: '12px', color: 'var(--hs-text-muted)', marginTop: '4px' }}>
                                       {taskDate.toLocaleDateString()}
                                     </div>
                                   </div>
@@ -1284,7 +1284,7 @@ const Reports: React.FC<ReportsProps> = ({
 
             <div className="transcript-print-area">
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '22px', color: '#333' }}>{homeschoolName} Transcript</h3>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '22px', color: 'var(--hs-text-primary)' }}>{homeschoolName} Transcript</h3>
               </div>
 
               {[...students]
@@ -1335,14 +1335,14 @@ const Reports: React.FC<ReportsProps> = ({
                       borderRadius: '12px',
                       padding: '20px',
                       marginBottom: '20px',
-                      backgroundColor: '#fff'
+                      backgroundColor: 'var(--hs-bg)'
                     }}>
-                      <h3 style={{ margin: '0 0 15px 0', fontSize: '20px', color: '#333', borderBottom: '2px solid #2196f3', paddingBottom: '8px' }}>
+                      <h3 style={{ margin: '0 0 15px 0', fontSize: '20px', color: 'var(--hs-text-primary)', borderBottom: '2px solid #2196f3', paddingBottom: '8px' }}>
                         {student.name}
                       </h3>
 
                       {completedGoals.length === 0 ? (
-                        <p style={{ color: '#999', fontSize: '14px' }}>No completed goals.</p>
+                        <p style={{ color: 'var(--hs-text-muted)', fontSize: '14px' }}>No completed goals.</p>
                       ) : (
                         <div>
                           {sortedSubjects.map(subject => (
@@ -1376,20 +1376,20 @@ const Reports: React.FC<ReportsProps> = ({
                                       justifyContent: 'space-between',
                                       alignItems: 'baseline'
                                     }}>
-                                      <span style={{ fontWeight: '700', fontSize: '15px', color: '#333' }}>
+                                      <span style={{ fontWeight: '700', fontSize: '15px', color: 'var(--hs-text-primary)' }}>
                                         {goal.name || activity?.name || 'Unnamed Goal'}
                                       </span>
-                                      <span style={{ fontWeight: '700', fontSize: '15px', color: '#333', marginLeft: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                      <span style={{ fontWeight: '700', fontSize: '15px', color: 'var(--hs-text-primary)', marginLeft: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                                         {grade || 'Completed'}
                                       </span>
                                     </div>
                                     {goal.description && (
-                                      <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>
+                                      <div style={{ fontSize: '13px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
                                         {goal.description}
                                       </div>
                                     )}
                                     {completionDateStr && (
-                                      <div style={{ fontSize: '12px', color: '#999', marginTop: '3px' }}>
+                                      <div style={{ fontSize: '12px', color: 'var(--hs-text-muted)', marginTop: '3px' }}>
                                         Completed: {completionDateStr}
                                       </div>
                                     )}

@@ -106,7 +106,7 @@ const CleanupDuplicates: React.FC<CleanupDuplicatesProps> = ({
       zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         width: '90%',
@@ -141,17 +141,17 @@ const CleanupDuplicates: React.FC<CleanupDuplicatesProps> = ({
               {duplicates.map((dup, index) => (
                 <div key={index} style={{
                   padding: '10px',
-                  border: '1px solid #ddd',
+                  border: '1px solid var(--hs-border-light)',
                   borderRadius: '4px',
                   marginBottom: '10px',
-                  backgroundColor: '#f8f9fa'
+                  backgroundColor: 'var(--hs-bg-surface)'
                 }}>
                   <strong>{dup.email}</strong> - appears in both user list and {dup.role} email invites
                 </div>
               ))}
             </div>
             
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginBottom: '20px' }}>
               This will remove the email invitation entries since these users are already active in the system.
             </p>
             

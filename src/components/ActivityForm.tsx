@@ -73,7 +73,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
       zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '500px',
@@ -96,7 +96,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., Piano Practice, 4th Grade Math"
@@ -121,7 +121,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., Music, Mathematics, Science"
@@ -132,8 +132,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
                 top: '100%',
                 left: 0,
                 right: 0,
-                backgroundColor: 'white',
-                border: '1px solid #ccc',
+                backgroundColor: 'var(--hs-bg)',
+                border: '1px solid var(--hs-border-input)',
                 borderTop: 'none',
                 borderRadius: '0 0 4px 4px',
                 maxHeight: '150px',
@@ -150,11 +150,11 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
                     style={{
                       padding: '8px',
                       cursor: 'pointer',
-                      backgroundColor: '#f8f9fa',
-                      borderBottom: '1px solid #eee'
+                      backgroundColor: 'var(--hs-bg-surface)',
+                      borderBottom: '1px solid var(--hs-border-light)'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e9ecef'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--hs-bg-elevated)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--hs-bg-surface)'}
                   >
                     {subj}
                   </div>
@@ -174,7 +174,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 minHeight: '60px'
               }}
@@ -186,7 +186,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
             <label style={{ display: 'block', marginBottom: '10px' }}>
               How to Track Progress:
             </label>
-            <p style={{ fontSize: '14px', color: '#666', marginTop: '-5px', marginBottom: '10px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginTop: '-5px', marginBottom: '10px' }}>
               Times/Week always tracked.
             </p>
             
@@ -239,7 +239,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
                   width: '100%',
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px',
                   marginTop: '8px'
                 }}

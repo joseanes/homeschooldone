@@ -117,7 +117,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
       zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '400px',
@@ -138,7 +138,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., John Smith"
@@ -157,12 +157,12 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="student@example.com"
             />
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
               If provided, student can log in to record their own activities
             </div>
             
@@ -189,7 +189,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
                     </button>
                   )}
                   {!name.trim() && (
-                    <div style={{ color: '#666', fontSize: '11px' }}>
+                    <div style={{ color: 'var(--hs-text-secondary)', fontSize: '11px' }}>
                       Enter student name first to send invitation
                     </div>
                   )}
@@ -210,12 +210,12 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., +1 (555) 123-4567"
             />
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
               For SMS notifications and emergency contact
             </div>
           </div>
@@ -232,7 +232,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
             />
@@ -253,12 +253,12 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., 4.5"
             />
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
               Students of different ages and abilities do different daily hours of education
             </div>
           </div>

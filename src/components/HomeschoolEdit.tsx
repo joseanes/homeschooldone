@@ -47,7 +47,7 @@ const HomeschoolEdit: React.FC<HomeschoolEditProps> = ({ homeschool, onClose, on
       zIndex: 10000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '400px',
@@ -68,7 +68,7 @@ const HomeschoolEdit: React.FC<HomeschoolEditProps> = ({ homeschool, onClose, on
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., Smith Family Homeschool"

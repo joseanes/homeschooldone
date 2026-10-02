@@ -1535,7 +1535,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #ddd' }}>
+                    <tr style={{ borderBottom: '2px solid var(--hs-border-light)' }}>
                       <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--hs-badge-text)' }}>Task Name</th>
                       <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--hs-badge-text)' }}>Student</th>
                       <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--hs-badge-text)' }}>Start</th>
@@ -1549,7 +1549,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       const studentName = students.find(s => s.id === task.studentId)?.name || 'Unknown';
                       const isPending = !task.completedDate;
                       return (
-                        <tr key={task.id} style={{ borderBottom: '1px solid #eee' }}>
+                        <tr key={task.id} style={{ borderBottom: '1px solid var(--hs-border-light)' }}>
                           <td style={{ padding: '8px 6px', fontWeight: '500' }}>
                             {task.name}
                             {task.description && (
@@ -1731,7 +1731,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Tab Navigation */}
         <div style={{
           display: 'flex',
-          borderBottom: '1px solid #ddd',
+          borderBottom: '1px solid var(--hs-border-light)',
           marginBottom: '20px',
           gap: '5px'
         }}>
@@ -1954,9 +1954,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                     marginBottom: '10px',
                     padding: '12px 16px',
                     fontSize: '14px',
-                    border: editingUserAccess.currentRole === role ? '2px solid #007bff' : '1px solid #ddd',
+                    border: editingUserAccess.currentRole === role ? '2px solid #007bff' : '1px solid var(--hs-border-light)',
                     borderRadius: '6px',
-                    backgroundColor: editingUserAccess.currentRole === role ? '#e3f2fd' : 'white',
+                    backgroundColor: editingUserAccess.currentRole === role ? 'var(--hs-goal-today-bg)' : 'var(--hs-bg)',
                     color: editingUserAccess.currentRole === role ? '#1976d2' : 'var(--hs-text-primary)',
                     cursor: 'pointer',
                     textAlign: 'left',

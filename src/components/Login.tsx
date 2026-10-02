@@ -204,7 +204,7 @@ const Login: React.FC = () => {
                     width: '100%',
                     padding: '10px',
                     fontSize: '16px',
-                    border: '1px solid #ccc',
+                    border: '1px solid var(--hs-border-input)',
                     borderRadius: '4px',
                     boxSizing: 'border-box'
                   }}

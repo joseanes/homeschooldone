@@ -117,7 +117,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
       zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '500px',
@@ -140,11 +140,11 @@ const GoalForm: React.FC<GoalFormProps> = ({
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
             />
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
               {goalName ? '' : `Will default to: ${selectedActivityData && selectedStudents.length > 0 ? generateDefaultGoalName() : 'Activity Name - Student Names'}`}
             </div>
           </div>
@@ -154,7 +154,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
               Select Students * (Choose one or more)
             </label>
             <div style={{
-              border: '1px solid #ccc',
+              border: '1px solid var(--hs-border-input)',
               borderRadius: '4px',
               padding: '10px',
               maxHeight: '150px',
@@ -202,7 +202,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
             >
@@ -218,7 +218,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
           {selectedActivityData && (
             <>
               <div style={{ 
-                backgroundColor: '#f0f0f0', 
+                backgroundColor: 'var(--hs-bg-surface)', 
                 padding: '10px', 
                 borderRadius: '4px',
                 marginBottom: '15px' 
@@ -248,7 +248,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
                     width: '100%',
                     padding: '8px',
                     fontSize: '16px',
-                    border: '1px solid #ccc',
+                    border: '1px solid var(--hs-border-input)',
                     borderRadius: '4px'
                   }}
                   placeholder="e.g., 5 (for 5 days a week)"
@@ -269,12 +269,12 @@ const GoalForm: React.FC<GoalFormProps> = ({
                     width: '100%',
                     padding: '8px',
                     fontSize: '16px',
-                    border: '1px solid #ccc',
+                    border: '1px solid var(--hs-border-input)',
                     borderRadius: '4px'
                   }}
                   placeholder="e.g., 45"
                 />
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
                   Expected duration of each session in minutes
                 </div>
               </div>
@@ -296,12 +296,12 @@ const GoalForm: React.FC<GoalFormProps> = ({
                         width: '100%',
                         padding: '8px',
                         fontSize: '16px',
-                        border: '1px solid #ccc',
+                        border: '1px solid var(--hs-border-input)',
                         borderRadius: '4px'
                       }}
                       placeholder="e.g., 95 (for 95% completion goal)"
                     />
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
                       Target percentage completion for this goal (default: 100%)
                     </div>
                   </div>
@@ -320,12 +320,12 @@ const GoalForm: React.FC<GoalFormProps> = ({
                         width: '100%',
                         padding: '8px',
                         fontSize: '16px',
-                        border: '1px solid #ccc',
+                        border: '1px solid var(--hs-border-input)',
                         borderRadius: '4px'
                       }}
                       placeholder="e.g., 2 (for 2% increase per day)"
                     />
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
                       How much percentage progress per day when the activity is performed
                     </div>
                   </div>
@@ -346,7 +346,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
                       width: '100%',
                       padding: '8px',
                       fontSize: '16px',
-                      border: '1px solid #ccc',
+                      border: '1px solid var(--hs-border-input)',
                       borderRadius: '4px'
                     }}
                     placeholder="e.g., 50 (chapters, problems, etc.)"
@@ -357,24 +357,24 @@ const GoalForm: React.FC<GoalFormProps> = ({
               {/* Per-Student Dates */}
               {selectedStudents.length > 0 && (
                 <div style={{
-                  backgroundColor: '#f8f9fa',
+                  backgroundColor: 'var(--hs-bg-surface)',
                   borderRadius: '8px',
                   padding: '15px',
                   marginBottom: '15px'
                 }}>
-                  <h4 style={{ marginTop: 0, marginBottom: '10px', fontSize: '14px', color: '#555' }}>Per-Student Dates (optional)</h4>
-                  <p style={{ fontSize: '12px', color: '#666', marginTop: 0, marginBottom: '10px' }}>
+                  <h4 style={{ marginTop: 0, marginBottom: '10px', fontSize: '14px', color: 'var(--hs-text-label)' }}>Per-Student Dates (optional)</h4>
+                  <p style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: 0, marginBottom: '10px' }}>
                     Goals will not appear on dashboards before the start date.
                   </p>
                   {selectedStudents.map(sid => {
                     const student = students.find(s => s.id === sid);
                     if (!student) return null;
                     return (
-                      <div key={sid} style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'white', borderRadius: '6px', border: '1px solid #ddd' }}>
+                      <div key={sid} style={{ marginBottom: '10px', padding: '10px', backgroundColor: 'var(--hs-bg)', borderRadius: '6px', border: '1px solid var(--hs-border-light)' }}>
                         <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>{student.name}</div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                           <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: '#555' }}>Start Date</label>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--hs-text-label)' }}>Start Date</label>
                             <input
                               type="date"
                               value={studentDates[sid]?.startDate || ''}
@@ -382,11 +382,11 @@ const GoalForm: React.FC<GoalFormProps> = ({
                                 ...prev,
                                 [sid]: { ...prev[sid], startDate: e.target.value }
                               }))}
-                              style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px' }}
+                              style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                             />
                           </div>
                           <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: '#555' }}>Deadline</label>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--hs-text-label)' }}>Deadline</label>
                             <input
                               type="date"
                               value={studentDates[sid]?.deadline || ''}
@@ -394,7 +394,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
                                 ...prev,
                                 [sid]: { ...prev[sid], deadline: e.target.value }
                               }))}
-                              style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px' }}
+                              style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                             />
                           </div>
                         </div>
@@ -418,7 +418,7 @@ const GoalForm: React.FC<GoalFormProps> = ({
                     width: '100%',
                     padding: '8px',
                     fontSize: '14px',
-                    border: '1px solid #ccc',
+                    border: '1px solid var(--hs-border-input)',
                     borderRadius: '4px',
                     resize: 'vertical'
                   }}

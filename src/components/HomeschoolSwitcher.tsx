@@ -83,8 +83,8 @@ const HomeschoolSwitcher: React.FC<HomeschoolSwitcherProps> = ({
         position: 'absolute',
         top: '100%',
         right: 0,
-        backgroundColor: 'white',
-        border: '1px solid #ccc',
+        backgroundColor: 'var(--hs-bg)',
+        border: '1px solid var(--hs-border-input)',
         borderRadius: '8px',
         padding: '20px',
         minWidth: '250px',
@@ -101,8 +101,8 @@ const HomeschoolSwitcher: React.FC<HomeschoolSwitcherProps> = ({
       position: 'absolute',
       top: '100%',
       right: 0,
-      backgroundColor: 'white',
-      border: '1px solid #ccc',
+      backgroundColor: 'var(--hs-bg)',
+      border: '1px solid var(--hs-border-input)',
       borderRadius: '8px',
       padding: '20px',
       minWidth: '300px',
@@ -113,7 +113,7 @@ const HomeschoolSwitcher: React.FC<HomeschoolSwitcherProps> = ({
       
       {homeschools.length > 0 && (
         <div style={{ marginBottom: '20px' }}>
-          <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#666' }}>
+          <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--hs-text-secondary)' }}>
             Your Homeschools:
           </h4>
           {homeschools.map(homeschool => (
@@ -130,8 +130,8 @@ const HomeschoolSwitcher: React.FC<HomeschoolSwitcherProps> = ({
                 padding: '10px 15px',
                 marginBottom: '8px',
                 textAlign: 'left',
-                backgroundColor: homeschool.id === currentHomeschool.id ? '#e3f2fd' : 'white',
-                border: `1px solid ${homeschool.id === currentHomeschool.id ? '#2196f3' : '#ddd'}`,
+                backgroundColor: homeschool.id === currentHomeschool.id ? 'var(--hs-goal-today-bg)' : 'var(--hs-bg)',
+                border: `1px solid ${homeschool.id === currentHomeschool.id ? '#2196f3' : 'var(--hs-border-light)'}`,
                 borderRadius: '4px',
                 cursor: homeschool.id === currentHomeschool.id ? 'default' : 'pointer',
                 fontSize: '14px'
@@ -148,7 +148,7 @@ const HomeschoolSwitcher: React.FC<HomeschoolSwitcherProps> = ({
         </div>
       )}
 
-      <div style={{ borderTop: '1px solid #eee', paddingTop: '15px' }}>
+      <div style={{ borderTop: '1px solid var(--hs-border-light)', paddingTop: '15px' }}>
         {!showCreateForm ? (
           <button
             onClick={() => setShowCreateForm(true)}
@@ -177,7 +177,7 @@ const HomeschoolSwitcher: React.FC<HomeschoolSwitcherProps> = ({
                 width: '100%',
                 padding: '8px',
                 marginBottom: '10px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 fontSize: '14px'
               }}
@@ -233,7 +233,7 @@ const HomeschoolSwitcher: React.FC<HomeschoolSwitcherProps> = ({
           border: 'none',
           fontSize: '18px',
           cursor: 'pointer',
-          color: '#666'
+          color: 'var(--hs-text-secondary)'
         }}
       >
         ×

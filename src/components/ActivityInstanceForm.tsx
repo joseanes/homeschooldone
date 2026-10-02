@@ -675,10 +675,9 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                         width: '100%',
                         height: '8px',
                         borderRadius: '4px',
-                        outline: 'none',
                         WebkitAppearance: 'none',
                         appearance: 'none',
-                        background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, #ddd ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, #ddd 100%)`,
+                        background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, var(--hs-border-light) ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, var(--hs-border-light) 100%)`,
                         cursor: 'pointer'
                       }}
                     />
@@ -754,10 +753,9 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                           width: '100%',
                           height: '8px',
                           borderRadius: '4px',
-                          outline: 'none',
                           WebkitAppearance: 'none',
                           appearance: 'none',
-                          background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, #ddd ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, #ddd 100%)`,
+                          background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, var(--hs-border-light) ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, var(--hs-border-light) 100%)`,
                           cursor: 'pointer'
                         }}
                       />

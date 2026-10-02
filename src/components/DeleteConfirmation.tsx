@@ -37,7 +37,7 @@ const DeleteConfirmation: React.FC<DeleteConfirmationProps> = ({
       zIndex: 2000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '400px',
@@ -62,7 +62,7 @@ const DeleteConfirmation: React.FC<DeleteConfirmationProps> = ({
             width: '100%',
             padding: '8px',
             fontSize: '16px',
-            border: '1px solid #ccc',
+            border: '1px solid var(--hs-border-input)',
             borderRadius: '4px',
             marginBottom: '20px'
           }}

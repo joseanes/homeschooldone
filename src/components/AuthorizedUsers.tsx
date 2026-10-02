@@ -302,7 +302,7 @@ The HomeschoolDone Team`;
       zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         width: '90%',
@@ -320,7 +320,7 @@ The HomeschoolDone Team`;
                   padding: '6px 12px',
                   fontSize: '14px',
                   backgroundColor: '#ffc107',
-                  color: '#000',
+                  color: 'var(--hs-text-primary)',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
@@ -337,7 +337,7 @@ The HomeschoolDone Team`;
                 border: 'none',
                 fontSize: '24px',
                 cursor: 'pointer',
-                color: '#666'
+                color: 'var(--hs-text-secondary)'
               }}
             >
               ×
@@ -345,12 +345,12 @@ The HomeschoolDone Team`;
           </div>
         </div>
 
-        <p style={{ color: '#666', marginBottom: '20px' }}>
+        <p style={{ color: 'var(--hs-text-secondary)', marginBottom: '20px' }}>
           People with access to "{homeschool.name}" homeschool:
         </p>
 
         {users.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#666' }}>
+          <p style={{ textAlign: 'center', color: 'var(--hs-text-secondary)' }}>
             No authorized users found
           </p>
         ) : (
@@ -363,9 +363,9 @@ The HomeschoolDone Team`;
               return (
                 <div key={user.id} style={{
                   padding: '15px',
-                  border: '1px solid #ddd',
+                  border: '1px solid var(--hs-border-light)',
                   borderRadius: '8px',
-                  backgroundColor: isCurrentUser ? '#f0f8ff' : 'white',
+                  backgroundColor: isCurrentUser ? 'var(--hs-goal-today-bg)' : 'var(--hs-bg)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center'
@@ -384,7 +384,7 @@ The HomeschoolDone Team`;
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: '13px', color: '#666', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: '13px', color: 'var(--hs-text-secondary)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span style={{ 
                         backgroundColor: role === 'Parent' ? '#e3f2fd' : role === 'Tutor' ? '#e8f5e8' : '#fff3e0',
                         color: role === 'Parent' ? '#1976d2' : role === 'Tutor' ? '#388e3c' : '#f57c00',
@@ -413,7 +413,7 @@ The HomeschoolDone Team`;
                     </div>
                     {/* Last activity info */}
                     {user.status === 'active' && (
-                      <div style={{ fontSize: '11px', color: '#999', marginTop: '4px' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--hs-text-muted)', marginTop: '4px' }}>
                         {user.lastLogin && (
                           <span>Last login: {formatLastActivity(user.lastLogin)}</span>
                         )}
@@ -475,7 +475,7 @@ The HomeschoolDone Team`;
                     {isOnlyParent && !homeschool.parentEmails?.length && (
                       <span style={{ 
                         fontSize: '11px', 
-                        color: '#666',
+                        color: 'var(--hs-text-secondary)',
                         fontStyle: 'italic'
                       }}>
                         Cannot remove only parent
@@ -484,7 +484,7 @@ The HomeschoolDone Team`;
                     {isCurrentUser && (
                       <span style={{ 
                         fontSize: '11px', 
-                        color: '#666',
+                        color: 'var(--hs-text-secondary)',
                         fontStyle: 'italic'
                       }}>
                         Cannot remove yourself
@@ -500,10 +500,10 @@ The HomeschoolDone Team`;
         <div style={{ 
           marginTop: '20px', 
           padding: '15px', 
-          backgroundColor: '#f8f9fa', 
+          backgroundColor: 'var(--hs-bg-surface)', 
           borderRadius: '4px',
           fontSize: '13px',
-          color: '#666'
+          color: 'var(--hs-text-secondary)'
         }}>
           <strong>Note:</strong> 
           {currentUserRole === 'parent' ? (

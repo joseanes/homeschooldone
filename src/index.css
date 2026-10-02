@@ -33,6 +33,9 @@
   /* Action link (e.g. "+ Record", "✏️ Edit") */
   --hs-link-action: #4f46e5;
 
+  /* Keyboard focus ring */
+  --hs-focus-ring: #4f46e5;
+
   /* Goal pill badges (student dashboard) — always readable against badge bg */
   --hs-goal-complete-badge: #2e7d32;
   --hs-goal-today-badge:    #1565c0;
@@ -65,7 +68,7 @@
   --hs-task-pending-border:  #dddddd;
 }
 
-@media (prefers-color-scheme: dark) {
+@media screen and (prefers-color-scheme: dark) {
   :root {
     /* Structural backgrounds */
     --hs-bg:              #0f172a;
@@ -98,6 +101,9 @@
 
     /* Action link */
     --hs-link-action: #818cf8;
+
+    /* Keyboard focus ring */
+    --hs-focus-ring: #818cf8;
 
     /* Goal pill badges — dark mode uses lighter colors, text flips to dark */
     --hs-goal-complete-badge: #a5d6a7;
@@ -132,6 +138,22 @@
   }
 }
 
+/* Padding stays inside an element's width, so width: 100% inputs fit their container */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Printouts always use the light palette (dark tokens are screen-only) */
+@media print {
+  :root { color-scheme: light; }
+}
+
+/* Visible focus for keyboard users; mouse clicks don't show it */
+:focus-visible {
+  outline: 2px solid var(--hs-focus-ring);
+  outline-offset: 2px;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -155,6 +177,6 @@ code {
 
 /* Student dashboard goal pill badge — text color flips with color scheme */
 .hs-goal-badge { color: white; }
-@media (prefers-color-scheme: dark) {
+@media screen and (prefers-color-scheme: dark) {
   .hs-goal-badge { color: #0f172a; }
 }

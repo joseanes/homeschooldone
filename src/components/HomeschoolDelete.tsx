@@ -69,7 +69,7 @@ const HomeschoolDelete: React.FC<HomeschoolDeleteProps> = ({ homeschool, onClose
       zIndex: 2000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '500px',
@@ -125,7 +125,7 @@ const HomeschoolDelete: React.FC<HomeschoolDeleteProps> = ({ homeschool, onClose
             <p>To confirm deletion, please type the exact name of the homeschool:</p>
             <p style={{ 
               fontWeight: 'bold', 
-              backgroundColor: '#f8f9fa', 
+              backgroundColor: 'var(--hs-bg-surface)', 
               padding: '10px', 
               borderRadius: '4px',
               fontFamily: 'monospace'

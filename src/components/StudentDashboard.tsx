@@ -475,7 +475,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <div
                       key={`task-${task.id}`}
                       style={{
-                        border: isCompleted ? '2px solid #4caf50' : '2px solid #ddd',
+                        border: isCompleted ? '2px solid #4caf50' : '2px solid var(--hs-border-light)',
                         borderRadius: '15px', padding: '25px',
                         background: isCompleted ? '#e8f5e9' : '#f5f5f5',
                         cursor: isCompleted ? 'default' : 'pointer',
@@ -491,7 +491,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         {isCompleted ? '✅' : '📋'}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                        <h3 style={{ margin: 0, fontSize: '22px', color: isCompleted ? '#2e7d32' : '#666', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h3 style={{ margin: 0, fontSize: '22px', color: isCompleted ? 'var(--hs-goal-complete-text)' : 'var(--hs-text-secondary)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           📋 {task.name}
                         </h3>
                         <div style={{

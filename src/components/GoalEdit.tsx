@@ -133,7 +133,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
       zIndex: 2000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '500px',
@@ -143,7 +143,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
       }}>
         <h2>Edit Goal</h2>
         <div style={{ 
-          backgroundColor: '#f0f0f0', 
+          backgroundColor: 'var(--hs-bg-surface)', 
           padding: '10px', 
           borderRadius: '4px',
           marginBottom: '15px' 
@@ -164,7 +164,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., Chemistry 101 - First Semester"
@@ -185,7 +185,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., 5 (for 5 days a week)"
@@ -206,12 +206,12 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="e.g., 45"
             />
-            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
               Expected duration of each session in minutes
             </div>
           </div>
@@ -233,12 +233,12 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                     width: '100%',
                     padding: '8px',
                     fontSize: '16px',
-                    border: '1px solid #ccc',
+                    border: '1px solid var(--hs-border-input)',
                     borderRadius: '4px'
                   }}
                   placeholder="e.g., 95 (for 95% completion goal)"
                 />
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
                   Target percentage completion for this goal (default: 100%)
                 </div>
               </div>
@@ -257,7 +257,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                     width: '100%',
                     padding: '8px',
                     fontSize: '16px',
-                    border: '1px solid #ccc',
+                    border: '1px solid var(--hs-border-input)',
                     borderRadius: '4px'
                   }}
                   placeholder="e.g., 2 (for 2% increase per day)"
@@ -280,7 +280,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                   width: '100%',
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
                 placeholder="e.g., 50 (chapters, problems, etc.)"
@@ -290,7 +290,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
 
           {/* Student Completion Tracking */}
           <div style={{
-            backgroundColor: '#f8f9fa',
+            backgroundColor: 'var(--hs-bg-surface)',
             borderRadius: '8px',
             padding: '20px',
             marginBottom: '15px'
@@ -298,11 +298,11 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
             <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Student Completion Tracking</h3>
             {students.map(student => (
               <div key={student.id} style={{
-                backgroundColor: 'white',
+                backgroundColor: 'var(--hs-bg)',
                 borderRadius: '6px',
                 padding: '15px',
                 marginBottom: '10px',
-                border: '1px solid #ddd'
+                border: '1px solid var(--hs-border-light)'
               }}>
                 <h4 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>{student.name}</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -317,7 +317,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                         ...prev,
                         [student.id]: { ...prev[student.id], startDate: e.target.value }
                       }))}
-                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px' }}
+                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                     />
                   </div>
                   <div>
@@ -331,7 +331,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                         ...prev,
                         [student.id]: { ...prev[student.id], deadline: e.target.value }
                       }))}
-                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px' }}
+                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                     />
                   </div>
                   <div>
@@ -345,7 +345,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                         ...prev,
                         [student.id]: { ...prev[student.id], completionDate: e.target.value }
                       }))}
-                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px' }}
+                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                     />
                   </div>
                   <div>
@@ -360,7 +360,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                         [student.id]: { ...prev[student.id], grade: e.target.value }
                       }))}
                       placeholder="e.g., A+, 95%, Pass"
-                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid #ccc', borderRadius: '4px' }}
+                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
                     />
                   </div>
                 </div>
@@ -382,7 +382,7 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                 width: '100%',
                 padding: '8px',
                 fontSize: '14px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 resize: 'vertical'
               }}

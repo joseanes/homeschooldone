@@ -41,7 +41,7 @@ const InvitationDialog: React.FC<InvitationDialogProps> = ({ email, subject, bod
       zIndex: 20000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '600px',
@@ -60,7 +60,7 @@ const InvitationDialog: React.FC<InvitationDialogProps> = ({ email, subject, bod
           }}>
             <strong>To:</strong>
             <span style={{ 
-              backgroundColor: '#f0f0f0', 
+              backgroundColor: 'var(--hs-bg-surface)', 
               padding: '4px 8px', 
               borderRadius: '4px',
               fontFamily: 'monospace'
@@ -89,7 +89,7 @@ const InvitationDialog: React.FC<InvitationDialogProps> = ({ email, subject, bod
         </div>
         
         <div style={{
-          backgroundColor: '#f8f9fa',
+          backgroundColor: 'var(--hs-bg-surface)',
           padding: '15px',
           borderRadius: '4px',
           marginBottom: '20px',
@@ -97,12 +97,12 @@ const InvitationDialog: React.FC<InvitationDialogProps> = ({ email, subject, bod
           fontSize: '14px',
           maxHeight: '300px',
           overflow: 'auto',
-          border: '1px solid #dee2e6'
+          border: '1px solid var(--hs-border-light)'
         }}>
           {body}
         </div>
         
-        <div style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+        <div style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginBottom: '20px' }}>
           <strong>Choose how to send:</strong>
           <ol style={{ marginTop: '10px', marginBottom: 0 }}>
             <li>Click "Open Email Client" to use your default email app</li>

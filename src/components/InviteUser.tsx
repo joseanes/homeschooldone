@@ -132,7 +132,7 @@ The HomeschoolDone Team`;
       zIndex: 10000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '400px',
@@ -153,7 +153,7 @@ The HomeschoolDone Team`;
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
               placeholder="user@example.com"
@@ -171,7 +171,7 @@ The HomeschoolDone Team`;
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px'
               }}
             >
@@ -181,7 +181,7 @@ The HomeschoolDone Team`;
             </select>
           </div>
 
-          <div style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+          <div style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginBottom: '20px' }}>
             <strong>Role Permissions:</strong>
             <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
               {role === 'parent' && (

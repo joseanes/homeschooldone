@@ -157,14 +157,14 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
       zIndex: 1000
     }}>
       <div style={{
-        backgroundColor: 'white',
+        backgroundColor: 'var(--hs-bg)',
         padding: '30px',
         borderRadius: '8px',
         maxWidth: '450px',
         width: '90%'
       }}>
         <h2>{title}</h2>
-        <p style={{ fontSize: '14px', color: '#666', marginTop: '-10px', marginBottom: '20px' }}>
+        <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginTop: '-10px', marginBottom: '20px' }}>
           {subtitle}
         </p>
         <form onSubmit={handleSubmit}>
@@ -181,9 +181,9 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
-                backgroundColor: (isEditing || !!preSelectedStudent) ? '#f0f0f0' : 'white'
+                backgroundColor: (isEditing || !!preSelectedStudent) ? 'var(--hs-bg-surface)' : 'var(--hs-bg-input)'
               }}
             >
               <option value="">Select a student...</option>
@@ -209,9 +209,9 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
-                backgroundColor: isEditing ? '#f0f0f0' : 'white'
+                backgroundColor: isEditing ? 'var(--hs-bg-surface)' : 'var(--hs-bg-input)'
               }}
               placeholder="e.g., Apply to XYZ College"
             />
@@ -229,11 +229,11 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
-                border: '1px solid #ccc',
+                border: '1px solid var(--hs-border-input)',
                 borderRadius: '4px',
                 minHeight: '60px',
                 resize: 'vertical',
-                backgroundColor: isEditing ? '#f0f0f0' : 'white'
+                backgroundColor: isEditing ? 'var(--hs-bg-surface)' : 'var(--hs-bg-input)'
               }}
               placeholder="Additional details..."
             />
@@ -254,7 +254,7 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
                   width: '100%',
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
               />
@@ -275,7 +275,7 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
                   width: '100%',
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
               />
@@ -297,12 +297,12 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
                   width: '100%',
                   padding: '8px',
                   fontSize: '16px',
-                  border: '1px solid #ccc',
+                  border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
               />
               {isEditing && (
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
                   Set the date to mark this task as completed
                 </div>
               )}

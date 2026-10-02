@@ -780,15 +780,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         {!showCreateForm ? (
           <button 
             onClick={() => setShowCreateForm(true)}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              backgroundColor: '#4285f4',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
+            className="hs-btn hs-btn--primary"
           >
             Create Your Homeschool
           </button>
@@ -816,31 +808,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
             <button 
               type="button"
               onClick={createHomeschool}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#4285f4',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                marginRight: '10px'
-              }}
+              className="hs-btn hs-btn--primary" style={{ marginRight: '10px' }}
             >
               Create
             </button>
             <button 
               type="button"
               onClick={() => setShowCreateForm(false)}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: 'var(--hs-btn-neutral)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
+              className="hs-btn hs-btn--secondary"
             >
               Cancel
             </button>

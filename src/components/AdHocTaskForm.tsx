@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { collection, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Person, AdHocTask } from '../types';
+import Modal from './Modal';
 
 interface AdHocTaskFormProps {
   homeschoolId: string;
@@ -144,208 +145,172 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
     : 'Log a one-off task or activity (e.g., college application, project, field trip)';
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: 'var(--hs-bg)',
-        padding: '30px',
-        borderRadius: '8px',
-        maxWidth: '450px',
-        width: '90%'
-      }}>
-        <h2>{title}</h2>
-        <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginTop: '-10px', marginBottom: '20px' }}>
-          {subtitle}
-        </p>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Student *
-            </label>
-            <select
-              value={selectedStudent}
-              onChange={(e) => setSelectedStudent(e.target.value)}
-              required
-              disabled={isEditing || !!preSelectedStudent}
-              style={{
-                width: '100%',
-                padding: '8px',
-                fontSize: '16px',
-                border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px',
-                backgroundColor: (isEditing || !!preSelectedStudent) ? 'var(--hs-bg-surface)' : 'var(--hs-bg-input)'
-              }}
-            >
-              <option value="">Select a student...</option>
-              {students.map(student => (
-                <option key={student.id} value={student.id}>
-                  {student.name}
-                </option>
-              ))}
-            </select>
-          </div>
+    <Modal maxWidth="450px">
+      <h2>{title}</h2>
+      <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginTop: '-10px', marginBottom: '20px' }}>
+        {subtitle}
+      </p>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Student *
+          </label>
+          <select
+            value={selectedStudent}
+            onChange={(e) => setSelectedStudent(e.target.value)}
+            required
+            disabled={isEditing || !!preSelectedStudent}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px',
+              backgroundColor: (isEditing || !!preSelectedStudent) ? 'var(--hs-bg-surface)' : 'var(--hs-bg-input)'
+            }}
+          >
+            <option value="">Select a student...</option>
+            {students.map(student => (
+              <option key={student.id} value={student.id}>
+                {student.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Task Name *
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            disabled={isEditing}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px',
+              backgroundColor: isEditing ? 'var(--hs-bg-surface)' : 'var(--hs-bg-input)'
+            }}
+            placeholder="e.g., Apply to XYZ College"
+          />
+        </div>
+
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Description (optional)
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={isEditing}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px',
+              minHeight: '60px',
+              resize: 'vertical',
+              backgroundColor: isEditing ? 'var(--hs-bg-surface)' : 'var(--hs-bg-input)'
+            }}
+            placeholder="Additional details..."
+          />
+        </div>
+
+        {/* Start Date - shown in assign mode or when creating */}
+        {!isEditing && (
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px' }}>
-              Task Name *
+              Start Date *
             </label>
             <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
               required
-              disabled={isEditing}
               style={{
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
                 border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px',
-                backgroundColor: isEditing ? 'var(--hs-bg-surface)' : 'var(--hs-bg-input)'
+                borderRadius: '4px'
               }}
-              placeholder="e.g., Apply to XYZ College"
             />
           </div>
+        )}
 
+        {/* Target Date - shown in assign mode or when creating */}
+        {(isAssignMode || !isEditing) && (
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px' }}>
-              Description (optional)
+              Target Date
             </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={isEditing}
+            <input
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
               style={{
                 width: '100%',
                 padding: '8px',
                 fontSize: '16px',
                 border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px',
-                minHeight: '60px',
-                resize: 'vertical',
-                backgroundColor: isEditing ? 'var(--hs-bg-surface)' : 'var(--hs-bg-input)'
+                borderRadius: '4px'
               }}
-              placeholder="Additional details..."
             />
           </div>
+        )}
 
-          {/* Start Date - shown in assign mode or when creating */}
-          {!isEditing && (
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Start Date *
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  fontSize: '16px',
-                  border: '1px solid var(--hs-border-input)',
-                  borderRadius: '4px'
-                }}
-              />
-            </div>
-          )}
-
-          {/* Target Date - shown in assign mode or when creating */}
-          {(isAssignMode || !isEditing) && (
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Target Date
-              </label>
-              <input
-                type="date"
-                value={targetDate}
-                onChange={(e) => setTargetDate(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  fontSize: '16px',
-                  border: '1px solid var(--hs-border-input)',
-                  borderRadius: '4px'
-                }}
-              />
-            </div>
-          )}
-
-          {/* Date Completed - shown in record mode or when editing an existing task */}
-          {(!isAssignMode || isEditing) && (
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Date Completed {isEditing ? '' : '*'}
-              </label>
-              <input
-                type="date"
-                value={completedDate}
-                onChange={(e) => setCompletedDate(e.target.value)}
-                required={!isAssignMode && !isEditing}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  fontSize: '16px',
-                  border: '1px solid var(--hs-border-input)',
-                  borderRadius: '4px'
-                }}
-              />
-              {isEditing && (
-                <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
-                  Set the date to mark this task as completed
-                </div>
-              )}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-            <button
-              type="submit"
-              disabled={saving || !name.trim() || !selectedStudent}
+        {/* Date Completed - shown in record mode or when editing an existing task */}
+        {(!isAssignMode || isEditing) && (
+          <div style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>
+              Date Completed {isEditing ? '' : '*'}
+            </label>
+            <input
+              type="date"
+              value={completedDate}
+              onChange={(e) => setCompletedDate(e.target.value)}
+              required={!isAssignMode && !isEditing}
               style={{
-                padding: '10px 20px',
+                width: '100%',
+                padding: '8px',
                 fontSize: '16px',
-                backgroundColor: isAssignMode ? '#17a2b8' : '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving || !name.trim() || !selectedStudent ? 0.6 : 1
+                border: '1px solid var(--hs-border-input)',
+                borderRadius: '4px'
               }}
-            >
-              {saving ? 'Saving...' : isEditing ? 'Save' : isAssignMode ? 'Assign Task' : 'Save Activity'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#666',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
+            />
+            {isEditing && (
+              <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
+                Set the date to mark this task as completed
+              </div>
+            )}
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button
+            type="submit"
+            disabled={saving || !name.trim() || !selectedStudent}
+            className={`hs-btn hs-btn--${isAssignMode ? 'primary' : 'success'}`}
+          >
+            {saving ? 'Saving...' : isEditing ? 'Save' : isAssignMode ? 'Assign Task' : 'Save Activity'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="hs-btn hs-btn--secondary"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

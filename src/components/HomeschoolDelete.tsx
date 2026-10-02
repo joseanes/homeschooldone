@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { doc, collection, query, where, getDocs, writeBatch, deleteDoc, DocumentReference } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool } from '../types';
+import Modal from './Modal';
 
 interface HomeschoolDeleteProps {
   homeschool: Homeschool;
@@ -56,149 +57,90 @@ const HomeschoolDelete: React.FC<HomeschoolDeleteProps> = ({ homeschool, onClose
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 2000
-    }}>
-      <div style={{
-        backgroundColor: 'var(--hs-bg)',
-        padding: '30px',
-        borderRadius: '8px',
-        maxWidth: '500px',
-        width: '90%'
-      }}>
-        <h2 style={{ color: '#dc3545', marginTop: 0 }}>⚠️ Delete Homeschool</h2>
-        
-        {showWarning ? (
-          <div>
-            <p><strong>This action cannot be undone!</strong></p>
-            <p>Deleting "{homeschool.name}" will permanently remove:</p>
-            <ul style={{ color: '#dc3545', margin: '15px 0', paddingLeft: '20px' }}>
-              <li>All students ({homeschool.studentIds?.length || 0})</li>
-              <li>All activities and goals</li>
-              <li>All recorded activity instances</li>
-              <li>All progress data and reports</li>
-            </ul>
-            <p><strong>Are you sure you want to continue?</strong></p>
-            
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button
-                onClick={() => setShowWarning(false)}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Yes, Continue
-              </button>
-              <button
-                onClick={onClose}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  backgroundColor: '#666',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-            </div>
+    <Modal>
+      <h2 style={{ color: '#dc3545', marginTop: 0 }}>⚠️ Delete Homeschool</h2>
+      
+      {showWarning ? (
+        <div>
+          <p><strong>This action cannot be undone!</strong></p>
+          <p>Deleting "{homeschool.name}" will permanently remove:</p>
+          <ul style={{ color: '#dc3545', margin: '15px 0', paddingLeft: '20px' }}>
+            <li>All students ({homeschool.studentIds?.length || 0})</li>
+            <li>All activities and goals</li>
+            <li>All recorded activity instances</li>
+            <li>All progress data and reports</li>
+          </ul>
+          <p><strong>Are you sure you want to continue?</strong></p>
+          
+          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            <button
+              onClick={() => setShowWarning(false)}
+              className="hs-btn hs-btn--danger"
+            >
+              Yes, Continue
+            </button>
+            <button
+              onClick={onClose}
+              className="hs-btn hs-btn--secondary"
+            >
+              Cancel
+            </button>
           </div>
-        ) : (
-          <div>
-            <p>To confirm deletion, please type the exact name of the homeschool:</p>
-            <p style={{ 
-              fontWeight: 'bold', 
-              backgroundColor: 'var(--hs-bg-surface)', 
-              padding: '10px', 
+        </div>
+      ) : (
+        <div>
+          <p>To confirm deletion, please type the exact name of the homeschool:</p>
+          <p style={{ 
+            fontWeight: 'bold', 
+            backgroundColor: 'var(--hs-bg-surface)', 
+            padding: '10px', 
+            borderRadius: '4px',
+            fontFamily: 'monospace'
+          }}>
+            {homeschool.name}
+          </p>
+          
+          <input
+            type="text"
+            value={confirmationName}
+            onChange={(e) => setConfirmationName(e.target.value)}
+            placeholder="Type the homeschool name here..."
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '16px',
+              border: '2px solid #dc3545',
               borderRadius: '4px',
-              fontFamily: 'monospace'
-            }}>
-              {homeschool.name}
-            </p>
-            
-            <input
-              type="text"
-              value={confirmationName}
-              onChange={(e) => setConfirmationName(e.target.value)}
-              placeholder="Type the homeschool name here..."
-              style={{
-                width: '100%',
-                padding: '10px',
-                fontSize: '16px',
-                border: '2px solid #dc3545',
-                borderRadius: '4px',
-                marginBottom: '20px'
-              }}
-            />
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={handleDelete}
-                disabled={deleting || confirmationName !== homeschool.name}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  backgroundColor: confirmationName === homeschool.name ? '#dc3545' : '#ccc',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: (deleting || confirmationName !== homeschool.name) ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {deleting ? 'Deleting...' : 'Delete Forever'}
-              </button>
-              <button
-                onClick={() => setShowWarning(true)}
-                disabled={deleting}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  backgroundColor: '#666',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: deleting ? 'not-allowed' : 'pointer'
-                }}
-              >
-                Back
-              </button>
-              <button
-                onClick={onClose}
-                disabled={deleting}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: deleting ? 'not-allowed' : 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-            </div>
+              marginBottom: '20px'
+            }}
+          />
+          
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={handleDelete}
+              disabled={deleting || confirmationName !== homeschool.name}
+              className="hs-btn hs-btn--danger"
+            >
+              {deleting ? 'Deleting...' : 'Delete Forever'}
+            </button>
+            <button
+              onClick={() => setShowWarning(true)}
+              disabled={deleting}
+              className="hs-btn hs-btn--secondary"
+            >
+              Back
+            </button>
+            <button
+              onClick={onClose}
+              disabled={deleting}
+              className="hs-btn hs-btn--success"
+            >
+              Cancel
+            </button>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </Modal>
   );
 };
 

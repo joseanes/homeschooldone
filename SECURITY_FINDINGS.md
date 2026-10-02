@@ -37,7 +37,7 @@ Issue 16 remains open.
 **Files:** `src/firebase.ts:6–14`, `ios-tvos/HomeschoolDone/HomeschoolDone/GoogleService-Info.plist`  
 **Impact:** Without Firestore rules, an exposed API key combined with an open database means anyone who finds it can read/write all data. The key is in git history and the built JS bundle.  
 **Fix:** Primary mitigation is issue 1 (Firestore rules). Secondary: restrict the web API key in Google Cloud Console to only allow requests from `homeschooldone.web.app` and `homeschooldone.firebaseapp.com`.  
-**Status:** Mitigated by the rules once deployed. Key restriction still to do in Google Cloud Console.
+**Status:** Mitigated by the rules once deployed. Restricting the key to the app's domains is **on hold (TODO)**. The tvOS app currently uses the web key, so it needs its own key first. Plan in `docs/api-keys.md`.
 
 ---
 

@@ -107,5 +107,6 @@ function change works with the old rules too.
 
 ## Still manual
 
-- Restrict the web API key to the app's domains in Google Cloud Console →
-  APIs & Services → Credentials (security finding #7).
+- TODO (on hold): restrict the web API key to the app's domains (security
+  finding #7). See `docs/api-keys.md` for the order of steps; the tvOS app
+  must get its own key first.

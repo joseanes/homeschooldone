@@ -23,3 +23,8 @@ yarn-debug.log*
 yarn-error.log*
 server.log
 .firebase/
+
+# Firestore rules/function test harness
+/tests/firestore/node_modules
+firebase-debug.log
+firestore-debug.log

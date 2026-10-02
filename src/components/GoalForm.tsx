@@ -109,10 +109,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
       <h2>Create Goal</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="goal-form-goal-name" style={{ display: 'block', marginBottom: '5px' }}>
             Goal Name *
           </label>
-          <input
+          <input id="goal-form-goal-name"
             type="text"
             value={goalName}
             onChange={(e) => setGoalName(e.target.value)}
@@ -172,10 +172,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
         </div>
 
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="goal-form-select-activity" style={{ display: 'block', marginBottom: '5px' }}>
             Select Activity *
           </label>
-          <select
+          <select id="goal-form-select-activity"
             value={selectedActivity}
             onChange={(e) => setSelectedActivity(e.target.value)}
             required
@@ -216,10 +216,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
             </div>
 
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
+              <label htmlFor="goal-form-times-per-week" style={{ display: 'block', marginBottom: '5px' }}>
                 Times per Week
               </label>
-              <input
+              <input id="goal-form-times-per-week"
                 type="number"
                 value={timesPerWeek}
                 onChange={(e) => setTimesPerWeek(e.target.value ? Number(e.target.value) : '')}
@@ -237,10 +237,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
             </div>
 
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
+              <label htmlFor="goal-form-minutes-per-session" style={{ display: 'block', marginBottom: '5px' }}>
                 Minutes per Session {(selectedActivityData.requiresTimeTracking || selectedActivityData.progressReportingStyle.timesTotal) ? '*' : '(optional)'}
               </label>
-              <input
+              <input id="goal-form-minutes-per-session"
                 type="number"
                 value={minutesPerSession}
                 onChange={(e) => setMinutesPerSession(e.target.value ? Number(e.target.value) : '')}
@@ -263,10 +263,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
             {selectedActivityData.progressReportingStyle.percentageCompletion && (
               <>
                 <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>
+                  <label htmlFor="goal-form-percentage-goal" style={{ display: 'block', marginBottom: '5px' }}>
                     Percentage Goal
                   </label>
-                  <input
+                  <input id="goal-form-percentage-goal"
                     type="number"
                     value={percentageGoal}
                     onChange={(e) => setPercentageGoal(e.target.value ? Number(e.target.value) : '')}
@@ -287,10 +287,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
                   </div>
                 </div>
                 <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>
+                  <label htmlFor="goal-form-daily-percentage-increase-goal" style={{ display: 'block', marginBottom: '5px' }}>
                     Daily Percentage Increase Goal (optional)
                   </label>
-                  <input
+                  <input id="goal-form-daily-percentage-increase-goal"
                     type="number"
                     value={targetPercentage}
                     onChange={(e) => setTargetPercentage(e.target.value ? Number(e.target.value) : '')}
@@ -315,10 +315,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
 
             {selectedActivityData.progressReportingStyle.progressCount && (
               <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>
+                <label htmlFor="goal-form-target" style={{ display: 'block', marginBottom: '5px' }}>
                   Target {selectedActivityData.progressCountName || 'Count'}
                 </label>
-                <input
+                <input id="goal-form-target"
                   type="number"
                   value={targetCount}
                   onChange={(e) => setTargetCount(e.target.value ? Number(e.target.value) : '')}
@@ -355,8 +355,8 @@ const GoalForm: React.FC<GoalFormProps> = ({
                       <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>{student.name}</div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                         <div>
-                          <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--hs-text-label)' }}>Start Date</label>
-                          <input
+                          <label htmlFor={`goal-form-start-date-${sid}`} style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--hs-text-label)' }}>Start Date</label>
+                          <input id={`goal-form-start-date-${sid}`}
                             type="date"
                             value={studentDates[sid]?.startDate || ''}
                             onChange={(e) => setStudentDates(prev => ({
@@ -367,8 +367,8 @@ const GoalForm: React.FC<GoalFormProps> = ({
                           />
                         </div>
                         <div>
-                          <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--hs-text-label)' }}>Deadline</label>
-                          <input
+                          <label htmlFor={`goal-form-deadline-${sid}`} style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--hs-text-label)' }}>Deadline</label>
+                          <input id={`goal-form-deadline-${sid}`}
                             type="date"
                             value={studentDates[sid]?.deadline || ''}
                             onChange={(e) => setStudentDates(prev => ({
@@ -387,10 +387,10 @@ const GoalForm: React.FC<GoalFormProps> = ({
 
             {/* Description */}
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
+              <label htmlFor="goal-form-description-optional" style={{ display: 'block', marginBottom: '5px' }}>
                 Description (optional)
               </label>
-              <textarea
+              <textarea id="goal-form-description-optional"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Enter a description for the transcript..."

@@ -140,10 +140,10 @@ const StudentEdit: React.FC<StudentEditProps> = ({ student, homeschool, inviterN
         <h2>Edit Student</h2>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-edit-student-name" style={{ display: 'block', marginBottom: '5px' }}>
               Student Name *
             </label>
-            <input
+            <input id="student-edit-student-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -160,10 +160,10 @@ const StudentEdit: React.FC<StudentEditProps> = ({ student, homeschool, inviterN
           </div>
           
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-edit-email-address-optional" style={{ display: 'block', marginBottom: '5px' }}>
               Email Address (optional)
             </label>
-            <input
+            <input id="student-edit-email-address-optional"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -222,10 +222,10 @@ const StudentEdit: React.FC<StudentEditProps> = ({ student, homeschool, inviterN
           </div>
           
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-edit-mobile-number-optional" style={{ display: 'block', marginBottom: '5px' }}>
               Mobile Number (optional)
             </label>
-            <input
+            <input id="student-edit-mobile-number-optional"
               type="tel"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
@@ -244,10 +244,10 @@ const StudentEdit: React.FC<StudentEditProps> = ({ student, homeschool, inviterN
           </div>
           
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-edit-date-of-birth-optional" style={{ display: 'block', marginBottom: '5px' }}>
               Date of Birth (optional)
             </label>
-            <input
+            <input id="student-edit-date-of-birth-optional"
               type="date"
               value={dateOfBirth}
               onChange={(e) => setDateOfBirth(e.target.value)}
@@ -262,10 +262,10 @@ const StudentEdit: React.FC<StudentEditProps> = ({ student, homeschool, inviterN
           </div>
           
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="student-edit-daily-work-hours-goal-optional" style={{ display: 'block', marginBottom: '5px' }}>
               Daily Work Hours Goal (optional)
             </label>
-            <input
+            <input id="student-edit-daily-work-hours-goal-optional"
               type="number"
               value={dailyWorkHoursGoal}
               onChange={(e) => setDailyWorkHoursGoal(e.target.value)}

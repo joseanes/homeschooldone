@@ -152,10 +152,10 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
       </p>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="ad-hoc-task-form-student" style={{ display: 'block', marginBottom: '5px' }}>
             Student *
           </label>
-          <select
+          <select id="ad-hoc-task-form-student"
             value={selectedStudent}
             onChange={(e) => setSelectedStudent(e.target.value)}
             required
@@ -179,10 +179,10 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
         </div>
 
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="ad-hoc-task-form-task-name" style={{ display: 'block', marginBottom: '5px' }}>
             Task Name *
           </label>
-          <input
+          <input id="ad-hoc-task-form-task-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -201,10 +201,10 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
         </div>
 
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="ad-hoc-task-form-description-optional" style={{ display: 'block', marginBottom: '5px' }}>
             Description (optional)
           </label>
-          <textarea
+          <textarea id="ad-hoc-task-form-description-optional"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={isEditing}
@@ -225,10 +225,10 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
         {/* Start Date - shown in assign mode or when creating */}
         {!isEditing && (
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="ad-hoc-task-form-start-date" style={{ display: 'block', marginBottom: '5px' }}>
               Start Date *
             </label>
-            <input
+            <input id="ad-hoc-task-form-start-date"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -247,10 +247,10 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
         {/* Target Date - shown in assign mode or when creating */}
         {(isAssignMode || !isEditing) && (
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="ad-hoc-task-form-target-date" style={{ display: 'block', marginBottom: '5px' }}>
               Target Date
             </label>
-            <input
+            <input id="ad-hoc-task-form-target-date"
               type="date"
               value={targetDate}
               onChange={(e) => setTargetDate(e.target.value)}
@@ -268,10 +268,10 @@ const AdHocTaskForm: React.FC<AdHocTaskFormProps> = ({
         {/* Date Completed - shown in record mode or when editing an existing task */}
         {(!isAssignMode || isEditing) && (
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="ad-hoc-task-form-date-completed" style={{ display: 'block', marginBottom: '5px' }}>
               Date Completed {isEditing ? '' : '*'}
             </label>
-            <input
+            <input id="ad-hoc-task-form-date-completed"
               type="date"
               value={completedDate}
               onChange={(e) => setCompletedDate(e.target.value)}

@@ -65,10 +65,10 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
       <h2>Create Activity</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="activity-form-activity-name" style={{ display: 'block', marginBottom: '5px' }}>
             Activity Name *
           </label>
-          <input
+          <input id="activity-form-activity-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -85,10 +85,10 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
         </div>
         
         <div style={{ marginBottom: '15px', position: 'relative' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="activity-form-subject-area" style={{ display: 'block', marginBottom: '5px' }}>
             Subject/Area *
           </label>
-          <input
+          <input id="activity-form-subject-area"
             type="text"
             value={subject}
             onChange={(e) => {
@@ -145,10 +145,10 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ homeschoolId, activities, o
         </div>
 
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="activity-form-description" style={{ display: 'block', marginBottom: '5px' }}>
             Description
           </label>
-          <textarea
+          <textarea id="activity-form-description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             style={{

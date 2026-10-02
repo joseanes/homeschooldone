@@ -124,10 +124,10 @@ The HomeschoolDone Team`;
       <h2>Invite User to {homeschool.name}</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="invite-user-email-address" style={{ display: 'block', marginBottom: '5px' }}>
             Email Address *
           </label>
-          <input
+          <input id="invite-user-email-address"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -144,10 +144,10 @@ The HomeschoolDone Team`;
         </div>
         
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="invite-user-role" style={{ display: 'block', marginBottom: '5px' }}>
             Role *
           </label>
-          <select
+          <select id="invite-user-role"
             value={role}
             onChange={(e) => setRole(e.target.value as any)}
             style={{

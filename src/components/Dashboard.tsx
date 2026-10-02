@@ -24,6 +24,7 @@ import DashboardView from './DashboardView';
 import StudentDashboard from './StudentDashboard';
 import SettingsModal from './SettingsModal';
 import AdHocTaskForm from './AdHocTaskForm';
+import { buttonRole } from '../utils/a11y';
 
 interface DashboardProps {
   user: User;
@@ -787,10 +788,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
         ) : (
           <form onSubmit={createHomeschool} style={{ marginTop: '20px' }}>
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
+              <label htmlFor="dashboard-homeschool-name" style={{ display: 'block', marginBottom: '5px' }}>
                 Homeschool Name:
               </label>
-              <input
+              <input id="dashboard-homeschool-name"
                 type="text"
                 value={homeschoolName}
                 onChange={(e) => setHomeschoolName(e.target.value)}
@@ -1199,7 +1200,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                         return (
                           <div
                             key={goal.id}
-                            onClick={() => handleOpenRecordActivity(goal.id, student.id)}
+                            {...buttonRole(() => handleOpenRecordActivity(goal.id, student.id))}
                             style={{
                               display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
                               backgroundColor: status.backgroundColor, color: status.textColor,
@@ -1263,14 +1264,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                         return (
                           <div
                             key={`task-${task.id}`}
-                            onClick={() => {
-                              if (!isCompleted) {
-                                setAdHocTaskMode('assign');
-                                setAdHocTaskStudent(student.id);
-                                setEditingAdHocTask(task);
-                                setShowAdHocTaskForm(true);
-                              }
-                            }}
+                            {...(!isCompleted && buttonRole(() => {
+                              setAdHocTaskMode('assign');
+                              setAdHocTaskStudent(student.id);
+                              setEditingAdHocTask(task);
+                              setShowAdHocTaskForm(true);
+                            }))}
                             style={{
                               display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
                               backgroundColor: isCompleted ? 'var(--hs-task-complete-bg)' : 'var(--hs-task-pending-bg)',

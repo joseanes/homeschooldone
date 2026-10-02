@@ -134,10 +134,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
 
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="goal-edit-goal-name" style={{ display: 'block', marginBottom: '5px' }}>
             Goal Name
           </label>
-          <input
+          <input id="goal-edit-goal-name"
             type="text"
             value={goalName}
             onChange={(e) => setGoalName(e.target.value)}
@@ -153,10 +153,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
         </div>
 
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="goal-edit-times-per-week" style={{ display: 'block', marginBottom: '5px' }}>
             Times per Week
           </label>
-          <input
+          <input id="goal-edit-times-per-week"
             type="number"
             value={timesPerWeek}
             onChange={(e) => setTimesPerWeek(e.target.value ? Number(e.target.value) : '')}
@@ -174,10 +174,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
         </div>
 
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="goal-edit-minutes-per-session" style={{ display: 'block', marginBottom: '5px' }}>
             Minutes per Session {(activity.requiresTimeTracking || activity.progressReportingStyle.timesTotal) ? '*' : '(optional)'}
           </label>
-          <input
+          <input id="goal-edit-minutes-per-session"
             type="number"
             value={minutesPerSession}
             onChange={(e) => setMinutesPerSession(e.target.value ? Number(e.target.value) : '')}
@@ -200,10 +200,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
         {activity.progressReportingStyle.percentageCompletion && (
           <>
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
+              <label htmlFor="goal-edit-percentage-goal" style={{ display: 'block', marginBottom: '5px' }}>
                 Percentage Goal
               </label>
-              <input
+              <input id="goal-edit-percentage-goal"
                 type="number"
                 value={percentageGoal}
                 onChange={(e) => setPercentageGoal(e.target.value ? Number(e.target.value) : '')}
@@ -224,10 +224,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
               </div>
             </div>
             <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
+              <label htmlFor="goal-edit-daily-percentage-increase-goal" style={{ display: 'block', marginBottom: '5px' }}>
                 Daily Percentage Increase Goal (optional)
               </label>
-              <input
+              <input id="goal-edit-daily-percentage-increase-goal"
                 type="number"
                 value={dailyPercentageIncrease}
                 onChange={(e) => setDailyPercentageIncrease(e.target.value ? Number(e.target.value) : '')}
@@ -249,10 +249,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
 
         {activity.progressReportingStyle.progressCount && (
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+            <label htmlFor="goal-edit-target" style={{ display: 'block', marginBottom: '5px' }}>
               Target {activity.progressCountName || 'Count'}
             </label>
-            <input
+            <input id="goal-edit-target"
               type="number"
               value={targetCount}
               onChange={(e) => setTargetCount(e.target.value ? Number(e.target.value) : '')}
@@ -288,10 +288,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
               <h4 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>{student.name}</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                  <label htmlFor={`goal-edit-start-date-optional-${student.id}`} style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
                     Start Date (optional)
                   </label>
-                  <input
+                  <input id={`goal-edit-start-date-optional-${student.id}`}
                     type="date"
                     value={studentCompletions[student.id]?.startDate || ''}
                     onChange={(e) => setStudentCompletions(prev => ({
@@ -302,10 +302,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                  <label htmlFor={`goal-edit-deadline-optional-${student.id}`} style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
                     Deadline (optional)
                   </label>
-                  <input
+                  <input id={`goal-edit-deadline-optional-${student.id}`}
                     type="date"
                     value={studentCompletions[student.id]?.deadline || ''}
                     onChange={(e) => setStudentCompletions(prev => ({
@@ -316,10 +316,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                  <label htmlFor={`goal-edit-completion-date-${student.id}`} style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
                     Completion Date
                   </label>
-                  <input
+                  <input id={`goal-edit-completion-date-${student.id}`}
                     type="date"
                     value={studentCompletions[student.id]?.completionDate || ''}
                     onChange={(e) => setStudentCompletions(prev => ({
@@ -330,10 +330,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                  <label htmlFor={`goal-edit-grade-score-${student.id}`} style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
                     Grade/Score
                   </label>
-                  <input
+                  <input id={`goal-edit-grade-score-${student.id}`}
                     type="text"
                     value={studentCompletions[student.id]?.grade || ''}
                     onChange={(e) => setStudentCompletions(prev => ({
@@ -351,10 +351,10 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
 
         {/* Description */}
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px' }}>
+          <label htmlFor="goal-edit-description-optional" style={{ display: 'block', marginBottom: '5px' }}>
             Description (optional)
           </label>
-          <textarea
+          <textarea id="goal-edit-description-optional"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Enter a description for the transcript..."

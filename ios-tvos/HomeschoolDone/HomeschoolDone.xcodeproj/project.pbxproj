@@ -1,0 +1,1061 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B843EE842F34FF0A00D59AD0 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B843EE832F34FF0A00D59AD0 /* FirebaseAuth */; };
+		B843EE862F34FF0A00D59AD0 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = B843EE852F34FF0A00D59AD0 /* FirebaseFirestore */; };
+		B843EE892F34FF1A00D59AD0 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B843EE882F34FF1A00D59AD0 /* FirebaseAuth */; };
+		B843EE8B2F34FF1A00D59AD0 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = B843EE8A2F34FF1A00D59AD0 /* FirebaseFirestore */; };
+		B8BE9CB22F35612200B7F8C6 /* Podfile in Resources */ = {isa = PBXBuildFile; fileRef = B8BE9CB12F35612200B7F8C6 /* Podfile */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B843EE392F34FB6100D59AD0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B843EE212F34FB5F00D59AD0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B843EE282F34FB5F00D59AD0;
+			remoteInfo = HomeschoolDone;
+		};
+		B843EE432F34FB6100D59AD0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B843EE212F34FB5F00D59AD0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B843EE282F34FB5F00D59AD0;
+			remoteInfo = HomeschoolDone;
+		};
+		B843EE682F34FDA200D59AD0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B843EE212F34FB5F00D59AD0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B843EE582F34FDA100D59AD0;
+			remoteInfo = "HomeschoolDone-tvOS";
+		};
+		B843EE722F34FDA200D59AD0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = B843EE212F34FB5F00D59AD0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B843EE582F34FDA100D59AD0;
+			remoteInfo = "HomeschoolDone-tvOS";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		B843EE292F34FB6000D59AD0 /* HomeschoolDone.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HomeschoolDone.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B843EE382F34FB6100D59AD0 /* HomeschoolDoneTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HomeschoolDoneTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B843EE422F34FB6100D59AD0 /* HomeschoolDoneUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HomeschoolDoneUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B843EE592F34FDA100D59AD0 /* HomeschoolDone-tvOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "HomeschoolDone-tvOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B843EE672F34FDA200D59AD0 /* HomeschoolDone-tvOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "HomeschoolDone-tvOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B843EE712F34FDA200D59AD0 /* HomeschoolDone-tvOSUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "HomeschoolDone-tvOSUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B8BE9CB12F35612200B7F8C6 /* Podfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = Podfile; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		B843EE2B2F34FB6000D59AD0 /* HomeschoolDone */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HomeschoolDone;
+			sourceTree = "<group>";
+		};
+		B843EE3B2F34FB6100D59AD0 /* HomeschoolDoneTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HomeschoolDoneTests;
+			sourceTree = "<group>";
+		};
+		B843EE452F34FB6100D59AD0 /* HomeschoolDoneUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = HomeschoolDoneUITests;
+			sourceTree = "<group>";
+		};
+		B843EE5A2F34FDA100D59AD0 /* HomeschoolDone-tvOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "HomeschoolDone-tvOS";
+			sourceTree = "<group>";
+		};
+		B843EE6A2F34FDA200D59AD0 /* HomeschoolDone-tvOSTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "HomeschoolDone-tvOSTests";
+			sourceTree = "<group>";
+		};
+		B843EE742F34FDA200D59AD0 /* HomeschoolDone-tvOSUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "HomeschoolDone-tvOSUITests";
+			sourceTree = "<group>";
+		};
+		B8BE9CB32F35614400B7F8C6 /* SharedModels */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SharedModels;
+			sourceTree = "<group>";
+		};
+		B8BE9CB42F35614500B7F8C6 /* FirebaseService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FirebaseService;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B843EE262F34FB5F00D59AD0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B843EE842F34FF0A00D59AD0 /* FirebaseAuth in Frameworks */,
+				B843EE862F34FF0A00D59AD0 /* FirebaseFirestore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE352F34FB6100D59AD0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE3F2F34FB6100D59AD0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE562F34FDA100D59AD0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B843EE892F34FF1A00D59AD0 /* FirebaseAuth in Frameworks */,
+				B843EE8B2F34FF1A00D59AD0 /* FirebaseFirestore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE642F34FDA200D59AD0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE6E2F34FDA200D59AD0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B843EE202F34FB5F00D59AD0 = {
+			isa = PBXGroup;
+			children = (
+				B843EE2B2F34FB6000D59AD0 /* HomeschoolDone */,
+				B843EE3B2F34FB6100D59AD0 /* HomeschoolDoneTests */,
+				B843EE452F34FB6100D59AD0 /* HomeschoolDoneUITests */,
+				B843EE5A2F34FDA100D59AD0 /* HomeschoolDone-tvOS */,
+				B843EE6A2F34FDA200D59AD0 /* HomeschoolDone-tvOSTests */,
+				B843EE742F34FDA200D59AD0 /* HomeschoolDone-tvOSUITests */,
+				B843EE2A2F34FB6000D59AD0 /* Products */,
+				B8BE9CB12F35612200B7F8C6 /* Podfile */,
+				B860784D2F35666D0005323D /* Recovered References */,
+			);
+			sourceTree = "<group>";
+		};
+		B843EE2A2F34FB6000D59AD0 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B843EE292F34FB6000D59AD0 /* HomeschoolDone.app */,
+				B843EE382F34FB6100D59AD0 /* HomeschoolDoneTests.xctest */,
+				B843EE422F34FB6100D59AD0 /* HomeschoolDoneUITests.xctest */,
+				B843EE592F34FDA100D59AD0 /* HomeschoolDone-tvOS.app */,
+				B843EE672F34FDA200D59AD0 /* HomeschoolDone-tvOSTests.xctest */,
+				B843EE712F34FDA200D59AD0 /* HomeschoolDone-tvOSUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B860784D2F35666D0005323D /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				B8BE9CB32F35614400B7F8C6 /* SharedModels */,
+				B8BE9CB42F35614500B7F8C6 /* FirebaseService */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		B843EE282F34FB5F00D59AD0 /* HomeschoolDone */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B843EE4C2F34FB6100D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDone" */;
+			buildPhases = (
+				B843EE252F34FB5F00D59AD0 /* Sources */,
+				B843EE262F34FB5F00D59AD0 /* Frameworks */,
+				B843EE272F34FB5F00D59AD0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B843EE2B2F34FB6000D59AD0 /* HomeschoolDone */,
+			);
+			name = HomeschoolDone;
+			packageProductDependencies = (
+				B843EE832F34FF0A00D59AD0 /* FirebaseAuth */,
+				B843EE852F34FF0A00D59AD0 /* FirebaseFirestore */,
+			);
+			productName = HomeschoolDone;
+			productReference = B843EE292F34FB6000D59AD0 /* HomeschoolDone.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B843EE372F34FB6100D59AD0 /* HomeschoolDoneTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B843EE4F2F34FB6100D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDoneTests" */;
+			buildPhases = (
+				B843EE342F34FB6100D59AD0 /* Sources */,
+				B843EE352F34FB6100D59AD0 /* Frameworks */,
+				B843EE362F34FB6100D59AD0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B843EE3A2F34FB6100D59AD0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B843EE3B2F34FB6100D59AD0 /* HomeschoolDoneTests */,
+			);
+			name = HomeschoolDoneTests;
+			packageProductDependencies = (
+			);
+			productName = HomeschoolDoneTests;
+			productReference = B843EE382F34FB6100D59AD0 /* HomeschoolDoneTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B843EE412F34FB6100D59AD0 /* HomeschoolDoneUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B843EE522F34FB6100D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDoneUITests" */;
+			buildPhases = (
+				B843EE3E2F34FB6100D59AD0 /* Sources */,
+				B843EE3F2F34FB6100D59AD0 /* Frameworks */,
+				B843EE402F34FB6100D59AD0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B843EE442F34FB6100D59AD0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B843EE452F34FB6100D59AD0 /* HomeschoolDoneUITests */,
+			);
+			name = HomeschoolDoneUITests;
+			packageProductDependencies = (
+			);
+			productName = HomeschoolDoneUITests;
+			productReference = B843EE422F34FB6100D59AD0 /* HomeschoolDoneUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		B843EE582F34FDA100D59AD0 /* HomeschoolDone-tvOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B843EE792F34FDA200D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDone-tvOS" */;
+			buildPhases = (
+				B843EE552F34FDA100D59AD0 /* Sources */,
+				B843EE562F34FDA100D59AD0 /* Frameworks */,
+				B843EE572F34FDA100D59AD0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B843EE5A2F34FDA100D59AD0 /* HomeschoolDone-tvOS */,
+				B8BE9CB32F35614400B7F8C6 /* SharedModels */,
+				B8BE9CB42F35614500B7F8C6 /* FirebaseService */,
+			);
+			name = "HomeschoolDone-tvOS";
+			packageProductDependencies = (
+				B843EE882F34FF1A00D59AD0 /* FirebaseAuth */,
+				B843EE8A2F34FF1A00D59AD0 /* FirebaseFirestore */,
+			);
+			productName = "HomeschoolDone-tvOS";
+			productReference = B843EE592F34FDA100D59AD0 /* HomeschoolDone-tvOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		B843EE662F34FDA200D59AD0 /* HomeschoolDone-tvOSTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B843EE7C2F34FDA200D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDone-tvOSTests" */;
+			buildPhases = (
+				B843EE632F34FDA200D59AD0 /* Sources */,
+				B843EE642F34FDA200D59AD0 /* Frameworks */,
+				B843EE652F34FDA200D59AD0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B843EE692F34FDA200D59AD0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B843EE6A2F34FDA200D59AD0 /* HomeschoolDone-tvOSTests */,
+			);
+			name = "HomeschoolDone-tvOSTests";
+			packageProductDependencies = (
+			);
+			productName = "HomeschoolDone-tvOSTests";
+			productReference = B843EE672F34FDA200D59AD0 /* HomeschoolDone-tvOSTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		B843EE702F34FDA200D59AD0 /* HomeschoolDone-tvOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B843EE7F2F34FDA200D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDone-tvOSUITests" */;
+			buildPhases = (
+				B843EE6D2F34FDA200D59AD0 /* Sources */,
+				B843EE6E2F34FDA200D59AD0 /* Frameworks */,
+				B843EE6F2F34FDA200D59AD0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B843EE732F34FDA200D59AD0 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				B843EE742F34FDA200D59AD0 /* HomeschoolDone-tvOSUITests */,
+			);
+			name = "HomeschoolDone-tvOSUITests";
+			packageProductDependencies = (
+			);
+			productName = "HomeschoolDone-tvOSUITests";
+			productReference = B843EE712F34FDA200D59AD0 /* HomeschoolDone-tvOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B843EE212F34FB5F00D59AD0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					B843EE282F34FB5F00D59AD0 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					B843EE372F34FB6100D59AD0 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = B843EE282F34FB5F00D59AD0;
+					};
+					B843EE412F34FB6100D59AD0 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = B843EE282F34FB5F00D59AD0;
+					};
+					B843EE582F34FDA100D59AD0 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					B843EE662F34FDA200D59AD0 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = B843EE582F34FDA100D59AD0;
+					};
+					B843EE702F34FDA200D59AD0 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = B843EE582F34FDA100D59AD0;
+					};
+				};
+			};
+			buildConfigurationList = B843EE242F34FB5F00D59AD0 /* Build configuration list for PBXProject "HomeschoolDone" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = B843EE202F34FB5F00D59AD0;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B843EE822F34FF0A00D59AD0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B843EE2A2F34FB6000D59AD0 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				B843EE282F34FB5F00D59AD0 /* HomeschoolDone */,
+				B843EE372F34FB6100D59AD0 /* HomeschoolDoneTests */,
+				B843EE412F34FB6100D59AD0 /* HomeschoolDoneUITests */,
+				B843EE582F34FDA100D59AD0 /* HomeschoolDone-tvOS */,
+				B843EE662F34FDA200D59AD0 /* HomeschoolDone-tvOSTests */,
+				B843EE702F34FDA200D59AD0 /* HomeschoolDone-tvOSUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B843EE272F34FB5F00D59AD0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B8BE9CB22F35612200B7F8C6 /* Podfile in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE362F34FB6100D59AD0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE402F34FB6100D59AD0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE572F34FDA100D59AD0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE652F34FDA200D59AD0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE6F2F34FDA200D59AD0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		B843EE252F34FB5F00D59AD0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE342F34FB6100D59AD0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE3E2F34FB6100D59AD0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE552F34FDA100D59AD0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE632F34FDA200D59AD0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B843EE6D2F34FDA200D59AD0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B843EE3A2F34FB6100D59AD0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B843EE282F34FB5F00D59AD0 /* HomeschoolDone */;
+			targetProxy = B843EE392F34FB6100D59AD0 /* PBXContainerItemProxy */;
+		};
+		B843EE442F34FB6100D59AD0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B843EE282F34FB5F00D59AD0 /* HomeschoolDone */;
+			targetProxy = B843EE432F34FB6100D59AD0 /* PBXContainerItemProxy */;
+		};
+		B843EE692F34FDA200D59AD0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B843EE582F34FDA100D59AD0 /* HomeschoolDone-tvOS */;
+			targetProxy = B843EE682F34FDA200D59AD0 /* PBXContainerItemProxy */;
+		};
+		B843EE732F34FDA200D59AD0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B843EE582F34FDA100D59AD0 /* HomeschoolDone-tvOS */;
+			targetProxy = B843EE722F34FDA200D59AD0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		B843EE4A2F34FB6100D59AD0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		B843EE4B2F34FB6100D59AD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		B843EE4D2F34FB6100D59AD0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CF3R8F3FJE;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anesrincon.homeschooldone;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		B843EE4E2F34FB6100D59AD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CF3R8F3FJE;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anesrincon.homeschooldone;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		B843EE502F34FB6100D59AD0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anesrincon.HomeschoolDoneTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HomeschoolDone.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HomeschoolDone";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		B843EE512F34FB6100D59AD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anesrincon.HomeschoolDoneTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HomeschoolDone.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HomeschoolDone";
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		B843EE532F34FB6100D59AD0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anesrincon.HomeschoolDoneUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = HomeschoolDone;
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		B843EE542F34FB6100D59AD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anesrincon.HomeschoolDoneUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TEST_TARGET_NAME = HomeschoolDone;
+				XROS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
+		B843EE7A2F34FDA200D59AD0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 78WHUG5NN4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.anesrincon.HomeschoolDone-tvOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		B843EE7B2F34FDA200D59AD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 78WHUG5NN4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.anesrincon.HomeschoolDone-tvOS";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 26.2;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		B843EE7D2F34FDA200D59AD0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.anesrincon.HomeschoolDone-tvOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HomeschoolDone-tvOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HomeschoolDone-tvOS";
+				TVOS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		B843EE7E2F34FDA200D59AD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.anesrincon.HomeschoolDone-tvOSTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HomeschoolDone-tvOS.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/HomeschoolDone-tvOS";
+				TVOS_DEPLOYMENT_TARGET = 26.2;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		B843EE802F34FDA200D59AD0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.anesrincon.HomeschoolDone-tvOSUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = "HomeschoolDone-tvOS";
+				TVOS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		B843EE812F34FDA200D59AD0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.anesrincon.HomeschoolDone-tvOSUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = "HomeschoolDone-tvOS";
+				TVOS_DEPLOYMENT_TARGET = 26.2;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		B843EE242F34FB5F00D59AD0 /* Build configuration list for PBXProject "HomeschoolDone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B843EE4A2F34FB6100D59AD0 /* Debug */,
+				B843EE4B2F34FB6100D59AD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B843EE4C2F34FB6100D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B843EE4D2F34FB6100D59AD0 /* Debug */,
+				B843EE4E2F34FB6100D59AD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B843EE4F2F34FB6100D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDoneTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B843EE502F34FB6100D59AD0 /* Debug */,
+				B843EE512F34FB6100D59AD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B843EE522F34FB6100D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDoneUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B843EE532F34FB6100D59AD0 /* Debug */,
+				B843EE542F34FB6100D59AD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B843EE792F34FDA200D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDone-tvOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B843EE7A2F34FDA200D59AD0 /* Debug */,
+				B843EE7B2F34FDA200D59AD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B843EE7C2F34FDA200D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDone-tvOSTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B843EE7D2F34FDA200D59AD0 /* Debug */,
+				B843EE7E2F34FDA200D59AD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B843EE7F2F34FDA200D59AD0 /* Build configuration list for PBXNativeTarget "HomeschoolDone-tvOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B843EE802F34FDA200D59AD0 /* Debug */,
+				B843EE812F34FDA200D59AD0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B843EE822F34FF0A00D59AD0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.9.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B843EE832F34FF0A00D59AD0 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B843EE822F34FF0A00D59AD0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		B843EE852F34FF0A00D59AD0 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B843EE822F34FF0A00D59AD0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		B843EE882F34FF1A00D59AD0 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B843EE822F34FF0A00D59AD0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		B843EE8A2F34FF1A00D59AD0 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B843EE822F34FF0A00D59AD0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = B843EE212F34FB5F00D59AD0 /* Project object */;
+}

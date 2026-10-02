@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Goal, Activity, Person } from '../types';
+import Modal from './Modal';
 
 interface GoalEditProps {
   goal: Goal;
@@ -120,162 +121,95 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 2000
-    }}>
-      <div style={{
-        backgroundColor: 'var(--hs-bg)',
-        padding: '30px',
-        borderRadius: '8px',
-        maxWidth: '500px',
-        width: '90%',
-        maxHeight: '80vh',
-        overflow: 'auto'
+    <Modal>
+      <h2>Edit Goal</h2>
+      <div style={{ 
+        backgroundColor: 'var(--hs-bg-surface)', 
+        padding: '10px', 
+        borderRadius: '4px',
+        marginBottom: '15px' 
       }}>
-        <h2>Edit Goal</h2>
-        <div style={{ 
-          backgroundColor: 'var(--hs-bg-surface)', 
-          padding: '10px', 
-          borderRadius: '4px',
-          marginBottom: '15px' 
-        }}>
-          <strong>{students.map(s => s.name).join(', ')}</strong> {students.length === 1 ? 'is' : 'are'} doing <strong>{activity.name}</strong>
+        <strong>{students.map(s => s.name).join(', ')}</strong> {students.length === 1 ? 'is' : 'are'} doing <strong>{activity.name}</strong>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Goal Name
+          </label>
+          <input
+            type="text"
+            value={goalName}
+            onChange={(e) => setGoalName(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px'
+            }}
+            placeholder="e.g., Chemistry 101 - First Semester"
+          />
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Goal Name
-            </label>
-            <input
-              type="text"
-              value={goalName}
-              onChange={(e) => setGoalName(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px',
-                fontSize: '16px',
-                border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px'
-              }}
-              placeholder="e.g., Chemistry 101 - First Semester"
-            />
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Times per Week
+          </label>
+          <input
+            type="number"
+            value={timesPerWeek}
+            onChange={(e) => setTimesPerWeek(e.target.value ? Number(e.target.value) : '')}
+            min="1"
+            max="7"
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px'
+            }}
+            placeholder="e.g., 5 (for 5 days a week)"
+          />
+        </div>
+
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Minutes per Session {(activity.requiresTimeTracking || activity.progressReportingStyle.timesTotal) ? '*' : '(optional)'}
+          </label>
+          <input
+            type="number"
+            value={minutesPerSession}
+            onChange={(e) => setMinutesPerSession(e.target.value ? Number(e.target.value) : '')}
+            min="1"
+            required={activity.requiresTimeTracking || activity.progressReportingStyle.timesTotal}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px'
+            }}
+            placeholder="e.g., 45"
+          />
+          <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
+            Expected duration of each session in minutes
           </div>
+        </div>
 
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Times per Week
-            </label>
-            <input
-              type="number"
-              value={timesPerWeek}
-              onChange={(e) => setTimesPerWeek(e.target.value ? Number(e.target.value) : '')}
-              min="1"
-              max="7"
-              style={{
-                width: '100%',
-                padding: '8px',
-                fontSize: '16px',
-                border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px'
-              }}
-              placeholder="e.g., 5 (for 5 days a week)"
-            />
-          </div>
-
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Minutes per Session {(activity.requiresTimeTracking || activity.progressReportingStyle.timesTotal) ? '*' : '(optional)'}
-            </label>
-            <input
-              type="number"
-              value={minutesPerSession}
-              onChange={(e) => setMinutesPerSession(e.target.value ? Number(e.target.value) : '')}
-              min="1"
-              required={activity.requiresTimeTracking || activity.progressReportingStyle.timesTotal}
-              style={{
-                width: '100%',
-                padding: '8px',
-                fontSize: '16px',
-                border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px'
-              }}
-              placeholder="e.g., 45"
-            />
-            <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
-              Expected duration of each session in minutes
-            </div>
-          </div>
-
-          {activity.progressReportingStyle.percentageCompletion && (
-            <>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>
-                  Percentage Goal
-                </label>
-                <input
-                  type="number"
-                  value={percentageGoal}
-                  onChange={(e) => setPercentageGoal(e.target.value ? Number(e.target.value) : '')}
-                  min="1"
-                  max="100"
-                  step="1"
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    fontSize: '16px',
-                    border: '1px solid var(--hs-border-input)',
-                    borderRadius: '4px'
-                  }}
-                  placeholder="e.g., 95 (for 95% completion goal)"
-                />
-                <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
-                  Target percentage completion for this goal (default: 100%)
-                </div>
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>
-                  Daily Percentage Increase Goal (optional)
-                </label>
-                <input
-                  type="number"
-                  value={dailyPercentageIncrease}
-                  onChange={(e) => setDailyPercentageIncrease(e.target.value ? Number(e.target.value) : '')}
-                  min="0.1"
-                  max="100"
-                  step="0.1"
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    fontSize: '16px',
-                    border: '1px solid var(--hs-border-input)',
-                    borderRadius: '4px'
-                  }}
-                  placeholder="e.g., 2 (for 2% increase per day)"
-                />
-              </div>
-            </>
-          )}
-
-          {activity.progressReportingStyle.progressCount && (
+        {activity.progressReportingStyle.percentageCompletion && (
+          <>
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px' }}>
-                Target {activity.progressCountName || 'Count'}
+                Percentage Goal
               </label>
               <input
                 type="number"
-                value={targetCount}
-                onChange={(e) => setTargetCount(e.target.value ? Number(e.target.value) : '')}
+                value={percentageGoal}
+                onChange={(e) => setPercentageGoal(e.target.value ? Number(e.target.value) : '')}
                 min="1"
+                max="100"
+                step="1"
                 style={{
                   width: '100%',
                   padding: '8px',
@@ -283,149 +217,178 @@ const GoalEdit: React.FC<GoalEditProps> = ({ goal, activity, students, onClose, 
                   border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
-                placeholder="e.g., 50 (chapters, problems, etc.)"
+                placeholder="e.g., 95 (for 95% completion goal)"
+              />
+              <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
+                Target percentage completion for this goal (default: 100%)
+              </div>
+            </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px' }}>
+                Daily Percentage Increase Goal (optional)
+              </label>
+              <input
+                type="number"
+                value={dailyPercentageIncrease}
+                onChange={(e) => setDailyPercentageIncrease(e.target.value ? Number(e.target.value) : '')}
+                min="0.1"
+                max="100"
+                step="0.1"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  fontSize: '16px',
+                  border: '1px solid var(--hs-border-input)',
+                  borderRadius: '4px'
+                }}
+                placeholder="e.g., 2 (for 2% increase per day)"
               />
             </div>
-          )}
+          </>
+        )}
 
-          {/* Student Completion Tracking */}
-          <div style={{
-            backgroundColor: 'var(--hs-bg-surface)',
-            borderRadius: '8px',
-            padding: '20px',
-            marginBottom: '15px'
-          }}>
-            <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Student Completion Tracking</h3>
-            {students.map(student => (
-              <div key={student.id} style={{
-                backgroundColor: 'var(--hs-bg)',
-                borderRadius: '6px',
-                padding: '15px',
-                marginBottom: '10px',
-                border: '1px solid var(--hs-border-light)'
-              }}>
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>{student.name}</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
-                      Start Date (optional)
-                    </label>
-                    <input
-                      type="date"
-                      value={studentCompletions[student.id]?.startDate || ''}
-                      onChange={(e) => setStudentCompletions(prev => ({
-                        ...prev,
-                        [student.id]: { ...prev[student.id], startDate: e.target.value }
-                      }))}
-                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
-                      Deadline (optional)
-                    </label>
-                    <input
-                      type="date"
-                      value={studentCompletions[student.id]?.deadline || ''}
-                      onChange={(e) => setStudentCompletions(prev => ({
-                        ...prev,
-                        [student.id]: { ...prev[student.id], deadline: e.target.value }
-                      }))}
-                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
-                      Completion Date
-                    </label>
-                    <input
-                      type="date"
-                      value={studentCompletions[student.id]?.completionDate || ''}
-                      onChange={(e) => setStudentCompletions(prev => ({
-                        ...prev,
-                        [student.id]: { ...prev[student.id], completionDate: e.target.value }
-                      }))}
-                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
-                      Grade/Score
-                    </label>
-                    <input
-                      type="text"
-                      value={studentCompletions[student.id]?.grade || ''}
-                      onChange={(e) => setStudentCompletions(prev => ({
-                        ...prev,
-                        [student.id]: { ...prev[student.id], grade: e.target.value }
-                      }))}
-                      placeholder="e.g., A+, 95%, Pass"
-                      style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Description */}
+        {activity.progressReportingStyle.progressCount && (
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px' }}>
-              Description (optional)
+              Target {activity.progressCountName || 'Count'}
             </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter a description for the transcript..."
-              rows={3}
+            <input
+              type="number"
+              value={targetCount}
+              onChange={(e) => setTargetCount(e.target.value ? Number(e.target.value) : '')}
+              min="1"
               style={{
                 width: '100%',
                 padding: '8px',
-                fontSize: '14px',
+                fontSize: '16px',
                 border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px',
-                resize: 'vertical'
+                borderRadius: '4px'
               }}
+              placeholder="e.g., 50 (chapters, problems, etc.)"
             />
           </div>
+        )}
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-            <button
-              type="submit"
-              disabled={saving}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#4285f4',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.6 : 1
-              }}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#666',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        {/* Student Completion Tracking */}
+        <div style={{
+          backgroundColor: 'var(--hs-bg-surface)',
+          borderRadius: '8px',
+          padding: '20px',
+          marginBottom: '15px'
+        }}>
+          <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Student Completion Tracking</h3>
+          {students.map(student => (
+            <div key={student.id} style={{
+              backgroundColor: 'var(--hs-bg)',
+              borderRadius: '6px',
+              padding: '15px',
+              marginBottom: '10px',
+              border: '1px solid var(--hs-border-light)'
+            }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>{student.name}</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                    Start Date (optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={studentCompletions[student.id]?.startDate || ''}
+                    onChange={(e) => setStudentCompletions(prev => ({
+                      ...prev,
+                      [student.id]: { ...prev[student.id], startDate: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                    Deadline (optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={studentCompletions[student.id]?.deadline || ''}
+                    onChange={(e) => setStudentCompletions(prev => ({
+                      ...prev,
+                      [student.id]: { ...prev[student.id], deadline: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                    Completion Date
+                  </label>
+                  <input
+                    type="date"
+                    value={studentCompletions[student.id]?.completionDate || ''}
+                    onChange={(e) => setStudentCompletions(prev => ({
+                      ...prev,
+                      [student.id]: { ...prev[student.id], completionDate: e.target.value }
+                    }))}
+                    style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>
+                    Grade/Score
+                  </label>
+                  <input
+                    type="text"
+                    value={studentCompletions[student.id]?.grade || ''}
+                    onChange={(e) => setStudentCompletions(prev => ({
+                      ...prev,
+                      [student.id]: { ...prev[student.id], grade: e.target.value }
+                    }))}
+                    placeholder="e.g., A+, 95%, Pass"
+                    style={{ width: '100%', padding: '6px', fontSize: '14px', border: '1px solid var(--hs-border-input)', borderRadius: '4px' }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Description */}
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Description (optional)
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Enter a description for the transcript..."
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '14px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px',
+              resize: 'vertical'
+            }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button
+            type="submit"
+            disabled={saving}
+            className="hs-btn hs-btn--primary"
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="hs-btn hs-btn--secondary"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

@@ -5,6 +5,7 @@ import { ActivityInstance, Goal, Activity, Person } from '../types';
 import { updateStudentLastActivity, updateLastActivity } from '../utils/activityTracking';
 import { playAlarmSound } from '../utils/alarmSound';
 import { dateToFirestoreTimestamp, formatDateToStringUTC, localDateTimeToFirestoreTimestamp, formatTimeToString } from '../utils/dateUtils';
+import Modal from './Modal';
 
 interface ActivityInstanceFormProps {
   goals: Goal[];
@@ -411,39 +412,51 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: 'var(--hs-bg)',
-        padding: '30px',
-        borderRadius: '8px',
-        maxWidth: '500px',
-        width: '90%',
-        maxHeight: '80vh',
-        overflow: 'auto'
-      }}>
-        <h2>{existingInstance || loadedExistingInstance ? 'Edit Activity' : 'Record Activity'}</h2>
-        <form onSubmit={handleSubmit}>
+    <Modal>
+      <h2>{existingInstance || loadedExistingInstance ? 'Edit Activity' : 'Record Activity'}</h2>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Select Goal *
+          </label>
+          <select
+            value={selectedGoal}
+            onChange={(e) => {
+              setSelectedGoal(e.target.value);
+              setSelectedStudent(''); // Clear student selection when goal changes
+            }}
+            required
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px'
+            }}
+          >
+            <option value="">Choose a goal...</option>
+            {goals.map(goal => {
+              const activity = activities.find(a => a.id === goal.activityId);
+              const goalStudents = students.filter(s => goal.studentIds?.includes(s.id));
+              const studentNames = goalStudents.map(s => s.name).join(', ') || 'Unknown students';
+              return (
+                <option key={goal.id} value={goal.id}>
+                  {studentNames} - {activity?.name}
+                  {goal.timesPerWeek && ` (${goal.timesPerWeek}x/week)`}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
+        {selectedGoalData && goalStudents.length > 0 && (
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'block', marginBottom: '5px' }}>
-              Select Goal *
+              Select Student *
             </label>
             <select
-              value={selectedGoal}
-              onChange={(e) => {
-                setSelectedGoal(e.target.value);
-                setSelectedStudent(''); // Clear student selection when goal changes
-              }}
+              value={selectedStudent}
+              onChange={(e) => setSelectedStudent(e.target.value)}
               required
               style={{
                 width: '100%',
@@ -453,29 +466,45 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                 borderRadius: '4px'
               }}
             >
-              <option value="">Choose a goal...</option>
-              {goals.map(goal => {
-                const activity = activities.find(a => a.id === goal.activityId);
-                const goalStudents = students.filter(s => goal.studentIds?.includes(s.id));
-                const studentNames = goalStudents.map(s => s.name).join(', ') || 'Unknown students';
-                return (
-                  <option key={goal.id} value={goal.id}>
-                    {studentNames} - {activity?.name}
-                    {goal.timesPerWeek && ` (${goal.timesPerWeek}x/week)`}
-                  </option>
-                );
-              })}
+              <option value="">Choose which student...</option>
+              {goalStudents.map(student => (
+                <option key={student.id} value={student.id}>
+                  {student.name}
+                </option>
+              ))}
             </select>
           </div>
+        )}
 
-          {selectedGoalData && goalStudents.length > 0 && (
+        {selectedGoalData && selectedActivity && selectedStudent && (
+          <>
+            <div style={{ 
+              backgroundColor: 'var(--hs-bg-elevated)', 
+              padding: '10px', 
+              borderRadius: '4px',
+              marginBottom: '15px' 
+            }}>
+              <strong>{selectedStudentData?.name || 'Select a student'}</strong> is doing <strong>{selectedActivity.name}</strong>
+              {selectedGoalData.minutesPerSession && (
+                <div style={{ fontSize: '14px', marginTop: '4px' }}>
+                  Goal: {selectedGoalData.minutesPerSession} minutes per session
+                </div>
+              )}
+              {selectedGoalData.dailyPercentageIncrease && (
+                <div style={{ fontSize: '14px', marginTop: '4px' }}>
+                  Goal: {selectedGoalData.dailyPercentageIncrease}% increase
+                </div>
+              )}
+            </div>
+
             <div style={{ marginBottom: '15px' }}>
               <label style={{ display: 'block', marginBottom: '5px' }}>
-                Select Student *
+                Date *
               </label>
-              <select
-                value={selectedStudent}
-                onChange={(e) => setSelectedStudent(e.target.value)}
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
                 required
                 style={{
                   width: '100%',
@@ -484,165 +513,187 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                   border: '1px solid var(--hs-border-input)',
                   borderRadius: '4px'
                 }}
-              >
-                <option value="">Choose which student...</option>
-                {goalStudents.map(student => (
-                  <option key={student.id} value={student.id}>
-                    {student.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
-          )}
 
-          {selectedGoalData && selectedActivity && selectedStudent && (
-            <>
-              <div style={{ 
-                backgroundColor: 'var(--hs-bg-elevated)', 
-                padding: '10px', 
-                borderRadius: '4px',
-                marginBottom: '15px' 
-              }}>
-                <strong>{selectedStudentData?.name || 'Select a student'}</strong> is doing <strong>{selectedActivity.name}</strong>
-                {selectedGoalData.minutesPerSession && (
-                  <div style={{ fontSize: '14px', marginTop: '4px' }}>
-                    Goal: {selectedGoalData.minutesPerSession} minutes per session
+            {selectedActivity.progressReportingStyle.timesTotal && (
+              <>
+                <div style={{ 
+                  marginBottom: '15px',
+                  textAlign: 'center',
+                  padding: '20px',
+                  backgroundColor: selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 ? 'var(--hs-bg-card-success)' : 'var(--hs-bg-elevated)',
+                  borderRadius: '8px',
+                  border: selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 ? '2px solid #28a745' : 'none'
+                }}>
+                  <div style={{ fontSize: '32px', fontFamily: 'monospace', marginBottom: '10px' }}>
+                    {formatTime(elapsedTime)}
                   </div>
-                )}
-                {selectedGoalData.dailyPercentageIncrease && (
-                  <div style={{ fontSize: '14px', marginTop: '4px' }}>
-                    Goal: {selectedGoalData.dailyPercentageIncrease}% increase
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>
-                  Date *
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    fontSize: '16px',
-                    border: '1px solid var(--hs-border-input)',
-                    borderRadius: '4px'
-                  }}
-                />
-              </div>
-
-              {selectedActivity.progressReportingStyle.timesTotal && (
-                <>
-                  <div style={{ 
-                    marginBottom: '15px',
-                    textAlign: 'center',
-                    padding: '20px',
-                    backgroundColor: selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 ? 'var(--hs-bg-card-success)' : 'var(--hs-bg-elevated)',
-                    borderRadius: '8px',
-                    border: selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 ? '2px solid #28a745' : 'none'
-                  }}>
-                    <div style={{ fontSize: '32px', fontFamily: 'monospace', marginBottom: '10px' }}>
-                      {formatTime(elapsedTime)}
+                  {selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 && (
+                    <div style={{ color: '#28a745', fontSize: '16px', fontWeight: 'bold', marginBottom: '10px' }}>
+                      🎉 Goal Reached!
                     </div>
-                    {selectedGoalData?.minutesPerSession && elapsedTime >= selectedGoalData.minutesPerSession * 60 && (
-                      <div style={{ color: '#28a745', fontSize: '16px', fontWeight: 'bold', marginBottom: '10px' }}>
-                        🎉 Goal Reached!
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleTimerToggle}
-                      style={{
-                        padding: '10px 20px',
-                        fontSize: '16px',
-                        backgroundColor: timerRunning ? '#dc3545' : '#28a745',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {timerRunning ? 'Stop Timer' : 'Start Timer'}
-                    </button>
-                  </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleTimerToggle}
+                    className={`hs-btn hs-btn--${timerRunning ? 'danger' : 'success'}`}
+                  >
+                    {timerRunning ? 'Stop Timer' : 'Start Timer'}
+                  </button>
+                </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px' }}>
-                        Start Time
-                      </label>
-                      <input
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        disabled={timerRunning}
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          fontSize: '16px',
-                          border: '1px solid var(--hs-border-input)',
-                          borderRadius: '4px',
-                          backgroundColor: timerRunning ? 'var(--hs-bg-elevated)' : 'var(--hs-bg-input)'
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', marginBottom: '5px' }}>
-                        End Time
-                      </label>
-                      <input
-                        type="time"
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        disabled={timerRunning}
-                        style={{
-                          width: '100%',
-                          padding: '8px',
-                          fontSize: '16px',
-                          border: '1px solid var(--hs-border-input)',
-                          borderRadius: '4px',
-                          backgroundColor: timerRunning ? 'var(--hs-bg-elevated)' : 'var(--hs-bg-input)'
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: '15px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
+                  <div>
                     <label style={{ display: 'block', marginBottom: '5px' }}>
-                      Duration (minutes)
+                      Start Time
                     </label>
                     <input
-                      type="number"
-                      value={duration}
-                      onChange={(e) => setDuration(e.target.value ? Number(e.target.value) : '')}
-                      min="1"
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      disabled={timerRunning}
                       style={{
                         width: '100%',
                         padding: '8px',
                         fontSize: '16px',
                         border: '1px solid var(--hs-border-input)',
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        backgroundColor: timerRunning ? 'var(--hs-bg-elevated)' : 'var(--hs-bg-input)'
                       }}
-                      placeholder={selectedGoalData.minutesPerSession ? `Goal: ${selectedGoalData.minutesPerSession} minutes` : 'Enter duration'}
                     />
-                    {startTime && endTime && (
-                      <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
-                        Duration will be calculated from times
-                      </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px' }}>
+                      End Time
+                    </label>
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      disabled={timerRunning}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        fontSize: '16px',
+                        border: '1px solid var(--hs-border-input)',
+                        borderRadius: '4px',
+                        backgroundColor: timerRunning ? 'var(--hs-bg-elevated)' : 'var(--hs-bg-input)'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px' }}>
+                    Duration (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value ? Number(e.target.value) : '')}
+                    min="1"
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      fontSize: '16px',
+                      border: '1px solid var(--hs-border-input)',
+                      borderRadius: '4px'
+                    }}
+                    placeholder={selectedGoalData.minutesPerSession ? `Goal: ${selectedGoalData.minutesPerSession} minutes` : 'Enter duration'}
+                  />
+                  {startTime && endTime && (
+                    <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
+                      Duration will be calculated from times
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {selectedActivity.progressReportingStyle.percentageCompletion && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '10px' }}>
+                  Percent of Completion
+                </label>
+                <div style={{ 
+                  backgroundColor: 'var(--hs-bg-elevated)', 
+                  padding: '15px', 
+                  borderRadius: '8px',
+                  border: '1px solid var(--hs-border-light)'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '10px'
+                  }}>
+                    <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#4285f4' }}>
+                      {percentageCompleted.toFixed(1)}%
+                    </span>
+                    {lastPercentageCompleted > 0 && (
+                      <span style={{ fontSize: '14px', color: 'var(--hs-text-secondary)' }}>
+                        Last recorded: {lastPercentageCompleted.toFixed(1)}%
+                      </span>
                     )}
                   </div>
-                </>
-              )}
+                  <input
+                    type="range"
+                    min="0"
+                    max={selectedGoalData.percentageGoal || 100}
+                    step="0.5"
+                    value={percentageCompleted}
+                    onChange={(e) => setPercentageCompleted(Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      height: '8px',
+                      borderRadius: '4px',
+                      WebkitAppearance: 'none',
+                      appearance: 'none',
+                      background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, var(--hs-border-light) ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, var(--hs-border-light) 100%)`,
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginTop: '5px',
+                    fontSize: '12px',
+                    color: 'var(--hs-text-secondary)'
+                  }}>
+                    <span>0%</span>
+                    <span>{selectedGoalData.percentageGoal || 100}%</span>
+                  </div>
+                  {(selectedGoalData.dailyPercentageIncrease || selectedGoalData.percentageGoal) && (
+                    <div style={{ 
+                      fontSize: '14px', 
+                      color: 'var(--hs-text-secondary)', 
+                      marginTop: '10px',
+                      backgroundColor: 'var(--hs-bg)',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #e0e0e0'
+                    }}>
+                      {selectedGoalData.dailyPercentageIncrease && (
+                        <>Target today: {Math.min(selectedGoalData.percentageGoal || 100, lastPercentageCompleted + selectedGoalData.dailyPercentageIncrease).toFixed(1)}% 
+                        (+{selectedGoalData.dailyPercentageIncrease}% from last)</>
+                      )}
+                      {selectedGoalData.percentageGoal && (
+                        <div>Goal: {selectedGoalData.percentageGoal}%</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-              {selectedActivity.progressReportingStyle.percentageCompletion && (
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '10px' }}>
-                    Percent of Completion
-                  </label>
+            {selectedActivity.progressReportingStyle.progressCount && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '10px' }}>
+                  {selectedActivity.progressCountName || 'Count'} Completed
+                </label>
+                {selectedGoalData.progressCount ? (
+                  // Show slider when goal has a target
                   <div style={{ 
                     backgroundColor: 'var(--hs-bg-elevated)', 
                     padding: '15px', 
@@ -656,28 +707,28 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                       marginBottom: '10px'
                     }}>
                       <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#4285f4' }}>
-                        {percentageCompleted.toFixed(1)}%
+                        {progressCountCompleted} / {selectedGoalData.progressCount}
                       </span>
-                      {lastPercentageCompleted > 0 && (
+                      {lastProgressCountCompleted > 0 && (
                         <span style={{ fontSize: '14px', color: 'var(--hs-text-secondary)' }}>
-                          Last recorded: {lastPercentageCompleted.toFixed(1)}%
+                          Last recorded: {lastProgressCountCompleted}
                         </span>
                       )}
                     </div>
                     <input
                       type="range"
                       min="0"
-                      max={selectedGoalData.percentageGoal || 100}
-                      step="0.5"
-                      value={percentageCompleted}
-                      onChange={(e) => setPercentageCompleted(Number(e.target.value))}
+                      max={selectedGoalData.progressCount}
+                      step="1"
+                      value={progressCountCompleted}
+                      onChange={(e) => setProgressCountCompleted(Number(e.target.value))}
                       style={{
                         width: '100%',
                         height: '8px',
                         borderRadius: '4px',
                         WebkitAppearance: 'none',
                         appearance: 'none',
-                        background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, var(--hs-border-light) ${(percentageCompleted / (selectedGoalData.percentageGoal || 100)) * 100}%, var(--hs-border-light) 100%)`,
+                        background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, var(--hs-border-light) ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, var(--hs-border-light) 100%)`,
                         cursor: 'pointer'
                       }}
                     />
@@ -688,177 +739,81 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
                       fontSize: '12px',
                       color: 'var(--hs-text-secondary)'
                     }}>
-                      <span>0%</span>
-                      <span>{selectedGoalData.percentageGoal || 100}%</span>
+                      <span>0</span>
+                      <span>{selectedGoalData.progressCount}</span>
                     </div>
-                    {(selectedGoalData.dailyPercentageIncrease || selectedGoalData.percentageGoal) && (
-                      <div style={{ 
-                        fontSize: '14px', 
-                        color: 'var(--hs-text-secondary)', 
-                        marginTop: '10px',
-                        backgroundColor: 'var(--hs-bg)',
-                        padding: '8px',
-                        borderRadius: '4px',
-                        border: '1px solid #e0e0e0'
-                      }}>
-                        {selectedGoalData.dailyPercentageIncrease && (
-                          <>Target today: {Math.min(selectedGoalData.percentageGoal || 100, lastPercentageCompleted + selectedGoalData.dailyPercentageIncrease).toFixed(1)}% 
-                          (+{selectedGoalData.dailyPercentageIncrease}% from last)</>
-                        )}
-                        {selectedGoalData.percentageGoal && (
-                          <div>Goal: {selectedGoalData.percentageGoal}%</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {selectedActivity.progressReportingStyle.progressCount && (
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', marginBottom: '10px' }}>
-                    {selectedActivity.progressCountName || 'Count'} Completed
-                  </label>
-                  {selectedGoalData.progressCount ? (
-                    // Show slider when goal has a target
                     <div style={{ 
-                      backgroundColor: 'var(--hs-bg-elevated)', 
-                      padding: '15px', 
-                      borderRadius: '8px',
-                      border: '1px solid var(--hs-border-light)'
+                      fontSize: '14px', 
+                      color: 'var(--hs-text-secondary)', 
+                      marginTop: '10px',
+                      backgroundColor: 'var(--hs-bg)',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      border: '1px solid #e0e0e0'
                     }}>
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '10px'
-                      }}>
-                        <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#4285f4' }}>
-                          {progressCountCompleted} / {selectedGoalData.progressCount}
-                        </span>
-                        {lastProgressCountCompleted > 0 && (
-                          <span style={{ fontSize: '14px', color: 'var(--hs-text-secondary)' }}>
-                            Last recorded: {lastProgressCountCompleted}
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max={selectedGoalData.progressCount}
-                        step="1"
-                        value={progressCountCompleted}
-                        onChange={(e) => setProgressCountCompleted(Number(e.target.value))}
-                        style={{
-                          width: '100%',
-                          height: '8px',
-                          borderRadius: '4px',
-                          WebkitAppearance: 'none',
-                          appearance: 'none',
-                          background: `linear-gradient(to right, #4285f4 0%, #4285f4 ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, var(--hs-border-light) ${(progressCountCompleted / selectedGoalData.progressCount) * 100}%, var(--hs-border-light) 100%)`,
-                          cursor: 'pointer'
-                        }}
-                      />
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        marginTop: '5px',
-                        fontSize: '12px',
-                        color: 'var(--hs-text-secondary)'
-                      }}>
-                        <span>0</span>
-                        <span>{selectedGoalData.progressCount}</span>
-                      </div>
-                      <div style={{ 
-                        fontSize: '14px', 
-                        color: 'var(--hs-text-secondary)', 
-                        marginTop: '10px',
-                        backgroundColor: 'var(--hs-bg)',
-                        padding: '8px',
-                        borderRadius: '4px',
-                        border: '1px solid #e0e0e0'
-                      }}>
-                        Progress: {((progressCountCompleted / selectedGoalData.progressCount) * 100).toFixed(1)}%
-                      </div>
+                      Progress: {((progressCountCompleted / selectedGoalData.progressCount) * 100).toFixed(1)}%
                     </div>
-                  ) : (
-                    // Show regular input when no goal target
-                    <input
-                      type="number"
-                      value={countComplete}
-                      onChange={(e) => setCountComplete(e.target.value ? Number(e.target.value) : '')}
-                      min="0"
-                      style={{
-                        width: '100%',
-                        padding: '8px',
-                        fontSize: '16px',
-                        border: '1px solid var(--hs-border-input)',
-                        borderRadius: '4px'
-                      }}
-                      placeholder={`Number of ${selectedActivity.progressCountName || 'items'} completed`}
-                    />
-                  )}
-                </div>
-              )}
-
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', marginBottom: '5px' }}>
-                  Notes (optional)
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    fontSize: '16px',
-                    border: '1px solid var(--hs-border-input)',
-                    borderRadius: '4px',
-                    minHeight: '60px'
-                  }}
-                  placeholder="Any notes about this activity session..."
-                />
+                  </div>
+                ) : (
+                  // Show regular input when no goal target
+                  <input
+                    type="number"
+                    value={countComplete}
+                    onChange={(e) => setCountComplete(e.target.value ? Number(e.target.value) : '')}
+                    min="0"
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      fontSize: '16px',
+                      border: '1px solid var(--hs-border-input)',
+                      borderRadius: '4px'
+                    }}
+                    placeholder={`Number of ${selectedActivity.progressCountName || 'items'} completed`}
+                  />
+                )}
               </div>
-            </>
-          )}
+            )}
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-            <button
-              type="submit"
-              disabled={saving || !selectedGoal || !selectedStudent}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#4285f4',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving || !selectedGoal || !selectedStudent ? 0.6 : 1
-              }}
-            >
-              {saving ? (existingInstance || loadedExistingInstance ? 'Updating...' : 'Recording...') : (existingInstance || loadedExistingInstance ? 'Update Activity' : 'Record Activity')}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: 'var(--hs-btn-neutral)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px' }}>
+                Notes (optional)
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  fontSize: '16px',
+                  border: '1px solid var(--hs-border-input)',
+                  borderRadius: '4px',
+                  minHeight: '60px'
+                }}
+                placeholder="Any notes about this activity session..."
+              />
+            </div>
+          </>
+        )}
+
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button
+            type="submit"
+            disabled={saving || !selectedGoal || !selectedStudent}
+            className="hs-btn hs-btn--primary"
+          >
+            {saving ? (existingInstance || loadedExistingInstance ? 'Updating...' : 'Recording...') : (existingInstance || loadedExistingInstance ? 'Update Activity' : 'Record Activity')}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="hs-btn hs-btn--secondary"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

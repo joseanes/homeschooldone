@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool } from '../types';
+import Modal from './Modal';
 
 interface HomeschoolEditProps {
   homeschool: Homeschool;
@@ -34,84 +35,48 @@ const HomeschoolEdit: React.FC<HomeschoolEditProps> = ({ homeschool, onClose, on
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10000
-    }}>
-      <div style={{
-        backgroundColor: 'var(--hs-bg)',
-        padding: '30px',
-        borderRadius: '8px',
-        maxWidth: '400px',
-        width: '90%'
-      }}>
-        <h2>Edit Homeschool</h2>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Homeschool Name *
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: '8px',
-                fontSize: '16px',
-                border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px'
-              }}
-              placeholder="e.g., Smith Family Homeschool"
-            />
-          </div>
+    <Modal maxWidth="400px">
+      <h2>Edit Homeschool</h2>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Homeschool Name *
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px'
+            }}
+            placeholder="e.g., Smith Family Homeschool"
+          />
+        </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-            <button
-              type="submit"
-              disabled={saving || !name.trim()}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#4285f4',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving || !name.trim() ? 0.6 : 1
-              }}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#666',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button
+            type="submit"
+            disabled={saving || !name.trim()}
+            className="hs-btn hs-btn--primary"
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="hs-btn hs-btn--secondary"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

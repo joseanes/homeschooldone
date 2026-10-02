@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool } from '../types';
+import Modal from './Modal';
 
 interface CleanupDuplicatesProps {
   homeschool: Homeschool;
@@ -93,105 +94,60 @@ const CleanupDuplicates: React.FC<CleanupDuplicatesProps> = ({
   const duplicates = findDuplicateEmails();
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: 'var(--hs-bg)',
-        padding: '30px',
-        borderRadius: '8px',
-        width: '90%',
-        maxWidth: '500px'
-      }}>
-        <h2>Clean Up Duplicate Users</h2>
-        
-        {duplicates.length === 0 ? (
-          <div>
-            <p>No duplicate users found in your homeschool.</p>
+    <Modal>
+      <h2>Clean Up Duplicate Users</h2>
+      
+      {duplicates.length === 0 ? (
+        <div>
+          <p>No duplicate users found in your homeschool.</p>
+          <button
+            onClick={onClose}
+            className="hs-btn hs-btn--secondary" style={{ marginTop: '20px' }}
+          >
+            Close
+          </button>
+        </div>
+      ) : (
+        <div>
+          <p>Found {duplicates.length} duplicate user(s) that can be cleaned up:</p>
+          
+          <div style={{ margin: '20px 0' }}>
+            {duplicates.map((dup, index) => (
+              <div key={index} style={{
+                padding: '10px',
+                border: '1px solid var(--hs-border-light)',
+                borderRadius: '4px',
+                marginBottom: '10px',
+                backgroundColor: 'var(--hs-bg-surface)'
+              }}>
+                <strong>{dup.email}</strong> - appears in both user list and {dup.role} email invites
+              </div>
+            ))}
+          </div>
+          
+          <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginBottom: '20px' }}>
+            This will remove the email invitation entries since these users are already active in the system.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={handleCleanup}
+              disabled={cleaning}
+              className="hs-btn hs-btn--success"
+            >
+              {cleaning ? 'Cleaning...' : 'Clean Up Duplicates'}
+            </button>
             <button
               onClick={onClose}
-              style={{
-                marginTop: '20px',
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#666',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
+              disabled={cleaning}
+              className="hs-btn hs-btn--secondary"
             >
-              Close
+              Cancel
             </button>
           </div>
-        ) : (
-          <div>
-            <p>Found {duplicates.length} duplicate user(s) that can be cleaned up:</p>
-            
-            <div style={{ margin: '20px 0' }}>
-              {duplicates.map((dup, index) => (
-                <div key={index} style={{
-                  padding: '10px',
-                  border: '1px solid var(--hs-border-light)',
-                  borderRadius: '4px',
-                  marginBottom: '10px',
-                  backgroundColor: 'var(--hs-bg-surface)'
-                }}>
-                  <strong>{dup.email}</strong> - appears in both user list and {dup.role} email invites
-                </div>
-              ))}
-            </div>
-            
-            <p style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginBottom: '20px' }}>
-              This will remove the email invitation entries since these users are already active in the system.
-            </p>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={handleCleanup}
-                disabled={cleaning}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: cleaning ? 'not-allowed' : 'pointer',
-                  opacity: cleaning ? 0.6 : 1
-                }}
-              >
-                {cleaning ? 'Cleaning...' : 'Clean Up Duplicates'}
-              </button>
-              <button
-                onClick={onClose}
-                disabled={cleaning}
-                style={{
-                  padding: '10px 20px',
-                  fontSize: '16px',
-                  backgroundColor: '#666',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </Modal>
   );
 };
 

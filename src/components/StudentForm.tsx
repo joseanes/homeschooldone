@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { Person, Homeschool } from '../types';
 import { sendStudentInvitation } from '../utils/invitations';
 import InvitationDialog from './InvitationDialog';
+import Modal from './Modal';
 
 interface StudentFormProps {
   homeschoolId: string;
@@ -104,25 +105,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: 'var(--hs-bg)',
-        padding: '30px',
-        borderRadius: '8px',
-        maxWidth: '400px',
-        width: '90%'
-      }}>
+    <>
+      <Modal maxWidth="400px">
         <h2>Add Student</h2>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '15px' }}>
@@ -267,16 +251,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
             <button
               type="submit"
               disabled={saving}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#4285f4',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.6 : 1
-              }}
+              className="hs-btn hs-btn--primary"
             >
               {saving ? 'Adding...' : 'Add Student'}
             </button>
@@ -284,21 +259,13 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
               type="button"
               onClick={onClose}
               disabled={saving}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#666',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
+              className="hs-btn hs-btn--secondary"
             >
               Cancel
             </button>
           </div>
         </form>
-      </div>
+      </Modal>
       
       {showInvitationDialog && invitationDetails && (
         <InvitationDialog
@@ -308,7 +275,7 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
           onClose={() => setShowInvitationDialog(false)}
         />
       )}
-    </div>
+    </>
   );
 };
 

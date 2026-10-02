@@ -5,6 +5,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { Homeschool, Person, Activity, Goal, AdHocTask } from '../types';
 import { formatLastActivity } from '../utils/activityTracking';
 import { generatePublicDashboardId } from '../utils/publicDashboard';
+import Modal from './Modal';
 
 interface UserWithStatus extends Person {
   status: 'active' | 'invited';
@@ -1615,58 +1616,42 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Task Delete Confirmation */}
             {taskToDelete && (
-              <div style={{
-                position: 'fixed',
-                top: 0, left: 0, right: 0, bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 2000
-              }}>
-                <div style={{
-                  backgroundColor: 'var(--hs-bg)',
-                  padding: '30px',
-                  borderRadius: '8px',
-                  maxWidth: '400px',
-                  width: '90%'
-                }}>
-                  <h3 style={{ color: '#dc3545', marginTop: 0 }}>Delete Task</h3>
-                  <p>Are you sure you want to delete "<strong>{taskToDelete.name}</strong>"? This cannot be undone.</p>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                    <button
-                      onClick={async () => {
-                        await onDeleteTask(taskToDelete.id);
-                        setTaskToDelete(null);
-                        onTasksUpdated();
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Delete
-                    </button>
-                    <button
-                      onClick={() => setTaskToDelete(null)}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: 'var(--hs-btn-neutral)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
+              <Modal maxWidth="400px">
+                <h3 style={{ color: '#dc3545', marginTop: 0 }}>Delete Task</h3>
+                <p>Are you sure you want to delete "<strong>{taskToDelete.name}</strong>"? This cannot be undone.</p>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                  <button
+                    onClick={async () => {
+                      await onDeleteTask(taskToDelete.id);
+                      setTaskToDelete(null);
+                      onTasksUpdated();
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setTaskToDelete(null)}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: 'var(--hs-btn-neutral)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
                 </div>
-              </div>
+              </Modal>
             )}
           </div>
         );
@@ -1678,28 +1663,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: 'var(--hs-bg)',
-        borderRadius: '12px',
-        padding: '30px',
-        maxWidth: '900px',
-        width: '90%',
-        maxHeight: '90vh',
-        overflow: 'auto',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
-      }}>
+    <>
+      <Modal maxWidth="900px">
         {/* Header */}
         <div style={{
           display: 'flex',
@@ -1809,223 +1774,180 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           )}
         </div>
-      </div>
+      </Modal>
       
       {/* User Removal Confirmation Dialog */}
       {userToRemove && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 2000
-        }}>
-          <div style={{
-            backgroundColor: 'var(--hs-bg)',
-            padding: '30px',
-            borderRadius: '8px',
-            maxWidth: '400px',
-            width: '90%'
-          }}>
-            <h2 style={{ color: '#dc3545' }}>
-              {userToRemove.userId.startsWith('invited-') ? 'Revoke Invitation' : 'Remove User'}
-            </h2>
-            
-            <p style={{ marginBottom: '20px' }}>
-              Are you sure you want to {userToRemove.userId.startsWith('invited-') ? 'revoke the invitation for' : 'remove'} <strong>{userToRemove.name}</strong>?
-              This action cannot be undone.
-            </p>
-            
-            <p style={{ marginBottom: '10px', fontSize: '14px' }}>
-              Type <strong>{userToRemove.name}</strong> to confirm:
-            </p>
-            
-            <input
-              type="text"
-              value={confirmationText}
-              onChange={(e) => setConfirmationText(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px',
-                fontSize: '14px',
-                border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px',
-                marginBottom: '20px'
+        <Modal maxWidth="400px">
+          <h2 style={{ color: '#dc3545' }}>
+            {userToRemove.userId.startsWith('invited-') ? 'Revoke Invitation' : 'Remove User'}
+          </h2>
+          
+          <p style={{ marginBottom: '20px' }}>
+            Are you sure you want to {userToRemove.userId.startsWith('invited-') ? 'revoke the invitation for' : 'remove'} <strong>{userToRemove.name}</strong>?
+            This action cannot be undone.
+          </p>
+          
+          <p style={{ marginBottom: '10px', fontSize: '14px' }}>
+            Type <strong>{userToRemove.name}</strong> to confirm:
+          </p>
+          
+          <input
+            type="text"
+            value={confirmationText}
+            onChange={(e) => setConfirmationText(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '14px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px',
+              marginBottom: '20px'
+            }}
+            placeholder={`Type "${userToRemove.name}" to confirm`}
+            autoFocus
+            disabled={removingUserId === userToRemove.userId}
+          />
+          
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => {
+                setUserToRemove(null);
+                setConfirmationText('');
               }}
-              placeholder={`Type "${userToRemove.name}" to confirm`}
-              autoFocus
               disabled={removingUserId === userToRemove.userId}
-            />
-            
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => {
-                  setUserToRemove(null);
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'var(--hs-btn-neutral)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: removingUserId === userToRemove.userId ? 'not-allowed' : 'pointer',
+                opacity: removingUserId === userToRemove.userId ? 0.6 : 1
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                if (confirmationText === userToRemove.name) {
+                  confirmRemoveUser();
                   setConfirmationText('');
-                }}
-                disabled={removingUserId === userToRemove.userId}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: 'var(--hs-btn-neutral)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: removingUserId === userToRemove.userId ? 'not-allowed' : 'pointer',
-                  opacity: removingUserId === userToRemove.userId ? 0.6 : 1
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (confirmationText === userToRemove.name) {
-                    confirmRemoveUser();
-                    setConfirmationText('');
-                  }
-                }}
-                disabled={removingUserId === userToRemove.userId || confirmationText !== userToRemove.name}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: confirmationText === userToRemove.name ? '#dc3545' : '#999',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: (removingUserId === userToRemove.userId || confirmationText !== userToRemove.name) ? 'not-allowed' : 'pointer',
-                  opacity: (removingUserId === userToRemove.userId || confirmationText !== userToRemove.name) ? 0.6 : 1
-                }}
-              >
-                {removingUserId === userToRemove.userId 
-                  ? 'Processing...' 
-                  : userToRemove.userId.startsWith('invited-') ? 'Revoke' : 'Delete'}
-              </button>
-            </div>
+                }
+              }}
+              disabled={removingUserId === userToRemove.userId || confirmationText !== userToRemove.name}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: confirmationText === userToRemove.name ? '#dc3545' : '#999',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: (removingUserId === userToRemove.userId || confirmationText !== userToRemove.name) ? 'not-allowed' : 'pointer',
+                opacity: (removingUserId === userToRemove.userId || confirmationText !== userToRemove.name) ? 0.6 : 1
+              }}
+            >
+              {removingUserId === userToRemove.userId 
+                ? 'Processing...' 
+                : userToRemove.userId.startsWith('invited-') ? 'Revoke' : 'Delete'}
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
       
       {/* Role Change Modal - Completely Rewritten */}
       {editingUserAccess && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999
-          }}
-        >
-          <div 
-            style={{
-              backgroundColor: 'var(--hs-bg)',
-              padding: '30px',
-              borderRadius: '8px',
-              maxWidth: '500px',
-              width: '90%',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-            }}
-          >
-            <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Change User Role</h3>
-            <p style={{ marginBottom: '20px', fontSize: '14px' }}>
-              Select the new role for this user:
-            </p>
-            
-            {/* Simple Button Selection */}
-            <div style={{ marginBottom: '30px' }}>
-              {['parent', 'tutor', 'observer'].map(role => (
-                <button
-                  key={role}
-                  type="button"
-                  onClick={() => {
-                    setEditingUserAccess(prev => prev ? { ...prev, currentRole: role } : null);
-                  }}
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    marginBottom: '10px',
-                    padding: '12px 16px',
-                    fontSize: '14px',
-                    border: editingUserAccess.currentRole === role ? '2px solid #007bff' : '1px solid var(--hs-border-light)',
-                    borderRadius: '6px',
-                    backgroundColor: editingUserAccess.currentRole === role ? 'var(--hs-goal-today-bg)' : 'var(--hs-bg)',
-                    color: editingUserAccess.currentRole === role ? '#1976d2' : 'var(--hs-text-primary)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    fontWeight: editingUserAccess.currentRole === role ? '600' : 'normal'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <span style={{ textTransform: 'capitalize' }}>{role}</span>
-                      <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
-                        {role === 'parent' && 'Full access to all settings and data'}
-                        {role === 'tutor' && 'Can assign goals and track progress'}  
-                        {role === 'observer' && 'Read-only access to view progress'}
-                      </div>
+        <Modal>
+          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>Change User Role</h3>
+          <p style={{ marginBottom: '20px', fontSize: '14px' }}>
+            Select the new role for this user:
+          </p>
+          
+          {/* Simple Button Selection */}
+          <div style={{ marginBottom: '30px' }}>
+            {['parent', 'tutor', 'observer'].map(role => (
+              <button
+                key={role}
+                type="button"
+                onClick={() => {
+                  setEditingUserAccess(prev => prev ? { ...prev, currentRole: role } : null);
+                }}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  marginBottom: '10px',
+                  padding: '12px 16px',
+                  fontSize: '14px',
+                  border: editingUserAccess.currentRole === role ? '2px solid #007bff' : '1px solid var(--hs-border-light)',
+                  borderRadius: '6px',
+                  backgroundColor: editingUserAccess.currentRole === role ? 'var(--hs-goal-today-bg)' : 'var(--hs-bg)',
+                  color: editingUserAccess.currentRole === role ? '#1976d2' : 'var(--hs-text-primary)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontWeight: editingUserAccess.currentRole === role ? '600' : 'normal'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ textTransform: 'capitalize' }}>{role}</span>
+                    <div style={{ fontSize: '12px', color: 'var(--hs-text-secondary)', marginTop: '4px' }}>
+                      {role === 'parent' && 'Full access to all settings and data'}
+                      {role === 'tutor' && 'Can assign goals and track progress'}  
+                      {role === 'observer' && 'Read-only access to view progress'}
                     </div>
-                    {editingUserAccess.currentRole === role && (
-                      <div style={{ color: '#007bff', fontWeight: 'bold' }}>✓</div>
-                    )}
                   </div>
-                </button>
-              ))}
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingUserAccess(null);
-                }}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: 'var(--hs-btn-neutral)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
+                  {editingUserAccess.currentRole === role && (
+                    <div style={{ color: '#007bff', fontWeight: 'bold' }}>✓</div>
+                  )}
+                </div>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const user = users.find(u => u.id === editingUserAccess.userId);
-                  if (user) {
-                    handleChangeUserRole(
-                      editingUserAccess.userId, 
-                      user.email || '', 
-                      user.role, 
-                      editingUserAccess.currentRole
-                    );
-                  }
-                }}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Save Role
-              </button>
-            </div>
+            ))}
           </div>
-        </div>
+          
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingUserAccess(null);
+              }}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: 'var(--hs-btn-neutral)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const user = users.find(u => u.id === editingUserAccess.userId);
+                if (user) {
+                  handleChangeUserRole(
+                    editingUserAccess.userId, 
+                    user.email || '', 
+                    user.role, 
+                    editingUserAccess.currentRole
+                  );
+                }
+              }}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Save Role
+            </button>
+          </div>
+        </Modal>
       )}
-    </div>
+    </>
   );
 };
 

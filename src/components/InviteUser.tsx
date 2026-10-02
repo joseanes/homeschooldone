@@ -3,6 +3,7 @@ import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Homeschool } from '../types';
 import InvitationDialog from './InvitationDialog';
+import Modal from './Modal';
 
 interface InviteUserProps {
   homeschool: Homeschool;
@@ -119,132 +120,96 @@ The HomeschoolDone Team`;
 
   return (
     <>
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10000
-    }}>
-      <div style={{
-        backgroundColor: 'var(--hs-bg)',
-        padding: '30px',
-        borderRadius: '8px',
-        maxWidth: '400px',
-        width: '90%'
-      }}>
-        <h2>Invite User to {homeschool.name}</h2>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Email Address *
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                padding: '8px',
-                fontSize: '16px',
-                border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px'
-              }}
-              placeholder="user@example.com"
-            />
-          </div>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Role *
-            </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as any)}
-              style={{
-                width: '100%',
-                padding: '8px',
-                fontSize: '16px',
-                border: '1px solid var(--hs-border-input)',
-                borderRadius: '4px'
-              }}
-            >
-              <option value="parent">Parent (Full access)</option>
-              <option value="tutor">Tutor (Can manage activities and goals)</option>
-              <option value="observer">Observer (View only)</option>
-            </select>
-          </div>
+    <Modal maxWidth="400px">
+      <h2>Invite User to {homeschool.name}</h2>
+      <form onSubmit={handleSubmit}>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Email Address *
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px'
+            }}
+            placeholder="user@example.com"
+          />
+        </div>
+        
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px' }}>
+            Role *
+          </label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as any)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '16px',
+              border: '1px solid var(--hs-border-input)',
+              borderRadius: '4px'
+            }}
+          >
+            <option value="parent">Parent (Full access)</option>
+            <option value="tutor">Tutor (Can manage activities and goals)</option>
+            <option value="observer">Observer (View only)</option>
+          </select>
+        </div>
 
-          <div style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginBottom: '20px' }}>
-            <strong>Role Permissions:</strong>
-            <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-              {role === 'parent' && (
-                <>
-                  <li>Full access to all features</li>
-                  <li>Can invite other users</li>
-                  <li>Can delete students and activities</li>
-                </>
-              )}
-              {role === 'tutor' && (
-                <>
-                  <li>Can create activities and assign goals</li>
-                  <li>Can record student progress</li>
-                  <li>Can view reports</li>
-                </>
-              )}
-              {role === 'observer' && (
-                <>
-                  <li>Can view student progress</li>
-                  <li>Can view reports</li>
-                  <li>Cannot edit or delete anything</li>
-                </>
-              )}
-            </ul>
-          </div>
+        <div style={{ fontSize: '14px', color: 'var(--hs-text-secondary)', marginBottom: '20px' }}>
+          <strong>Role Permissions:</strong>
+          <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+            {role === 'parent' && (
+              <>
+                <li>Full access to all features</li>
+                <li>Can invite other users</li>
+                <li>Can delete students and activities</li>
+              </>
+            )}
+            {role === 'tutor' && (
+              <>
+                <li>Can create activities and assign goals</li>
+                <li>Can record student progress</li>
+                <li>Can view reports</li>
+              </>
+            )}
+            {role === 'observer' && (
+              <>
+                <li>Can view student progress</li>
+                <li>Can view reports</li>
+                <li>Cannot edit or delete anything</li>
+              </>
+            )}
+          </ul>
+        </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-            <button
-              type="submit"
-              disabled={sending || !email.trim()}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: sending || !email.trim() ? 'not-allowed' : 'pointer',
-                opacity: sending || !email.trim() ? 0.6 : 1
-              }}
-            >
-              {sending ? 'Sending...' : 'Send Invitation'}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={sending}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#666',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button
+            type="submit"
+            disabled={sending || !email.trim()}
+            className="hs-btn hs-btn--success"
+          >
+            {sending ? 'Sending...' : 'Send Invitation'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={sending}
+            className="hs-btn hs-btn--secondary"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
     
     {showInvitationDialog && invitationDetails && (
       <InvitationDialog

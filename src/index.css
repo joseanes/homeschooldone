@@ -36,6 +36,12 @@
   /* Keyboard focus ring */
   --hs-focus-ring: #4f46e5;
 
+  /* Button fills; all keep white text at WCAG AA contrast (4.5:1+) */
+  --hs-btn-primary:   #2563eb;
+  --hs-btn-success:   #15803d;
+  --hs-btn-danger:    #dc2626;
+  --hs-btn-secondary: #666666;
+
   /* Goal pill badges (student dashboard) — always readable against badge bg */
   --hs-goal-complete-badge: #2e7d32;
   --hs-goal-today-badge:    #1565c0;
@@ -104,6 +110,9 @@
 
     /* Keyboard focus ring */
     --hs-focus-ring: #818cf8;
+
+    /* Button fills */
+    --hs-btn-secondary: #64748b;
 
     /* Goal pill badges — dark mode uses lighter colors, text flips to dark */
     --hs-goal-complete-badge: #a5d6a7;
@@ -174,6 +183,47 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Dialogs (components/Modal.tsx) */
+.hs-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.hs-modal-panel {
+  width: 90%;
+  max-height: 90vh;
+  overflow: auto;
+  padding: 30px;
+  border-radius: 8px;
+  background-color: var(--hs-bg);
+  color: var(--hs-text-primary);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  /* Same alignment dialogs inherited from .App before they moved to a portal */
+  text-align: center;
+}
+
+/* Buttons: <button className="hs-btn hs-btn--primary"> */
+.hs-btn {
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: 16px;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.hs-btn:hover:not(:disabled) { filter: brightness(0.9); }
+.hs-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.hs-btn--primary   { background-color: var(--hs-btn-primary); }
+.hs-btn--success   { background-color: var(--hs-btn-success); }
+.hs-btn--danger    { background-color: var(--hs-btn-danger); }
+.hs-btn--secondary { background-color: var(--hs-btn-secondary); }
 
 /* Student dashboard goal pill badge — text color flips with color scheme */
 .hs-goal-badge { color: white; }

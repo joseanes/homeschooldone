@@ -122,31 +122,13 @@ const Login: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
           <button
             onClick={handleGoogleSignIn}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              backgroundColor: '#4285f4',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              width: '260px'
-            }}
+            className="hs-btn hs-btn--primary" style={{ width: '260px' }}
           >
             Sign in with Google
           </button>
           <button
             onClick={() => setShowEmailForm(true)}
-            style={{
-              padding: '10px 20px',
-              fontSize: '16px',
-              backgroundColor: 'var(--hs-btn-neutral)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              width: '260px'
-            }}
+            className="hs-btn hs-btn--secondary" style={{ width: '260px' }}
           >
             Sign in with Email
           </button>

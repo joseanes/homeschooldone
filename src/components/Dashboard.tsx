@@ -925,34 +925,28 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
+    <div className="hs-page">
       {/* Header */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '30px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <svg width="60" height="60" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <div className="hs-page-header">
+        <div className="hs-brand">
+          <svg className="hs-logo" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M14 43L40 19L66 43V67C66 70.3137 63.3137 73 60 73H20C16.6863 73 14 70.3137 14 67V43Z" fill="#F59E0B"/>
             <path d="M8 45L40 15L72 45" stroke="#D97706" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
             <circle cx="40" cy="53" r="16" fill="white"/>
             <path d="M32 53L38 59L50 47" stroke="#16A34A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ margin: 0, fontSize: '28px', color: 'var(--hs-text-primary)' }}>{homeschool.name}</h1>
-            <div style={{ position: 'relative' }}>
+          <h1 className="hs-title">{homeschool.name}</h1>
+          <div className="hs-switcher">
               <button
+                className="hs-icon-btn"
                 onClick={() => setShowHomeschoolSwitcher(!showHomeschoolSwitcher)}
-                style={{
-                  padding: '6px',
-                  backgroundColor: 'transparent',
-                  border: '1px solid var(--hs-border-light)',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  fontSize: '18px'
-                }}
                 title="Switch homeschool or create new"
+                aria-label="Switch homeschool"
               >
-                🔄
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M2.5 5.5h8.2M8.5 3 11.5 5.5 8.5 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M13.5 10.5H5.3M7.5 8 4.5 10.5 7.5 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
               {showHomeschoolSwitcher && (
                 <HomeschoolSwitcher
@@ -1009,115 +1003,48 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                   onClose={() => setShowHomeschoolSwitcher(false)}
                 />
               )}
-            </div>
           </div>
         </div>
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '8px',
-          marginTop: '10px',
-          alignItems: 'center'
-        }}>
+        <div className="hs-toolbar">
           <button
+            className="hs-btn"
             onClick={() => setShowActivityInstanceForm(true)}
             disabled={goals.length === 0}
             title="Record a new activity session for a student"
-            style={{
-              padding: '8px 18px',
-              fontSize: '14px',
-              backgroundColor: goals.length === 0 ? '#ccc' : '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: goals.length === 0 ? 'not-allowed' : 'pointer',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
           >
             + Record Progress
           </button>
           <button
+            className="hs-btn"
             onClick={() => { setAdHocTaskMode('record'); setAdHocTaskStudent(''); setShowAdHocTaskForm(true); }}
             disabled={students.length === 0}
             title="Record a one-off task or activity"
-            style={{
-              padding: '8px 18px',
-              fontSize: '14px',
-              backgroundColor: students.length === 0 ? '#ccc' : '#17a2b8',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: students.length === 0 ? 'not-allowed' : 'pointer',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
           >
             + Record Activity
           </button>
           <button
+            className="hs-btn"
             onClick={() => setShowSettings(true)}
             title="Manage students, activities, goals, and settings"
-            style={{
-              padding: '8px 14px',
-              fontSize: '14px',
-              backgroundColor: 'var(--hs-btn-neutral)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
           >
             Settings
           </button>
           <button
+            className="hs-btn"
             onClick={() => setShowReports(true)}
             title="View progress reports, activity history, and export data"
-            style={{
-              padding: '8px 14px',
-              fontSize: '14px',
-              backgroundColor: '#9c27b0',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
           >
             Reports
           </button>
           <button
+            className="hs-btn"
             onClick={() => setShowDashboard(true)}
             title="Open full-screen TV dashboard for classroom display"
-            style={{
-              padding: '8px 14px',
-              fontSize: '14px',
-              backgroundColor: '#f57c00',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
           >
             Dashboard
           </button>
           {goals.length === 0 && (
-            <span style={{ fontSize: '13px', color: 'var(--hs-text-muted)', marginLeft: '8px' }}>
+            <span className="hs-hint">
               Set up students, activities and goals first
             </span>
           )}
@@ -1125,18 +1052,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
       </div>
 
       {/* Today's Progress Overview - Grouped by Student */}
-      <div style={{
-        backgroundColor: 'var(--hs-bg-elevated)',
-        border: '1px solid var(--hs-border)',
-        borderRadius: '10px',
-        padding: '20px',
-        marginBottom: '20px'
-      }}>
-        <h3 style={{ margin: '0 0 16px 0', color: 'var(--hs-text-label)' }} title="Overview of today's activity and weekly goal progress for each student">Today's Progress</h3>
+      <section className="hs-panel">
+        <h2 className="hs-panel-title" title="Overview of today's activity and weekly goal progress for each student">Today's Progress</h2>
         {goals.length === 0 ? (
-          <p style={{ color: 'var(--hs-text-secondary)' }}>No goals assigned yet</p>
+          <p className="hs-empty">No goals assigned yet</p>
         ) : (
-          <div style={{ display: 'grid', gap: '20px' }}>
+          <div className="hs-student-grid">
             {[...students].sort((a, b) => {
               const order = homeschool?.studentSortOrder || 'age-asc';
               if (order === 'alpha') {
@@ -1206,69 +1127,34 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
               });
 
               return (
-                <div key={student.id} style={{
-                  border: '1px solid var(--hs-border)',
-                  borderRadius: '10px',
-                  padding: '16px',
-                  backgroundColor: allCompleted ? 'var(--hs-bg-card-success)' : 'var(--hs-bg-card)',
-                  borderColor: allCompleted ? 'var(--hs-border-success)' : 'var(--hs-border)'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '12px'
-                  }}>
-                    <h4 style={{
-                      margin: 0,
-                      fontSize: '16px',
-                      color: 'var(--hs-text-label)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
+                <article key={student.id} className={allCompleted ? 'hs-student-card is-complete' : 'hs-student-card'}>
+                  <div className="hs-student-head">
+                    <h3 className="hs-student-name">
                       {student.name}
-                      {allCompleted && <span style={{ fontSize: '16px' }}>🎉</span>}
-                    </h4>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {allCompleted && <span aria-hidden="true">🎉</span>}
+                    </h3>
+                    <div className="hs-student-actions">
                       <button
+                        className="hs-btn hs-btn-accent hs-btn-sm"
                         onClick={() => {
                           setAdHocTaskMode('assign');
                           setAdHocTaskStudent(student.id);
                           setShowAdHocTaskForm(true);
                         }}
                         title={`Assign a task to ${student.name}`}
-                        style={{
-                          padding: '3px 8px',
-                          borderRadius: '10px',
-                          backgroundColor: '#17a2b8',
-                          color: 'white',
-                          border: 'none',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap'
-                        }}
                       >
                         Assign Task
                       </button>
                       <div
+                        className={allCompleted ? 'hs-count is-complete' : 'hs-count'}
                         title={`${completedGoals} of ${totalGoals} weekly goals completed for ${student.name}`}
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          backgroundColor: allCompleted ? 'var(--hs-badge-success-bg)' : 'var(--hs-badge-bg)',
-                          color: allCompleted ? 'var(--hs-badge-success-text)' : 'var(--hs-badge-text)',
-                          fontSize: '12px',
-                          fontWeight: '600'
-                        }}
                       >
                         {completedGoals}/{totalGoals} Complete
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '6px' }}>
+                  <div className="hs-chip-grid">
                     {sortedItems.map(item => {
                       if (item.type === 'goal') {
                         const goal = item.goal;
@@ -1287,21 +1173,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                         return (
                           <div
                             key={goal.id}
+                            className="hs-chip is-clickable"
                             onClick={() => handleOpenRecordActivity(goal.id, student.id)}
                             style={{
-                              display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
-                              backgroundColor: status.backgroundColor, color: status.textColor,
-                              borderRadius: '6px', border: `1px solid ${status.color}`,
-                              cursor: 'pointer', transition: 'all 0.2s ease', fontSize: '13px', lineHeight: '1.3'
+                              backgroundColor: status.backgroundColor,
+                              color: status.textColor,
+                              borderColor: status.color
                             }}
                             title={`${goalDisplayName} – Click to record activity`}
                           >
-                            <span style={{ fontSize: '16px', flexShrink: 0 }} title={iconTooltips[status.status] || status.label}>{status.text}</span>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={goal.name ? `Goal: ${goal.name} (Activity: ${activity.name})` : `Activity: ${activity.name}`}>
+                            <span className="hs-chip-icon" title={iconTooltips[status.status] || status.label}>{status.text}</span>
+                            <div className="hs-chip-body">
+                              <div className="hs-chip-name" title={goal.name ? `Goal: ${goal.name} (Activity: ${activity.name})` : `Activity: ${activity.name}`}>
                                 {goalDisplayName}
                               </div>
-                              <div style={{ fontSize: '11px', opacity: 0.75 }} title={(() => {
+                              <div className="hs-chip-meta" title={(() => {
                                 const tipParts = [];
                                 if (goal.timesPerWeek) tipParts.push(`${weeklyCount} of ${goal.timesPerWeek} weekly sessions completed`);
                                 const lp = getLatestProgress(goal.id, student.id);
@@ -1351,6 +1237,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                         return (
                           <div
                             key={`task-${task.id}`}
+                            className={isCompleted ? 'hs-chip' : 'hs-chip is-clickable'}
                             onClick={() => {
                               if (!isCompleted) {
                                 setAdHocTaskMode('assign');
@@ -1360,21 +1247,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                               }
                             }}
                             style={{
-                              display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px',
                               backgroundColor: isCompleted ? 'var(--hs-task-complete-bg)' : 'var(--hs-task-pending-bg)',
                               color: isCompleted ? 'var(--hs-task-complete-text)' : 'var(--hs-task-pending-text)',
-                              borderRadius: '6px', border: `1px solid ${isCompleted ? 'var(--hs-task-complete-border)' : 'var(--hs-task-pending-border)'}`,
-                              cursor: isCompleted ? 'default' : 'pointer', transition: 'all 0.2s ease',
-                              fontSize: '13px', lineHeight: '1.3'
+                              borderColor: isCompleted ? 'var(--hs-task-complete-border)' : 'var(--hs-task-pending-border)'
                             }}
                             title={`Task: ${task.name}${td ? ` – Due ${td.toLocaleDateString()}` : ''}${isCompleted ? ' (Completed)' : ' – Click to complete'}`}
                           >
-                            <span style={{ fontSize: '16px', flexShrink: 0 }}>{isCompleted ? '✅' : '📋'}</span>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span className="hs-chip-icon">{isCompleted ? '✓' : '○'}</span>
+                            <div className="hs-chip-body">
+                              <div className="hs-chip-name">
                                 {task.name}
                               </div>
-                              <div style={{ fontSize: '11px', opacity: 0.75 }}>
+                              <div className="hs-chip-meta">
                                 {isCompleted ? 'Completed' : isOverdue ? 'Overdue' : 'Pending'}{td && !isCompleted ? ` · Due ${td.toLocaleDateString()}` : ''}
                               </div>
                             </div>
@@ -1383,12 +1267,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
                       }
                     })}
                   </div>
-                </div>
+                </article>
               );
             })}
           </div>
         )}
-      </div>
+      </section>
 
       {/* Forms and Modals */}
       {showStudentForm && homeschool && (

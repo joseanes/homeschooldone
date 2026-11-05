@@ -154,7 +154,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         backgroundColor: 'var(--hs-goal-complete-bg)',
         textColor: 'var(--hs-goal-complete-text)',
         badgeBg: 'var(--hs-goal-complete-badge)',
-        text: 'Weekly Complete ✓'
+        icon: '✓',
+        text: 'Week complete'
       };
     }
 
@@ -165,7 +166,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         backgroundColor: 'var(--hs-goal-today-bg)',
         textColor: 'var(--hs-goal-today-text)',
         badgeBg: 'var(--hs-goal-today-badge)',
-        text: 'Done Today'
+        icon: '✔',
+        text: 'Done today'
       };
     }
 
@@ -176,7 +178,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
         backgroundColor: 'var(--hs-goal-progress-bg)',
         textColor: 'var(--hs-goal-progress-text)',
         badgeBg: 'var(--hs-goal-progress-badge)',
-        text: 'Progress This Week'
+        icon: '◐',
+        text: 'In progress'
       };
     }
 
@@ -186,7 +189,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
       backgroundColor: 'var(--hs-goal-pending-bg)',
       textColor: 'var(--hs-goal-pending-text)',
       badgeBg: 'var(--hs-goal-pending-badge)',
-      text: 'Pending'
+      icon: '○',
+      text: 'Not started'
     };
   };
 
@@ -250,15 +254,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
     return status.status === 'done-today' || status.status === 'weekly-complete';
   }).length;
 
-  // Calculate weekly progress based on weekly goals completion
+  // Weekly totals use the week list directly. Today's instances are already
+  // included there, so they are not added a second time.
   const weeklyProgress = goals.reduce((totals, goal) => {
-    const progress = getProgressForGoal(goal.id);
+    const weekCount = weekInstances.filter(instance => instance.goalId === goal.id && instance.studentId === student.id).length;
     if (goal.timesPerWeek) {
-      totals.completed += Math.min(progress.weekCount, goal.timesPerWeek);
+      totals.completed += Math.min(weekCount, goal.timesPerWeek);
       totals.target += goal.timesPerWeek;
     } else {
-      // For goals without weekly targets, count daily completion for this week
-      totals.completed += progress.weekCount > 0 ? 1 : 0;
+      totals.completed += weekCount > 0 ? 1 : 0;
       totals.target += 1;
     }
     return totals;
@@ -266,179 +270,63 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   const weeklyProgressPercentage = weeklyProgress.target > 0 ? (weeklyProgress.completed / weeklyProgress.target) * 100 : 0;
 
+  const weekFill = weeklyProgressPercentage === 100
+    ? 'var(--hs-goal-complete-border)'
+    : 'var(--hs-goal-today-border)';
+
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* CSS Animations */}
-      <style>
-        {`
-          @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-              transform: translateY(0);
-            }
-            40% {
-              transform: translateY(-10px);
-            }
-            60% {
-              transform: translateY(-5px);
-            }
-          }
-          
-          @keyframes pulse {
-            0% {
-              transform: scale(1);
-            }
-            50% {
-              transform: scale(1.05);
-            }
-            100% {
-              transform: scale(1);
-            }
-          }
-          
-          @keyframes shimmer {
-            0% {
-              background-position: -200px 0;
-            }
-            100% {
-              background-position: calc(200px + 100%) 0;
-            }
-          }
-        `}
-      </style>
-      {/* Header with integrated progress */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '30px',
-        padding: '25px 30px',
-        background: weeklyProgressPercentage === 100
-          ? 'linear-gradient(135deg, #43a047 0%, #2e7d32 100%)'
-          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        borderRadius: '15px',
-        color: 'white',
-        boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-        flexWrap: 'wrap',
-        gap: '15px'
-      }}>
-        <div style={{ flex: '1 1 auto', minWidth: '200px' }}>
-          <h1 style={{
-            margin: 0,
-            color: 'white',
-            textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            fontSize: '32px'
-          }}>
-            {weeklyProgressPercentage === 100 ? '🎉' : '🌟'} Welcome, {student.name}!
-          </h1>
-          <p style={{ margin: '6px 0 0 0', color: 'rgba(255,255,255,0.85)', fontSize: '16px' }}>
-            {homeschool.name} • {new Date().toLocaleDateString('en-US', {
+    <div className="hs-page">
+      <header className="hs-welcome">
+        <div>
+          <h1 className="hs-title">Welcome, {student.name}</h1>
+          <p className="hs-subtitle">
+            {homeschool.name} · {new Date().toLocaleDateString('en-US', {
               weekday: 'long',
               month: 'long',
               day: 'numeric'
             })}
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          {/* Weekly donut */}
-          <div style={{ position: 'relative' }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              background: weeklyProgressPercentage === 100
-                ? 'conic-gradient(#ffd700 360deg, #ffd700 360deg)'
-                : weeklyProgressPercentage > 50
-                ? `conic-gradient(rgba(255,255,255,0.9) ${weeklyProgressPercentage * 3.6}deg, rgba(255,255,255,0.2) ${weeklyProgressPercentage * 3.6}deg)`
-                : `conic-gradient(rgba(255,255,255,0.9) ${weeklyProgressPercentage * 3.6}deg, rgba(255,255,255,0.2) ${weeklyProgressPercentage * 3.6}deg)`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <div style={{
-                width: '62px',
-                height: '62px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(0,0,0,0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column'
-              }}>
-                <span style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', lineHeight: 1 }}>
-                  {Math.round(weeklyProgressPercentage)}%
-                </span>
-                <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.8)', lineHeight: 1, marginTop: '2px' }}>week</span>
-              </div>
-            </div>
+        <div className="hs-week">
+          <div className="hs-week-label">
+            {weeklyProgress.completed}/{weeklyProgress.target} sessions this week
           </div>
-          {/* Stats */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)' }}>
-              {weeklyProgress.completed}/{weeklyProgress.target} sessions
-            </div>
-            <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.8)', marginTop: '2px' }}>
-              {completedToday}/{goals.length} today
-            </div>
+          <div
+            className="hs-progress"
+            role="progressbar"
+            aria-valuenow={Math.round(weeklyProgressPercentage)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Weekly session progress"
+          >
+            <div
+              className="hs-progress-fill"
+              style={{ width: `${Math.min(weeklyProgressPercentage, 100)}%`, background: weekFill }}
+            />
+          </div>
+          <div className="hs-week-meta">
+            {completedToday}/{goals.length} done today
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Today's Goals */}
-      <div style={{
-        backgroundColor: 'var(--hs-bg-card)',
-        borderRadius: '15px',
-        padding: '30px',
-        marginBottom: '20px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-          <h2 style={{
-            margin: 0,
-            color: 'var(--hs-text-primary)',
-            fontSize: '32px',
-            fontWeight: '700',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
-            🎯 Today's Activities
-          </h2>
+      <section className="hs-panel">
+        <div className="hs-panel-bar">
+          <h2 className="hs-panel-title">Today's Activities</h2>
           <button
+            className="hs-btn"
             onClick={() => setShowAdHocTaskForm(true)}
-            style={{
-              padding: '10px 20px',
-              fontSize: '15px',
-              backgroundColor: '#17a2b8',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 12px rgba(23, 162, 184, 0.3)'
-            }}
           >
             + Record Activity
           </button>
         </div>
         
         {goals.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '40px',
-            color: 'var(--hs-text-secondary)',
-            fontSize: '16px'
-          }}>
+          <div className="hs-empty">
             No activities assigned to you yet. Check with your teacher or parent.
           </div>
         ) : (
-          <div style={{ 
-            display: 'grid', 
-            gap: '15px',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))'
-          }}>
+          <div className="hs-activity-grid">
             {/* Sort goals + tasks together: gray (pending) first, yellow, blue, green */}
             {(() => {
               const sp: { [key: string]: number } = { 'pending': 1, 'progress-week': 2, 'done-today': 3, 'weekly-complete': 4 };
@@ -471,100 +359,78 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                   const task = item.task;
                   const isCompleted = !!task.completedDate;
                   const targetDate = task.targetDate ? toMid(toD(task.targetDate)) : null;
+                  const taskColors = isCompleted
+                    ? {
+                        backgroundColor: 'var(--hs-goal-complete-bg)',
+                        color: 'var(--hs-goal-complete-text)',
+                        borderColor: 'var(--hs-goal-complete-border)'
+                      }
+                    : {
+                        backgroundColor: 'var(--hs-goal-pending-bg)',
+                        color: 'var(--hs-goal-pending-text)',
+                        borderColor: 'var(--hs-goal-pending-border)'
+                      };
                   return (
                     <div
                       key={`task-${task.id}`}
-                      style={{
-                        border: isCompleted ? '2px solid #4caf50' : '2px solid #ddd',
-                        borderRadius: '15px', padding: '25px',
-                        background: isCompleted ? '#e8f5e9' : '#f5f5f5',
-                        cursor: isCompleted ? 'default' : 'pointer',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: isCompleted ? '0 4px 15px rgba(76, 175, 80, 0.2)' : '0 4px 15px rgba(0, 0, 0, 0.08)',
-                        position: 'relative', overflow: 'hidden'
-                      }}
+                      className={isCompleted ? 'hs-activity-card' : 'hs-activity-card is-clickable'}
+                      style={taskColors}
                       onClick={() => { if (!isCompleted) { setEditingTask(task); setShowAdHocTaskForm(true); } }}
-                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; }}
                     >
-                      <div style={{ position: 'absolute', top: 0, right: 0, fontSize: '40px', opacity: 0.1, transform: 'rotate(15deg)', marginTop: '10px', marginRight: '10px' }}>
-                        {isCompleted ? '✅' : '📋'}
+                      <div className="hs-activity-top">
+                        <span className="hs-chip-icon">{isCompleted ? '✓' : '○'}</span>
+                        <h3 className="hs-activity-title">{task.name}</h3>
+                        <span className="hs-status-label">{isCompleted ? 'Done' : 'Task'}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                        <h3 style={{ margin: 0, fontSize: '22px', color: isCompleted ? '#2e7d32' : '#666', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          📋 {task.name}
-                        </h3>
-                        <div style={{
-                          padding: '8px 16px', borderRadius: '25px',
-                          backgroundColor: isCompleted ? '#4caf50' : '#9e9e9e',
-                          color: 'white', fontSize: '14px', fontWeight: 'bold',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)', whiteSpace: 'nowrap'
-                        }}>
-                          {isCompleted ? 'Done' : 'Task'}
+                      {task.description && <p className="hs-activity-desc">{task.description}</p>}
+                      <div className="hs-activity-foot">
+                        <div className="hs-chip-meta">
+                          {targetDate ? `Due ${targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : (isCompleted ? 'Completed' : 'Pending')}
                         </div>
-                      </div>
-                      {task.description && <p style={{ margin: '0 0 15px 0', color: 'var(--hs-text-secondary)', fontSize: '16px', lineHeight: '1.5' }}>{task.description}</p>}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: 'var(--hs-text-label)', borderTop: '1px solid var(--hs-border)', paddingTop: '12px', marginTop: '4px' }}>
-                        <div style={{ fontWeight: '500' }}>{targetDate && `Due: ${targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}</div>
-                        {!isCompleted && <div style={{ color: 'var(--hs-link-action)', fontWeight: '600', fontSize: '13px' }}>✏️ Mark Done</div>}
+                        {!isCompleted && <div className="hs-action-link">Mark Done</div>}
                       </div>
                     </div>
                   );
                 }
 
-                // Goal card
                 const goal = item.goal;
                 const activity = activities.find(a => a.id === goal.activityId);
                 const status = getStatusForGoal(goal);
-                const cardColors = (() => {
-                  switch (status.status) {
-                    case 'weekly-complete': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(76, 175, 80, 0.2)', emoji: '✅', titleColor: 'var(--hs-text-primary)' };
-                    case 'done-today': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(33, 150, 243, 0.2)', emoji: '✔️', titleColor: 'var(--hs-text-primary)' };
-                    case 'progress-week': return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(255, 193, 7, 0.2)', emoji: '📝', titleColor: 'var(--hs-text-primary)' };
-                    default: return { border: `2px solid ${status.color}`, background: status.backgroundColor, shadow: '0 4px 15px rgba(158, 158, 158, 0.1)', emoji: '⏳', titleColor: 'var(--hs-text-primary)' };
-                  }
-                })();
+                const progress = getProgressForGoal(goal.id);
+                const latest = getLatestProgress(goal.id);
+                const weeklyCount = weekInstances.filter(i => i.goalId === goal.id && i.studentId === student.id).length;
+                const todayCount = todayInstances.filter(i => i.goalId === goal.id && i.studentId === student.id).length;
+                const metaParts: string[] = [];
+                if (goal.timesPerWeek) metaParts.push(`${weeklyCount}/${goal.timesPerWeek} wk`);
+                if (goal.minutesPerSession) metaParts.push(`${goal.minutesPerSession} min`);
+                if (activity?.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && latest?.percentageCompleted !== undefined) {
+                  metaParts.push(goal.percentageGoal ? `${latest.percentageCompleted.toFixed(0)}% of ${goal.percentageGoal}%` : `${latest.percentageCompleted.toFixed(0)}%`);
+                }
+                if (activity?.progressReportingStyle?.progressCount && goal.progressCount && latest?.countCompleted !== undefined) {
+                  metaParts.push(`${latest.countCompleted}/${goal.progressCount} ${activity.progressCountName || 'items'}`);
+                }
+                if (todayCount > 1) metaParts.push(`${todayCount}x today`);
 
                 return (
                   <div
                     key={goal.id}
+                    className="hs-activity-card is-clickable"
                     style={{
-                      border: cardColors.border, borderRadius: '15px', padding: '25px',
-                      background: cardColors.background, cursor: 'pointer',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: cardColors.shadow, position: 'relative', overflow: 'hidden'
+                      backgroundColor: status.backgroundColor,
+                      color: status.textColor,
+                      borderColor: status.color
                     }}
                     onClick={() => handleRecordActivity(goal)}
-                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)'; e.currentTarget.style.boxShadow = `0 15px 40px ${cardColors.shadow.match(/rgba\([^)]+\)/)?.[0] || 'rgba(0,0,0,0.3)'}`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(1)'; e.currentTarget.style.boxShadow = cardColors.shadow; }}
                   >
-                    <div style={{ position: 'absolute', top: 0, right: 0, fontSize: '40px', opacity: 0.1, transform: 'rotate(15deg)', marginTop: '10px', marginRight: '10px' }}>{cardColors.emoji}</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                      <h3 style={{ margin: 0, fontSize: '22px', color: cardColors.titleColor, fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {cardColors.emoji} {goal.name || activity?.name || 'Unknown Activity'}
-                      </h3>
-                      <div className="hs-goal-badge" style={{ padding: '8px 16px', borderRadius: '25px', backgroundColor: status.badgeBg, fontSize: '14px', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                        {status.text}
-                      </div>
+                    <div className="hs-activity-top">
+                      <span className="hs-chip-icon" title={status.text}>{status.icon}</span>
+                      <h3 className="hs-activity-title">{goal.name || activity?.name || 'Unknown Activity'}</h3>
+                      <span className="hs-status-label">{status.text}</span>
                     </div>
-                    <p style={{ margin: '0 0 20px 0', color: 'var(--hs-text-secondary)', fontSize: '16px', lineHeight: '1.5' }}>
-                      {activity?.description || 'No description available'}
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '14px', color: 'var(--hs-text-label)', borderTop: '1px solid var(--hs-border)', paddingTop: '12px', marginTop: '10px' }}>
-                      <div style={{ fontWeight: '500' }}>
-                        {goal.timesPerWeek && `📊 ${getProgressForGoal(goal.id).weekCount} of ${goal.timesPerWeek}/week`}
-                        {goal.minutesPerSession && ` • ⏱️ ${goal.minutesPerSession} min`}
-                        {(() => {
-                          const lp = getLatestProgress(goal.id);
-                          const ind = [];
-                          if (activity?.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && lp?.percentageCompleted !== undefined) ind.push(` • 📈 ${lp.percentageCompleted.toFixed(0)}% of ${goal.percentageGoal || 100}%`);
-                          if (activity?.progressReportingStyle?.progressCount && goal.progressCount && lp?.countCompleted !== undefined) ind.push(` • 📚 ${lp.countCompleted} of ${goal.progressCount} ${activity.progressCountName || 'items'}`);
-                          return ind.join('');
-                        })()}
-                      </div>
-                      <div style={{ color: 'var(--hs-link-action)', fontWeight: '600', fontSize: '13px' }}>
-                        {getProgressForGoal(goal.id).todayInstance ? '✏️ Edit' : '➕ Record'}
-                      </div>
+                    {activity?.description && <p className="hs-activity-desc">{activity.description}</p>}
+                    <div className="hs-activity-foot">
+                      <div className="hs-chip-meta">{metaParts.join(' · ') || 'No progress yet'}</div>
+                      <div className="hs-action-link">{progress.todayInstance || todayCount > 0 ? 'Edit' : 'Record'}</div>
                     </div>
                   </div>
                 );
@@ -572,42 +438,22 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             })()}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Last Activity & Encouragement */}
-      <div style={{
-        textAlign: 'center',
-        marginTop: '30px',
-        padding: '20px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        borderRadius: '15px',
-        color: 'white'
-      }}>
+      <div className="hs-note">
         {student.lastActivity && (
-          <p style={{
-            margin: '0 0 10px 0',
-            fontSize: '16px',
-            opacity: 0.9
-          }}>
-            📅 Last activity: {formatLastActivity(student.lastActivity)}
-          </p>
+          <p>Last activity: {formatLastActivity(student.lastActivity)}</p>
         )}
-        
-        <p style={{
-          margin: 0,
-          fontSize: '18px',
-          fontWeight: '600',
-          textShadow: '0 1px 2px rgba(0,0,0,0.2)'
-        }}>
+        <p className="hs-encouragement">
           {weeklyProgressPercentage === 100
-            ? "🎉 You've absolutely crushed this week! Outstanding work!" 
-            : weeklyProgressPercentage > 75 
-            ? "🔥 You're so close to finishing your weekly goals! Amazing progress!"
+            ? "You've finished every session for this week. Outstanding work."
+            : weeklyProgressPercentage > 75
+            ? "You're close to finishing your weekly goals."
             : weeklyProgressPercentage > 50
-            ? "💪 You're doing fantastic this week! More than halfway there!"
+            ? "More than halfway through this week's sessions."
             : weeklyProgressPercentage > 25
-            ? "🌟 Great weekly progress! You've got excellent momentum!"
-            : "🚀 Ready to make this week amazing? Let's tackle those goals!"
+            ? "Good start this week. Keep the momentum going."
+            : "Ready when you are. Pick an activity to record."
           }
         </p>
       </div>

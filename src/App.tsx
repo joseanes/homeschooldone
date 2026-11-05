@@ -56,17 +56,9 @@ function App() {
 
   return (
     <div className="App">
-      <header style={{ 
-        backgroundColor: '#f5f5f5', 
-        padding: '10px 20px',
-        display: 'flex',
-        justifyContent: 'flex-end',
-        alignItems: 'center'
-      }}>
-        <div>
-          <span style={{ marginRight: '10px' }}>{user.email}</span>
-          <button onClick={() => auth.signOut()}>Sign Out</button>
-        </div>
+      <header className="hs-account-bar">
+        <span>{user.email}</span>
+        <button className="hs-btn hs-btn-ghost" onClick={() => auth.signOut()}>Sign Out</button>
       </header>
       <Dashboard user={user} onSignOut={() => auth.signOut()} />
     </div>

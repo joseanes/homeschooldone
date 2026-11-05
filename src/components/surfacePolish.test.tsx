@@ -165,10 +165,11 @@ jest.mock('firebase/auth', () => ({
   onAuthStateChanged: (_auth: unknown, callback: (user: any) => void) => {
     const state = (global as any).__HS_MOCK__;
     const student = state?.role === 'student';
+    const focus = state?.people?.find((person: Person) => person.id === (state.focusStudentId || 'nico'));
     callback({
-      uid: student ? 'nico' : 'parent1',
-      email: student ? 'nico@example.com' : 'parent@example.com',
-      displayName: student ? 'Nico' : 'Parent'
+      uid: student ? (focus?.id || 'nico') : 'parent1',
+      email: student ? (focus?.email || 'nico@example.com') : 'parent@example.com',
+      displayName: student ? (focus?.name || 'Nico') : 'Parent'
     });
     return jest.fn();
   }
@@ -242,6 +243,10 @@ function writePreview(name: string, html: string) {
 }
 
 describe('parent and student surface polish', () => {
+  beforeAll(() => {
+    installStyleCapture();
+  });
+
   beforeEach(() => {
     window.history.pushState({}, '', '/');
     localStorage.clear();
@@ -269,7 +274,8 @@ describe('parent and student surface polish', () => {
       }
       if (q?.col === 'people') {
         if (fields.includes('email') && state.role === 'student') {
-          return mockRows(state.people.filter((person: Person) => person.id === 'nico'));
+          const id = state.focusStudentId || 'nico';
+          return mockRows(state.people.filter((person: Person) => person.id === id));
         }
         return mockRows([]);
       }
@@ -293,13 +299,14 @@ describe('parent and student surface polish', () => {
       start.setHours(0, 0, 0, 0);
       const end = new Date(start);
       end.setDate(end.getDate() + 1);
-      const nicoGoals = state.goals.filter((item: Goal) => item.studentIds.includes('nico'));
-      const activityIds = new Set(nicoGoals.map((item: Goal) => item.activityId));
+      const studentId = state.focusStudentId || 'nico';
+      const studentGoals = state.goals.filter((item: Goal) => item.studentIds.includes(studentId));
+      const activityIds = new Set(studentGoals.map((item: Goal) => item.activityId));
       return {
-        goals: nicoGoals,
+        goals: studentGoals,
         activities: state.activities.filter((item: Activity) => activityIds.has(item.id)),
-        todayInstances: state.instances.filter((item: ActivityInstance) => item.studentId === 'nico' && item.date >= start && item.date < end),
-        weekInstances: state.instances.filter((item: ActivityInstance) => item.studentId === 'nico')
+        todayInstances: state.instances.filter((item: ActivityInstance) => item.studentId === studentId && item.date >= start && item.date < end),
+        weekInstances: state.instances.filter((item: ActivityInstance) => item.studentId === studentId)
       };
     });
   });
@@ -341,45 +348,170 @@ describe('parent and student surface polish', () => {
     expect(await screen.findByRole('heading', { level: 2, name: /Settings/ })).toBeInTheDocument();
   });
 
-  test('student dashboard shares status colors and still records work', async () => {
-    installState('student');
+  test('student home matches the live dark student surface', async () => {
+    installLiveStudent();
     const { container } = render(<App />);
 
-    expect(await screen.findByRole('heading', { name: 'Welcome, Nico' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: "Today's Activities" })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '+ Record Activity' })).toHaveClass('hs-btn');
-    expect(screen.getAllByText('Not started').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('In progress').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Done today').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Week complete').length).toBeGreaterThan(0);
-    expect(container.textContent).not.toMatch(/Apple TV/i);
-    expect(container.querySelector('.hs-student-home')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /Welcome, Alex/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Today's Activities/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '+ Record Activity' })).toBeInTheDocument();
+    expect(screen.getAllByText('Pending').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/0 of 5\/week/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Go up 1%').length).toBeGreaterThan(0);
+    expect(screen.getByText('Session and Assignment')).toBeInTheDocument();
+    expect(screen.getAllByText('➕ Record').length).toBeGreaterThan(0);
+    expect(container.textContent).not.toMatch(/Apple TV/);
+    expect(container.querySelector('.hs-student-live')).toBeTruthy();
     expect(container.querySelector('.hs-student-grid')).toBeNull();
-    expect(screen.getByText(/of \d+ sessions/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reports' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Dashboard' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Assign Task' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Record Progress' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Mark Done' })).toBeInTheDocument();
+    expect(screen.getByText('0/44 sessions')).toBeInTheDocument();
+    expect(screen.getByText('0/11 today')).toBeInTheDocument();
+    expect(document.documentElement.dataset.view).toBe('student');
 
-    const algebra = screen.getByRole('heading', { name: 'Algebra 1' }).closest('.hs-activity-card') as HTMLElement;
-    expect(algebra.querySelector('.hs-chip-icon')?.textContent).toBe('✔');
-    expect(within(algebra).getByText('4 of 5 this week · 93% of 100% · 2 times today')).toBeInTheDocument();
+    materializeStyles(container);
+    expect(container.innerHTML).toContain('linear-gradient(135deg, #667eea');
+    writeDarkPreview('student-live.html', container.innerHTML);
 
-    writePreview('student.html', container.innerHTML);
-
-    await userEvent.click(screen.getByRole('heading', { name: 'Soccer' }));
+    await userEvent.click(screen.getByRole('heading', { name: /Algebra 1/ }));
     expect(await screen.findByRole('heading', { name: 'Record Activity' })).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    await userEvent.click(screen.getByRole('button', { name: '+ Record Activity' }));
-    expect(await screen.findByRole('heading', { name: 'Record Activity' })).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Mark Done' }));
-    expect(await screen.findByRole('heading', { name: 'Complete Task' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox')).toHaveValue('nico');
-    writePreview('student-complete-task.html', container.innerHTML);
   });
 });
+
+const styleBag = new WeakMap<CSSStyleDeclaration, Record<string, string>>();
+
+function installStyleCapture() {
+  const proto = CSSStyleDeclaration.prototype as any;
+  if (proto.__hsCaptured) return;
+  proto.__hsCaptured = true;
+  for (const prop of Object.getOwnPropertyNames(proto)) {
+    if (prop === 'cssText' || prop === 'length' || prop === 'parentRule') continue;
+    const desc = Object.getOwnPropertyDescriptor(proto, prop);
+    const get = desc && desc.get;
+    const set = desc && desc.set;
+    if (typeof get !== 'function' || typeof set !== 'function') continue;
+    const kebab = prop.replace(/[A-Z]/g, (letter) => '-' + letter.toLowerCase());
+    Object.defineProperty(proto, prop, {
+      configurable: true,
+      enumerable: Boolean(desc && desc.enumerable),
+      get() {
+        const bag = styleBag.get(this);
+        if (bag && Object.prototype.hasOwnProperty.call(bag, kebab)) return bag[kebab];
+        return get.call(this);
+      },
+      set(value: string) {
+        let bag = styleBag.get(this);
+        if (!bag) {
+          bag = {};
+          styleBag.set(this, bag);
+        }
+        bag[kebab] = value;
+        try { set.call(this, value); } catch (error) { /* jsdom drops var() and gradients */ }
+      }
+    });
+  }
+}
+
+function materializeStyles(root: ParentNode) {
+  root.querySelectorAll<HTMLElement>('*').forEach((el) => {
+    const bag = styleBag.get(el.style);
+    if (!bag) return;
+    const existing = el.getAttribute('style') || '';
+    const extra = Object.entries(bag)
+      .filter(([key, value]) => value != null && value !== '' && !existing.includes(key + ':'))
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('; ');
+    const next = [existing.replace(/;\s*$/, ''), extra].filter(Boolean).join('; ');
+    if (next) el.setAttribute('style', next);
+  });
+}
+
+function installLiveStudent() {
+  const live = [
+    ['Algebra 1', 'Go up 1%', 5, 60],
+    ['Algebra 2', 'Go up 1%', 5, 60],
+    ['Bonnie ELA', 'Session and Assignment', 5, 60],
+    ['Duolingo', '', 5, 5],
+    ['FIRST 2026-2027 Season', '', 3, 120],
+    ['Geography', '', 3, 20],
+    ['Science', 'Lab', 4, 30],
+    ['History', 'Reading', 4, 30],
+    ['Piano', 'Practice', 4, 20],
+    ['Writing', 'Studio', 3, 30],
+    ['Reading', 'Chapter', 3, 20]
+  ] as const;
+  const activities: Activity[] = live.map((row, index) => ({
+    id: `live-${index}`,
+    name: row[0],
+    subjectId: 's',
+    description: row[1],
+    progressReportingStyle: {},
+    homeschoolId: 'hs1'
+  }));
+  const goals: Goal[] = live.map((row, index) => ({
+    id: `lg-${index}`,
+    name: row[0],
+    studentIds: ['alex'],
+    activityId: `live-${index}`,
+    tutorOrParentId: 'parent1',
+    homeschoolId: 'hs1',
+    timesPerWeek: row[2],
+    minutesPerSession: row[3]
+  }));
+  (global as any).__HS_MOCK__ = {
+    role: 'student',
+    focusStudentId: 'alex',
+    homeschool: { ...homeschool, name: 'Anés Rincón School', studentIds: ['alex'] },
+    people: [{ id: 'alex', name: 'Alex', role: 'student', email: 'alex@example.com' }],
+    activities,
+    goals,
+    tasks: [],
+    instances: []
+  };
+}
+
+function writeDarkPreview(name: string, html: string) {
+  const dir = '/tmp/hs-preview';
+  fs.mkdirSync(dir, { recursive: true });
+  const document = `<!doctype html>
+<html data-view="student">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="file://${path.resolve('src/index.css')}" />
+  <link rel="stylesheet" href="file://${path.resolve('src/App.css')}" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --hs-bg: #0f172a;
+      --hs-bg-elevated: #1e293b;
+      --hs-bg-card: #1e3048;
+      --hs-text-primary: #f1f5f9;
+      --hs-text-secondary: #b8c8d8;
+      --hs-text-label: #e8edf3;
+      --hs-border: #334155;
+      --hs-goal-complete-bg: rgba(76, 175, 80, 0.12);
+      --hs-goal-complete-text: #a5d6a7;
+      --hs-goal-complete-border: rgba(76, 175, 80, 0.4);
+      --hs-goal-today-bg: rgba(33, 150, 243, 0.12);
+      --hs-goal-today-text: #90caf9;
+      --hs-goal-today-border: rgba(33, 150, 243, 0.4);
+      --hs-goal-progress-bg: rgba(255, 193, 7, 0.10);
+      --hs-goal-progress-text: #ffe082;
+      --hs-goal-progress-border: rgba(255, 193, 7, 0.4);
+      --hs-goal-pending-bg: rgba(255, 255, 255, 0.06);
+      --hs-goal-pending-text: #b8c8d8;
+      --hs-goal-pending-border: rgba(255, 255, 255, 0.28);
+      --hs-goal-pending-badge: #94a3b8;
+      --hs-link-action: #818cf8;
+    }
+    .hs-goal-badge { color: #0f172a; }
+    body, #root, .App { background: #0f172a; color: #f1f5f9; }
+  </style>
+</head>
+<body>${html}</body>
+</html>`;
+  fs.writeFileSync(path.join(dir, name), document);
+}

@@ -57,7 +57,7 @@ function App() {
   return (
     <div className="App">
       <header className="hs-account-bar">
-        <span>{user.email}</span>
+        <span className="hs-account-email">{user.email}</span>
         <button className="hs-btn hs-btn-ghost" onClick={() => auth.signOut()}>Sign Out</button>
       </header>
       <Dashboard user={user} onSignOut={() => auth.signOut()} />

@@ -95,11 +95,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
     }
   }, [homeschool]);
 
-  // Set students array for student users
+  // Set students array for student users. data-view hides parent chrome
+  // (email, toolbar) so a child only gets Sign Out above their own home.
   useEffect(() => {
-    if (userRole === 'student' && currentStudent) {
+    const isStudent = userRole === 'student' && !!currentStudent;
+    if (isStudent) {
       setStudents([currentStudent]);
     }
+    document.documentElement.dataset.view = isStudent ? 'student' : 'family';
+    return () => {
+      delete document.documentElement.dataset.view;
+    };
   }, [userRole, currentStudent]);
 
   // Save dashboard settings to Firebase

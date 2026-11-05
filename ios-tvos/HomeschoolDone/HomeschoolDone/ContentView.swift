@@ -176,6 +176,7 @@ struct DashboardSettingsView: View {
                     LabeledContent("Cycle Time", value: "\(settings.cycleSeconds) seconds")
                     LabeledContent("Week Starts", value: dayName(for: settings.startOfWeek))
                     LabeledContent("Timezone", value: settings.timezone)
+                    LabeledContent("Progress", value: settings.resolvedProgressMode == "daily" ? "Daily" : "Weekly")
                 } else {
                     Text("Using default settings")
                         .foregroundColor(.secondary)

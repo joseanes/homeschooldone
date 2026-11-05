@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { doc, updateDoc, arrayRemove, arrayUnion, getDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { Homeschool, Person, Activity, Goal, AdHocTask } from '../types';
+import { Homeschool, Person, Activity, Goal, AdHocTask, DashboardSettings, DashboardProgressMode } from '../types';
 import { formatLastActivity } from '../utils/activityTracking';
+import { resolveProgressMode } from '../utils/dashboardProgress';
 import { generatePublicDashboardId } from '../utils/publicDashboard';
 
 interface UserWithStatus extends Person {
@@ -18,11 +19,7 @@ interface SettingsModalProps {
   userRole: string | null;
   currentUserId: string;
   currentUserInfo: { name?: string; email?: string };
-  dashboardSettings: {
-    cycleSeconds: number;
-    startOfWeek: number;
-    timezone: string;
-  };
+  dashboardSettings: DashboardSettings;
   timerAlarmEnabled: boolean;
   publicDashboardId: string | null;
   allowMultipleRecordsPerDay: boolean;
@@ -32,11 +29,7 @@ interface SettingsModalProps {
   adHocTasks: AdHocTask[];
   activeTab?: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks';
   onTabChange?: (tab: 'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks') => void;
-  onSaveSettings: (settings: {
-    cycleSeconds: number;
-    startOfWeek: number;
-    timezone: string;
-  }) => void;
+  onSaveSettings: (settings: DashboardSettings) => void;
   onSaveTimerAlarm: (enabled: boolean) => void;
   onSavePublicDashboard: (dashboardId: string | null) => void;
   onSaveMultipleRecords: (enabled: boolean) => void;
@@ -113,6 +106,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [cycleSeconds, setCycleSeconds] = useState(dashboardSettings.cycleSeconds);
   const [startOfWeek, setStartOfWeek] = useState(dashboardSettings.startOfWeek);
   const [timezone, setTimezone] = useState(dashboardSettings.timezone);
+  const [progressMode, setProgressMode] = useState<DashboardProgressMode>(resolveProgressMode(dashboardSettings.progressMode));
   const [timerAlarm, setTimerAlarm] = useState(timerAlarmEnabled);
   const [publicDashboard, setPublicDashboard] = useState(publicDashboardId);
   const [users, setUsers] = useState<UserWithStatus[]>([]);
@@ -425,7 +419,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     onSaveSettings({
       cycleSeconds,
       startOfWeek,
-      timezone
+      timezone,
+      progressMode
     });
     onSaveTimerAlarm(timerAlarm);
     onSavePublicDashboard(publicDashboard);
@@ -1190,8 +1185,58 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               color: 'var(--hs-text-secondary)',
               marginBottom: '20px'
             }}>
-              Configure the full-screen dashboard for display on TVs or monitors.
+              Configure the full-screen dashboard for display on TVs or monitors. The public dashboard link uses these same settings.
             </p>
+
+            <div style={{ marginBottom: '22px' }}>
+              <div style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                marginBottom: '8px',
+                color: 'var(--hs-text-primary)'
+              }}>
+                Progress mode
+              </div>
+              <div
+                role="group"
+                aria-label="Progress mode"
+                style={{ display: 'inline-flex', borderRadius: '999px', padding: '4px', background: 'var(--hs-bg)', border: '1px solid var(--hs-border-light)', gap: '4px' }}
+              >
+                {([
+                  { id: 'daily' as DashboardProgressMode, label: 'Daily' },
+                  { id: 'weekly' as DashboardProgressMode, label: 'Weekly' }
+                ]).map(option => {
+                  const selected = progressMode === option.id;
+                  const active = option.id === 'daily' ? '#1565c0' : '#2e7d32';
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setProgressMode(option.id)}
+                      style={{
+                        minWidth: '108px',
+                        padding: '8px 16px',
+                        borderRadius: '999px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: 650,
+                        fontSize: '14px',
+                        background: selected ? active : 'transparent',
+                        color: selected ? '#fff' : 'var(--hs-text-primary)'
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--hs-text-secondary)', margin: '10px 0 0', maxWidth: '640px', lineHeight: 1.45 }}>
+                {progressMode === 'daily'
+                  ? 'Daily is for a habits year. Each card shows Not yet or Done today, and the week total stays as a smaller line. The ring shows today’s share.'
+                  : 'Weekly is for coursework due before the next class. Each card shows the week target, such as 2/5, and Complete when that target is met. The ring shows week goals met.'}
+              </p>
+            </div>
 
             <div style={{
               display: 'grid',

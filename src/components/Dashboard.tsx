@@ -3,7 +3,8 @@ import { User } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, doc, getDoc, deleteDoc, updateDoc, arrayRemove, Timestamp } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
-import { Homeschool, Person, Activity, Goal, ActivityInstance, AdHocTask } from '../types';
+import { Homeschool, Person, Activity, Goal, ActivityInstance, AdHocTask, DashboardSettings } from '../types';
+import { resolveProgressMode } from '../utils/dashboardProgress';
 import { isGoalActiveForStudent } from '../utils/goalUtils';
 import { getWeekStart, getWeekEnd } from '../utils/dateUtils';
 import StudentForm from './StudentForm';
@@ -66,10 +67,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   const [returnToSettings, setReturnToSettings] = useState(false);
   const [returnToReports, setReturnToReports] = useState(false);
   const [settingsActiveTab, setSettingsActiveTab] = useState<'general' | 'dashboard' | 'timer' | 'students' | 'activities' | 'users' | 'tasks'>('general');
-  const [dashboardSettings, setDashboardSettings] = useState({
+  const [dashboardSettings, setDashboardSettings] = useState<DashboardSettings>({
     cycleSeconds: 10,
     startOfWeek: 1, // 1 = Monday
-    timezone: 'America/New_York' // EST/EDT
+    timezone: 'America/New_York', // EST/EDT
+    progressMode: 'weekly'
   });
   const [timerAlarmEnabled, setTimerAlarmEnabled] = useState(false);
   const [publicDashboardId, setPublicDashboardId] = useState<string | null>(null);
@@ -86,7 +88,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
   // Load dashboard settings, timer alarm, and public dashboard from homeschool document
   useEffect(() => {
     if (homeschool?.dashboardSettings) {
-      setDashboardSettings(homeschool.dashboardSettings);
+      setDashboardSettings({
+        cycleSeconds: homeschool.dashboardSettings.cycleSeconds ?? 10,
+        startOfWeek: homeschool.dashboardSettings.startOfWeek ?? 1,
+        timezone: homeschool.dashboardSettings.timezone || 'America/New_York',
+        progressMode: resolveProgressMode(homeschool.dashboardSettings.progressMode)
+      });
     }
     if (homeschool?.timerAlarmEnabled !== undefined) {
       setTimerAlarmEnabled(homeschool.timerAlarmEnabled);
@@ -1543,6 +1550,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onSignOut }) => {
           cycleSeconds={dashboardSettings.cycleSeconds}
           startOfWeek={dashboardSettings.startOfWeek}
           timezone={dashboardSettings.timezone}
+          progressMode={resolveProgressMode(dashboardSettings.progressMode)}
           onClose={() => setShowDashboard(false)}
         />
       )}

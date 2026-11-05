@@ -15,6 +15,20 @@ export interface Person {
   authUid?: string;
 }
 
+/** What the TV and public classroom board emphasizes. */
+export type DashboardProgressMode = 'daily' | 'weekly';
+
+export interface DashboardSettings {
+  cycleSeconds: number;
+  startOfWeek: number;
+  timezone: string;
+  /**
+   * Omitted on homeschools saved before this setting existed.
+   * Missing means weekly, which is how the classroom board already behaved.
+   */
+  progressMode?: DashboardProgressMode;
+}
+
 export interface Homeschool {
   id: string;
   name: string;
@@ -28,11 +42,7 @@ export interface Homeschool {
   studentUids?: string[]; // auth UIDs of linked student accounts (set server-side)
   createdBy: string;
   createdAt: Date;
-  dashboardSettings?: {
-    cycleSeconds: number;
-    startOfWeek: number;
-    timezone: string;
-  };
+  dashboardSettings?: DashboardSettings;
   timerAlarmEnabled?: boolean;
   publicDashboardId?: string;
   allowMultipleRecordsPerDay?: boolean;

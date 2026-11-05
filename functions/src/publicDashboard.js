@@ -131,6 +131,8 @@ async function buildPublicDashboard(db, publicId, now = new Date()) {
     homeschool: {
       id: homeschoolId,
       name: hs.name,
+      // Stored as written, including progressMode ('daily' | 'weekly').
+      // Older homeschools omit it; the client treats a missing mode as weekly.
       dashboardSettings: hs.dashboardSettings || null,
       studentSortOrder: hs.studentSortOrder || null,
     },

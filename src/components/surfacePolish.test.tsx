@@ -226,6 +226,8 @@ function writePreview(name: string, html: string) {
     return `<div class="${className}${extra || ''}" style="${paints[icon[1]]}"${rest}>`;
   }).replace(/class="hs-progress-fill" style="([^"]*)"/g, (_full, style) => {
     return `class="hs-progress-fill" style="${style};background-color:#2196f3"`;
+  }).replace(/<select([^>]*)>(\s*)<option value="">Select a student\.\.\.<\/option><option value="([^"]+)">/g, (_full, attrs, space, id) => {
+    return `<select${attrs}>${space}<option value="">Select a student...</option><option value="${id}" selected>`;
   });
   const document = `<!doctype html>
 <html>
@@ -351,12 +353,19 @@ describe('parent and student surface polish', () => {
     expect(screen.getAllByText('Done today').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Week complete').length).toBeGreaterThan(0);
     expect(container.textContent).not.toMatch(/Apple TV/i);
-    expect(container.querySelector('.hs-activity-card')).toBeTruthy();
-    expect(screen.getByText(/sessions this week/)).toBeInTheDocument();
+    expect(container.querySelector('.hs-student-home')).toBeTruthy();
+    expect(container.querySelector('.hs-student-grid')).toBeNull();
+    expect(screen.getByText(/of \d+ sessions/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reports' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Dashboard' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Assign Task' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '+ Record Progress' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mark Done' })).toBeInTheDocument();
 
     const algebra = screen.getByRole('heading', { name: 'Algebra 1' }).closest('.hs-activity-card') as HTMLElement;
     expect(algebra.querySelector('.hs-chip-icon')?.textContent).toBe('✔');
-    expect(within(algebra).getByText('4/5 wk · 93% of 100% · 2x today')).toBeInTheDocument();
+    expect(within(algebra).getByText('4 of 5 this week · 93% of 100% · 2 times today')).toBeInTheDocument();
 
     writePreview('student.html', container.innerHTML);
 
@@ -368,7 +377,9 @@ describe('parent and student surface polish', () => {
     expect(await screen.findByRole('heading', { name: 'Record Activity' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    await userEvent.click(screen.getByText('Science fair poster'));
+    await userEvent.click(screen.getByRole('button', { name: 'Mark Done' }));
     expect(await screen.findByRole('heading', { name: 'Complete Task' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toHaveValue('nico');
+    writePreview('student-complete-task.html', container.innerHTML);
   });
 });

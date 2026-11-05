@@ -270,14 +270,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   const weeklyProgressPercentage = weeklyProgress.target > 0 ? (weeklyProgress.completed / weeklyProgress.target) * 100 : 0;
 
-  const weekFill = weeklyProgressPercentage === 100
-    ? 'var(--hs-goal-complete-border)'
-    : 'var(--hs-goal-today-border)';
+  const weekDegrees = Math.min(weeklyProgressPercentage, 100) * 3.6;
+  const weekRing = weeklyProgressPercentage === 100 ? '#4caf50' : '#2196f3';
 
   return (
-    <div className="hs-page">
+    <div className="hs-page hs-student-home">
       <header className="hs-welcome">
         <div>
+          <p className="hs-kicker">Your day</p>
           <h1 className="hs-title">Welcome, {student.name}</h1>
           <p className="hs-subtitle">
             {homeschool.name} · {new Date().toLocaleDateString('en-US', {
@@ -287,25 +287,28 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             })}
           </p>
         </div>
-        <div className="hs-week">
-          <div className="hs-week-label">
-            {weeklyProgress.completed}/{weeklyProgress.target} sessions this week
-          </div>
+        <div className="hs-week hs-week-student">
           <div
-            className="hs-progress"
+            className="hs-donut"
+            style={{ background: `conic-gradient(${weekRing} ${weekDegrees}deg, #e6e8ec 0deg)` }}
             role="progressbar"
             aria-valuenow={Math.round(weeklyProgressPercentage)}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label="Weekly session progress"
           >
-            <div
-              className="hs-progress-fill"
-              style={{ width: `${Math.min(weeklyProgressPercentage, 100)}%`, background: weekFill }}
-            />
+            <div className="hs-donut-hole">
+              <span className="hs-donut-value">{Math.round(weeklyProgressPercentage)}%</span>
+              <span className="hs-donut-caption">this week</span>
+            </div>
           </div>
-          <div className="hs-week-meta">
-            {completedToday}/{goals.length} done today
+          <div>
+            <div className="hs-week-label">
+              {weeklyProgress.completed} of {weeklyProgress.target} sessions
+            </div>
+            <div className="hs-week-meta">
+              {completedToday} of {goals.length} done today
+            </div>
           </div>
         </div>
       </header>
@@ -385,9 +388,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       {task.description && <p className="hs-activity-desc">{task.description}</p>}
                       <div className="hs-activity-foot">
                         <div className="hs-chip-meta">
-                          {targetDate ? `Due ${targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : (isCompleted ? 'Completed' : 'Pending')}
+                          {targetDate ? `Due ${targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : (isCompleted ? 'Completed' : 'Waiting to start')}
                         </div>
-                        {!isCompleted && <div className="hs-action-link">Mark Done</div>}
+                        {!isCompleted && (
+                          <button type="button" className="hs-card-action is-accent">
+                            Mark Done
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -401,15 +408,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 const weeklyCount = weekInstances.filter(i => i.goalId === goal.id && i.studentId === student.id).length;
                 const todayCount = todayInstances.filter(i => i.goalId === goal.id && i.studentId === student.id).length;
                 const metaParts: string[] = [];
-                if (goal.timesPerWeek) metaParts.push(`${weeklyCount}/${goal.timesPerWeek} wk`);
+                if (goal.timesPerWeek) metaParts.push(`${weeklyCount} of ${goal.timesPerWeek} this week`);
                 if (goal.minutesPerSession) metaParts.push(`${goal.minutesPerSession} min`);
                 if (activity?.progressReportingStyle?.percentageCompletion && (goal.percentageGoal || goal.dailyPercentageIncrease) && latest?.percentageCompleted !== undefined) {
                   metaParts.push(goal.percentageGoal ? `${latest.percentageCompleted.toFixed(0)}% of ${goal.percentageGoal}%` : `${latest.percentageCompleted.toFixed(0)}%`);
                 }
                 if (activity?.progressReportingStyle?.progressCount && goal.progressCount && latest?.countCompleted !== undefined) {
-                  metaParts.push(`${latest.countCompleted}/${goal.progressCount} ${activity.progressCountName || 'items'}`);
+                  metaParts.push(`${latest.countCompleted} of ${goal.progressCount} ${activity.progressCountName || 'items'}`);
                 }
-                if (todayCount > 1) metaParts.push(`${todayCount}x today`);
+                if (todayCount > 1) metaParts.push(`${todayCount} times today`);
 
                 return (
                   <div
@@ -429,8 +436,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     </div>
                     {activity?.description && <p className="hs-activity-desc">{activity.description}</p>}
                     <div className="hs-activity-foot">
-                      <div className="hs-chip-meta">{metaParts.join(' · ') || 'No progress yet'}</div>
-                      <div className="hs-action-link">{progress.todayInstance || todayCount > 0 ? 'Edit' : 'Record'}</div>
+                      <div className="hs-chip-meta">{metaParts.join(' · ') || 'Nothing recorded yet'}</div>
+                      <button type="button" className="hs-card-action">
+                        {progress.todayInstance || todayCount > 0 ? 'Edit today' : 'Record'}
+                      </button>
                     </div>
                   </div>
                 );

@@ -267,7 +267,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const weeklyProgressPercentage = weeklyProgress.target > 0 ? (weeklyProgress.completed / weeklyProgress.target) * 100 : 0;
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    // Dark navy page: index.css @media (prefers-color-scheme: dark).
+    // Purple welcome gradient below is the signed-in student banner.
+    <div className="hs-student-live" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
       {/* CSS Animations */}
       <style>
         {`

@@ -126,7 +126,7 @@ describe('buildPublicDashboard', () => {
       publicDashboardId: 'abcd1234',
       parentIds: ['p1'], parentEmails: ['secret@example.com'], studentUids: ['ana-uid'],
       studentIds: ['S1', 'missing'],
-      dashboardSettings: { cycleSeconds: 10, startOfWeek: 1, timezone: 'UTC' },
+      dashboardSettings: { cycleSeconds: 10, startOfWeek: 1, timezone: 'UTC', progressMode: 'daily' },
     });
     await db.doc('people/S1').set({ name: 'Ana', role: 'student', email: 'ana@example.com', mobile: '555', homeschoolId: 'H1', authUid: 'ana-uid' });
     await db.doc('activities/A1').set({ name: 'Math', description: 'private notes', homeschoolId: 'H1', progressReportingStyle: { timesTotal: true } });
@@ -151,7 +151,7 @@ describe('buildPublicDashboard', () => {
     const result = await buildPublicDashboard(db, 'abcd1234', now);
     assert.deepEqual(result.homeschool, {
       id: 'H1', name: 'Anes Academy',
-      dashboardSettings: { cycleSeconds: 10, startOfWeek: 1, timezone: 'UTC' },
+      dashboardSettings: { cycleSeconds: 10, startOfWeek: 1, timezone: 'UTC', progressMode: 'daily' },
       studentSortOrder: null,
     });
     assert.deepEqual(result.students, [{ id: 'S1', name: 'Ana' }]);

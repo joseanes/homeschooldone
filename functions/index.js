@@ -11,6 +11,15 @@ const db = getFirestore();
 setGlobalOptions({maxInstances: 10});
 
 /**
+ * Keep a stored field, including 0, and drop only missing values.
+ * @param {*} value Field value from Firestore.
+ * @return {*} The stored value, or null when the field is absent.
+ */
+function present(value) {
+  return value === undefined ? null : value;
+}
+
+/**
  * Cloud Function to serve public dashboard data securely
  */
 exports.getPublicDashboard = onCall({cors: true}, async (request) => {
@@ -58,20 +67,45 @@ exports.getPublicDashboard = onCall({cors: true}, async (request) => {
         .where("homeschoolId", "==", homeschoolId)
         .get();
 
-    const activities = activitiesSnapshot.docs.map((doc) => ({
-      ...doc.data(),
-      id: doc.id,
-    }));
+    const activities = activitiesSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name,
+        subjectId: data.subjectId,
+        description: data.description || "",
+        progressReportingStyle: data.progressReportingStyle || {},
+        progressCountName: data.progressCountName || null,
+        requiresTimeTracking: !!data.requiresTimeTracking,
+        homeschoolId: data.homeschoolId,
+      };
+    });
 
-    // Fetch goals
+    // Fetch goals. Allowlist display fields so grades, tutor UIDs, and
+    // completion notes are not returned to whoever has the public link.
     const goalsSnapshot = await db.collection("goals")
         .where("homeschoolId", "==", homeschoolId)
         .get();
 
-    const goals = goalsSnapshot.docs.map((doc) => ({
-      ...doc.data(),
-      id: doc.id,
-    }));
+    const goals = goalsSnapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name || "",
+        description: data.description || "",
+        studentIds: data.studentIds || [],
+        activityId: data.activityId,
+        homeschoolId: data.homeschoolId,
+        timesPerWeek: present(data.timesPerWeek),
+        minutesPerSession: present(data.minutesPerSession),
+        progressCount: present(data.progressCount),
+        percentageGoal: present(data.percentageGoal),
+        dailyPercentageIncrease: present(data.dailyPercentageIncrease),
+        startDate: present(data.startDate),
+        deadline: present(data.deadline),
+        completionDate: present(data.completionDate),
+      };
+    });
 
     // Return only display-safe fields — no UIDs, emails, or role arrays
     return {

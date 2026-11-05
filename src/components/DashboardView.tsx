@@ -213,16 +213,26 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         const progress = await Promise.all(progressPromises);
         setStudentsProgress(progress);
 
-        // Fetch last 5 weeks of instances for charts (Last 7 Days + Weekly Completion)
+        // Chart history for this homeschool only. A date-only query matches every
+        // family's activity instances, and the public dashboard runs this unsigned.
         const fiveWeeksAgo = new Date(weekStart);
         fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 28); // 4 additional weeks back
-        const allInstancesQuery = query(
-          collection(db, 'activityInstances'),
-          where('date', '>=', fiveWeeksAgo),
-          where('date', '<=', weekEnd)
-        );
-        const allInstancesSnap = await getDocs(allInstancesQuery);
-        const instances = allInstancesSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ActivityInstance));
+        const studentIds = students.map((student) => student.id).filter(Boolean);
+        const instances: ActivityInstance[] = [];
+        const chunkSize = 10;
+        for (let i = 0; i < studentIds.length; i += chunkSize) {
+          const chunk = studentIds.slice(i, i + chunkSize);
+          const scopedQuery = query(
+            collection(db, 'activityInstances'),
+            where('studentId', 'in', chunk),
+            where('date', '>=', fiveWeeksAgo),
+            where('date', '<=', weekEnd)
+          );
+          const scopedSnap = await getDocs(scopedQuery);
+          scopedSnap.docs.forEach((instanceDoc) => {
+            instances.push({ ...instanceDoc.data(), id: instanceDoc.id } as ActivityInstance);
+          });
+        }
         setAllWeekInstances(instances);
       } catch (error) {
         console.error('Error fetching dashboard progress:', error);

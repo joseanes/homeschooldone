@@ -1,0 +1,240 @@
+rules_version = '2';
+
+// HomeschoolDone Firestore security rules.
+//
+// Access is granted per homeschool. A signed-in user's role in a homeschool
+// is determined only by the membership arrays on the homeschool document:
+//
+//   parentIds   - full control of the homeschool
+//   tutorIds    - can manage activities, goals, ad-hoc tasks and record progress
+//   observerIds - read-only
+//   studentUids - auth UIDs of student accounts, linked server-side by the
+//                 acceptInvitations Cloud Function after verifying the email
+//
+// The `role` field on people documents is display-only and is never trusted.
+// Pending email invitations (parentEmails/tutorEmails/observerEmails) grant
+// nothing until acceptInvitations moves them into the matching *Ids array.
+//
+// Every per-homeschool collection carries a `homeschoolId` field so that each
+// read can be checked with a single lookup. Queries must filter on it.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function homeschool(id) {
+      return get(/databases/$(database)/documents/homeschools/$(id)).data;
+    }
+
+    function inRole(h, field) {
+      return field in h && uid() in h[field];
+    }
+
+    function isParentOf(h) {
+      return inRole(h, 'parentIds');
+    }
+
+    function isStaffOf(h) {
+      return isParentOf(h) || inRole(h, 'tutorIds');
+    }
+
+    function isStudentUserOf(h) {
+      return inRole(h, 'studentUids');
+    }
+
+    function isMemberOf(h) {
+      return isStaffOf(h) || inRole(h, 'observerIds') || isStudentUserOf(h);
+    }
+
+    // True when the signed-in user is the linked account of student record `studentId`.
+    function ownsStudent(studentId) {
+      return get(/databases/$(database)/documents/people/$(studentId)).data.get('authUid', null) == uid();
+    }
+
+    function homeschoolIdUnchanged() {
+      return request.resource.data.homeschoolId == resource.data.homeschoolId;
+    }
+
+    function onlyChanges(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ---------- homeschools ----------
+
+    match /homeschools/{homeschoolId} {
+      allow read: if signedIn() && isMemberOf(resource.data);
+
+      // The creator must be the sole parent; no linked students on creation.
+      allow create: if signedIn()
+        && request.resource.data.createdBy == uid()
+        && request.resource.data.parentIds == [uid()]
+        && !('studentUids' in request.resource.data);
+
+      // Settings, membership and invitations are parent-only. Students are
+      // linked (studentUids) and invitations accepted by Cloud Functions.
+      allow update, delete: if signedIn() && isParentOf(resource.data);
+    }
+
+    // ---------- people ----------
+    //
+    // Two kinds of documents live here:
+    //  * Account profiles: document ID == auth UID, written by the user.
+    //  * Student records: role == 'student', created by a parent, carry a
+    //    homeschoolId and (once linked) the student's authUid.
+
+    match /people/{personId} {
+      function isStudentRecord(d) {
+        return d.get('role', '') == 'student';
+      }
+
+      function canReadStudentRecord() {
+        return resource.data.get('authUid', null) == uid()
+          || isMemberOf(homeschool(resource.data.homeschoolId));
+      }
+
+      // Account profiles can be fetched by ID (IDs are only visible to fellow
+      // homeschool members); student records require homeschool membership.
+      allow get: if signedIn() && (
+        personId == uid()
+        || !isStudentRecord(resource.data)
+        || canReadStudentRecord()
+      );
+
+      // Queries must be scoped to a homeschool (or to the caller's own link).
+      allow list: if signedIn() && canReadStudentRecord();
+
+      // Own account profile. Cannot masquerade as a student record.
+      allow create: if signedIn()
+        && personId == uid()
+        && !isStudentRecord(request.resource.data)
+        && !('homeschoolId' in request.resource.data)
+        && !('authUid' in request.resource.data);
+
+      allow update: if signedIn()
+        && personId == uid()
+        && !isStudentRecord(resource.data)
+        && !isStudentRecord(request.resource.data)
+        && !('homeschoolId' in request.resource.data)
+        && !('authUid' in request.resource.data);
+
+      // Student records: created/edited/deleted by parents of the homeschool.
+      // A parent may unlink the student account (remove authUid) but never set it.
+      allow create: if signedIn()
+        && isStudentRecord(request.resource.data)
+        && isParentOf(homeschool(request.resource.data.homeschoolId))
+        && !('authUid' in request.resource.data);
+
+      allow update: if signedIn()
+        && isStudentRecord(resource.data)
+        && isStudentRecord(request.resource.data)
+        && homeschoolIdUnchanged()
+        && isParentOf(homeschool(resource.data.homeschoolId))
+        && request.resource.data.get('authUid', null) in [null, resource.data.get('authUid', null)];
+
+      // Recording progress touches the student's lastActivity.
+      allow update: if signedIn()
+        && isStudentRecord(resource.data)
+        && onlyChanges(['lastActivity'])
+        && (isStaffOf(homeschool(resource.data.homeschoolId))
+            || resource.data.get('authUid', null) == uid());
+
+      allow delete: if signedIn()
+        && isStudentRecord(resource.data)
+        && isParentOf(homeschool(resource.data.homeschoolId));
+    }
+
+    // ---------- activities ----------
+
+    match /activities/{activityId} {
+      allow read: if signedIn() && isMemberOf(homeschool(resource.data.homeschoolId));
+      allow create: if signedIn() && isStaffOf(homeschool(request.resource.data.homeschoolId));
+      allow update: if signedIn()
+        && homeschoolIdUnchanged()
+        && isStaffOf(homeschool(resource.data.homeschoolId));
+      allow delete: if signedIn() && isParentOf(homeschool(resource.data.homeschoolId));
+    }
+
+    // ---------- goals ----------
+
+    match /goals/{goalId} {
+      allow read: if signedIn() && isMemberOf(homeschool(resource.data.homeschoolId));
+      allow create: if signedIn() && isStaffOf(homeschool(request.resource.data.homeschoolId));
+      allow update: if signedIn()
+        && homeschoolIdUnchanged()
+        && isStaffOf(homeschool(resource.data.homeschoolId));
+      // Students logging their own progress bump the goal's timesDone counter.
+      allow update: if signedIn()
+        && onlyChanges(['timesDone'])
+        && isStudentUserOf(homeschool(resource.data.homeschoolId));
+      allow delete: if signedIn() && isParentOf(homeschool(resource.data.homeschoolId));
+    }
+
+    // ---------- adHocTasks ----------
+
+    match /adHocTasks/{taskId} {
+      allow read: if signedIn() && isMemberOf(homeschool(resource.data.homeschoolId));
+
+      allow create: if signedIn() && (
+        isStaffOf(homeschool(request.resource.data.homeschoolId))
+        || (isStudentUserOf(homeschool(request.resource.data.homeschoolId))
+            && ownsStudent(request.resource.data.studentId))
+      );
+
+      allow update: if signedIn()
+        && homeschoolIdUnchanged()
+        && request.resource.data.studentId == resource.data.studentId
+        && (isStaffOf(homeschool(resource.data.homeschoolId))
+            || (isStudentUserOf(homeschool(resource.data.homeschoolId))
+                && ownsStudent(resource.data.studentId)));
+
+      allow delete: if signedIn() && isStaffOf(homeschool(resource.data.homeschoolId));
+    }
+
+    // ---------- activityInstances ----------
+
+    match /activityInstances/{instanceId} {
+      // The instance must point at a goal in the same homeschool.
+      function validInstance(d) {
+        return get(/databases/$(database)/documents/goals/$(d.goalId)).data.homeschoolId == d.homeschoolId;
+      }
+
+      // Staff record for any student and sign as themselves. Linked students
+      // record only for themselves; the student dashboard signs entries with
+      // the student record ID.
+      function canRecord(h, d) {
+        return (isStaffOf(h) && d.createdBy == uid())
+          || (isStudentUserOf(h)
+              && ownsStudent(d.studentId)
+              && d.createdBy in [uid(), d.studentId]);
+      }
+
+      allow read: if signedIn() && isMemberOf(homeschool(resource.data.homeschoolId));
+
+      allow create: if signedIn()
+        && validInstance(request.resource.data)
+        && canRecord(homeschool(request.resource.data.homeschoolId), request.resource.data);
+
+      allow update: if signedIn()
+        && homeschoolIdUnchanged()
+        && request.resource.data.studentId == resource.data.studentId
+        && validInstance(request.resource.data)
+        && canRecord(homeschool(resource.data.homeschoolId), request.resource.data);
+
+      allow delete: if signedIn() && isStaffOf(homeschool(resource.data.homeschoolId));
+    }
+
+    // Everything else is closed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

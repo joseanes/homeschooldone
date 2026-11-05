@@ -15,7 +15,10 @@ public class FirebaseService: ObservableObject {
     @Published public var students: [Person] = []
     @Published public var activities: [Activity] = []
     @Published public var goals: [Goal] = []
+    /// Activity instances in the current dashboard week (goal status badges).
     @Published public var weekInstances: [ActivityInstance] = []
+    /// Activity instances from the last five weeks (Last 7 Days and Weekly Completion charts).
+    @Published public var recentInstances: [ActivityInstance] = []
     @Published public var isLoading = false
     @Published public var error: String?
 
@@ -92,7 +95,7 @@ public class FirebaseService: ObservableObject {
 
         do {
             // Check if user is a student first
-            if let studentHomeschool = try await findHomeschoolForStudent(userEmail: user.email ?? "") {
+            if let studentHomeschool = try await findHomeschoolForStudent(userID: user.uid) {
                 print("📚 Found as student in homeschool: \(studentHomeschool.name)")
                 self.homeschool = studentHomeschool
                 await setupRealtimeListeners()
@@ -100,7 +103,7 @@ public class FirebaseService: ObservableObject {
             }
 
             // Check parent/tutor/observer access
-            if let homeschool = try await findHomeschoolForUser(userEmail: user.email ?? "") {
+            if let homeschool = try await findHomeschoolForUser(userID: user.uid) {
                 print("👤 Found as parent/tutor/observer in homeschool: \(homeschool.name)")
                 self.homeschool = homeschool
                 await setupRealtimeListeners()
@@ -116,61 +119,41 @@ public class FirebaseService: ObservableObject {
         print("🔄 Initial data loading complete, waiting for real-time listeners...")
     }
 
-    private func findHomeschoolForStudent(userEmail: String) async throws -> Homeschool? {
-        let peopleQuery = db.collection("people").whereField("email", isEqualTo: userEmail)
-        let peopleSnapshot = try await peopleQuery.getDocuments()
+    // Student accounts are linked server-side (acceptInvitations Cloud Function,
+    // run when the student signs in to the web app): the homeschool lists the
+    // account in studentUids and the student record carries its authUid.
+    private func findHomeschoolForStudent(userID: String) async throws -> Homeschool? {
+        let homeschoolSnapshot = try await db.collection("homeschools")
+            .whereField("studentUids", arrayContains: userID)
+            .getDocuments()
 
-        for document in peopleSnapshot.documents {
-            let person = try document.data(as: Person.self)
-            if person.role == .student, let _ = person.homeschoolId {
-                let homeschoolQuery = db.collection("homeschools").whereField("studentIds", arrayContains: document.documentID)
-                let homeschoolSnapshot = try await homeschoolQuery.getDocuments()
-
-                if let homeschoolDoc = homeschoolSnapshot.documents.first {
-                    return try homeschoolDoc.data(as: Homeschool.self)
-                }
-            }
+        guard let homeschoolDoc = homeschoolSnapshot.documents.first else {
+            return nil
         }
 
-        return nil
+        let studentSnapshot = try await db.collection("people")
+            .whereField("homeschoolId", isEqualTo: homeschoolDoc.documentID)
+            .whereField("authUid", isEqualTo: userID)
+            .getDocuments()
+
+        guard !studentSnapshot.documents.isEmpty else {
+            return nil
+        }
+        return try homeschoolDoc.data(as: Homeschool.self)
     }
 
-    private func findHomeschoolForUser(userEmail: String) async throws -> Homeschool? {
-        print("🔍 Looking for homeschool access for email: \(userEmail)")
+    // Firestore rules only allow membership queries on the signed-in user's own
+    // UID. Pending email invitations are accepted by the web app on sign-in.
+    private func findHomeschoolForUser(userID: String) async throws -> Homeschool? {
+        print("🔍 Looking for homeschool access for user: \(userID)")
 
-        let currentUserID = auth.currentUser?.uid
-        print("🆔 Current user ID: \(currentUserID ?? "none")")
-
-        // Check by user ID fields first
-        if let userID = currentUserID {
-            let idQueries = [
-                ("parentIds", db.collection("homeschools").whereField("parentIds", arrayContains: userID)),
-                ("tutorIds", db.collection("homeschools").whereField("tutorIds", arrayContains: userID)),
-                ("observerIds", db.collection("homeschools").whereField("observerIds", arrayContains: userID))
-            ]
-
-            for (queryType, query) in idQueries {
-                do {
-                    let snapshot = try await query.getDocuments()
-                    if let document = snapshot.documents.first {
-                        let homeschool = try document.data(as: Homeschool.self)
-                        print("✅ Found homeschool: \(homeschool.name) via \(queryType)")
-                        return homeschool
-                    }
-                } catch {
-                    print("❌ Error in \(queryType) query: \(error.localizedDescription)")
-                }
-            }
-        }
-
-        // Check by email fields
-        let emailQueries = [
-            ("parentEmails", db.collection("homeschools").whereField("parentEmails", arrayContains: userEmail)),
-            ("tutorEmails", db.collection("homeschools").whereField("tutorEmails", arrayContains: userEmail)),
-            ("observerEmails", db.collection("homeschools").whereField("observerEmails", arrayContains: userEmail))
+        let idQueries = [
+            ("parentIds", db.collection("homeschools").whereField("parentIds", arrayContains: userID)),
+            ("tutorIds", db.collection("homeschools").whereField("tutorIds", arrayContains: userID)),
+            ("observerIds", db.collection("homeschools").whereField("observerIds", arrayContains: userID))
         ]
 
-        for (queryType, query) in emailQueries {
+        for (queryType, query) in idQueries {
             do {
                 let snapshot = try await query.getDocuments()
                 if let document = snapshot.documents.first {
@@ -183,39 +166,7 @@ public class FirebaseService: ObservableObject {
             }
         }
 
-        // Fallback: scan all homeschools
-        do {
-            let allHomeschoolsSnapshot = try await db.collection("homeschools").getDocuments()
-            print("🏠 Total homeschools in database: \(allHomeschoolsSnapshot.documents.count)")
-
-            for doc in allHomeschoolsSnapshot.documents {
-                do {
-                    let hs = try doc.data(as: Homeschool.self)
-                    if let userID = currentUserID {
-                        if hs.parentIds?.contains(userID) == true ||
-                           hs.tutorIds?.contains(userID) == true ||
-                           hs.observerIds?.contains(userID) == true {
-                            print("✅ Found user access via IDs in \(hs.name)")
-                            return hs
-                        }
-                    }
-                    if hs.parentEmails.contains(userEmail) ||
-                       hs.tutorEmails?.contains(userEmail) == true ||
-                       hs.observerEmails?.contains(userEmail) == true ||
-                       hs.authorizedUsers?.contains(userEmail) == true {
-                        print("✅ Found user access via emails in \(hs.name)")
-                        return hs
-                    }
-                } catch {
-                    print("❌ Error parsing homeschool \(doc.documentID): \(error)")
-                }
-            }
-        } catch {
-            print("❌ Error getting homeschools: \(error.localizedDescription)")
-            throw error
-        }
-
-        print("❌ No homeschool access found for \(userEmail)")
+        print("❌ No homeschool access found for \(userID)")
         return nil
     }
 
@@ -232,7 +183,9 @@ public class FirebaseService: ObservableObject {
 
         // Listen to students
         if !homeschool.studentIds.isEmpty {
+            // Firestore rules require student queries to be scoped by homeschoolId.
             let studentsListener = db.collection("people")
+                .whereField("homeschoolId", isEqualTo: homeschool.id ?? "")
                 .whereField(FieldPath.documentID(), in: homeschool.studentIds)
                 .addSnapshotListener { [weak self] snapshot, error in
                     Task { @MainActor in
@@ -245,14 +198,10 @@ public class FirebaseService: ObservableObject {
                             self?.markDataLoaded("students")
                             return
                         }
-                        do {
-                            let students = try documents.map { try $0.data(as: Person.self) }
-                            print("✅ Loaded \(students.count) students")
-                            self?.students = students
-                            self?.markDataLoaded("students")
-                        } catch {
-                            print("❌ Error parsing students: \(error)")
-                        }
+                        let students = FirebaseService.decodeAll(documents, as: Person.self)
+                        print("✅ Loaded \(students.count) students")
+                        self?.students = students
+                        self?.markDataLoaded("students")
                     }
                 }
             listeners.append(studentsListener)
@@ -274,14 +223,10 @@ public class FirebaseService: ObservableObject {
                         self?.markDataLoaded("activities")
                         return
                     }
-                    do {
-                        let activities = try documents.map { try $0.data(as: Activity.self) }
-                        print("✅ Loaded \(activities.count) activities")
-                        self?.activities = activities
-                        self?.markDataLoaded("activities")
-                    } catch {
-                        print("❌ Error parsing activities: \(error)")
-                    }
+                    let activities = FirebaseService.decodeAll(documents, as: Activity.self)
+                    print("✅ Loaded \(activities.count) activities")
+                    self?.activities = activities
+                    self?.markDataLoaded("activities")
                 }
             }
         listeners.append(activitiesListener)
@@ -300,25 +245,40 @@ public class FirebaseService: ObservableObject {
                         self?.markDataLoaded("goals")
                         return
                     }
-                    do {
-                        let goals = try documents.map { try $0.data(as: Goal.self) }
-                        print("✅ Loaded \(goals.count) goals")
-                        self?.goals = goals
-                        self?.markDataLoaded("goals")
-                    } catch {
-                        print("❌ Error parsing goals: \(error)")
-                    }
+                    let goals = FirebaseService.decodeAll(documents, as: Goal.self)
+                    print("✅ Loaded \(goals.count) goals")
+                    self?.goals = goals
+                    self?.markDataLoaded("goals")
                 }
             }
         listeners.append(goalsListener)
     }
 
-    // MARK: - Activity Instances (Week)
+    /// Decodes each document, skipping (and logging) any that don't match the
+    /// model, so one malformed document can't blank a whole list or leave the
+    /// app stuck loading.
+    private static func decodeAll<T: Decodable>(_ documents: [QueryDocumentSnapshot], as type: T.Type) -> [T] {
+        documents.compactMap { document in
+            do {
+                return try document.data(as: T.self)
+            } catch {
+                print("❌ Skipping \(T.self) \(document.documentID): \(error)")
+                return nil
+            }
+        }
+    }
+
+    // MARK: - Activity Instances
+
+    /// Number of days of history loaded for the charts: the weekly chart shows
+    /// the current week plus the 3 before it, so 35 days always covers it.
+    private static let chartHistoryDays = 35
 
     public func fetchWeekInstances() async {
         let goalIds = goals.compactMap { $0.id }
         guard !goalIds.isEmpty else {
             weekInstances = []
+            recentInstances = []
             return
         }
 
@@ -335,38 +295,44 @@ public class FirebaseService: ObservableObject {
         let dayOfWeek = calendar.component(.weekday, from: today) - 1 // 0=Sun,1=Mon...
         let daysFromStart = (dayOfWeek - startOfWeekDay + 7) % 7
         guard let weekStart = calendar.date(byAdding: .day, value: -daysFromStart, to: today),
-              let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) else {
+              let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart),
+              let historyStart = calendar.date(byAdding: .day, value: -Self.chartHistoryDays, to: today) else {
             return
         }
+        let rangeStart = min(historyStart, weekStart)
 
-        print("📅 Fetching week instances: \(weekStart) to \(weekEnd)")
+        print("📅 Fetching activity instances: \(rangeStart) to \(weekEnd)")
 
         var allInstances: [ActivityInstance] = []
 
-        // Query in chunks of 10 (Firestore 'in' query limit)
-        let chunkSize = 10
-        for i in stride(from: 0, to: goalIds.count, by: chunkSize) {
-            let chunk = Array(goalIds[i..<min(i + chunkSize, goalIds.count)])
-            do {
-                let snapshot = try await db.collection("activityInstances")
-                    .whereField("goalId", in: chunk)
-                    .getDocuments()
+        // Firestore rules require activity instance queries to be scoped by
+        // homeschoolId (served by the homeschoolId + date composite index).
+        do {
+            let snapshot = try await db.collection("activityInstances")
+                .whereField("homeschoolId", isEqualTo: homeschool?.id ?? "")
+                .whereField("date", isGreaterThanOrEqualTo: Timestamp(date: rangeStart))
+                .whereField("date", isLessThan: Timestamp(date: weekEnd))
+                .getDocuments()
 
-                for doc in snapshot.documents {
-                    if let instance = try? doc.data(as: ActivityInstance.self) {
-                        let instanceDate = instance.date.dateValue()
-                        if instanceDate >= weekStart && instanceDate < weekEnd {
-                            allInstances.append(instance)
-                        }
-                    }
+            let goalIdSet = Set(goalIds)
+            for doc in snapshot.documents {
+                if let instance = try? doc.data(as: ActivityInstance.self),
+                   goalIdSet.contains(instance.goalId) {
+                    allInstances.append(instance)
                 }
-            } catch {
-                print("❌ Error fetching activity instances chunk: \(error)")
             }
+        } catch {
+            // Keep showing the last good data; the refresh loop retries.
+            print("❌ Error fetching activity instances: \(error)")
+            return
         }
 
-        print("✅ Fetched \(allInstances.count) week instances")
-        weekInstances = allInstances
+        recentInstances = allInstances
+        weekInstances = allInstances.filter { instance in
+            let date = instance.date.dateValue()
+            return date >= weekStart && date < weekEnd
+        }
+        print("✅ Fetched \(allInstances.count) recent instances, \(weekInstances.count) this week")
     }
 
     private func startInstanceRefresh() {
@@ -391,6 +357,7 @@ public class FirebaseService: ObservableObject {
         activities = []
         goals = []
         weekInstances = []
+        recentInstances = []
         initialDataLoaded.removeAll()
         instanceRefreshTask?.cancel()
         instanceRefreshTask = nil

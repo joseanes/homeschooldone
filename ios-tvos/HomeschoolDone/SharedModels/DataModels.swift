@@ -6,7 +6,7 @@ public struct Homeschool: Codable, Identifiable {
     @DocumentID public var id: String?
     public let name: String
     public let studentIds: [String]
-    public let parentEmails: [String]
+    public let parentEmails: [String]?
     public let tutorEmails: [String]?
     public let observerEmails: [String]?
     public let authorizedUsers: [String]?

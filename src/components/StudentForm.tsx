@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, addDoc, updateDoc, doc, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Person, Homeschool } from '../types';
-import { checkEmailExists, sendStudentInvitation } from '../utils/invitations';
+import { sendStudentInvitation } from '../utils/invitations';
 import InvitationDialog from './InvitationDialog';
 
 interface StudentFormProps {
@@ -20,8 +20,6 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [dailyWorkHoursGoal, setDailyWorkHoursGoal] = useState('');
   const [saving, setSaving] = useState(false);
-  const [emailExists, setEmailExists] = useState<boolean | null>(null);
-  const [checkingEmail, setCheckingEmail] = useState(false);
   const [invitationSent, setInvitationSent] = useState(false);
   const [showInvitationDialog, setShowInvitationDialog] = useState(false);
   const [invitationDetails, setInvitationDetails] = useState<{
@@ -30,23 +28,9 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
     body: string;
   } | null>(null);
 
-  // Check if email exists when email changes
+  // Reset invitation status when the email changes
   useEffect(() => {
-    const checkEmail = async () => {
-      if (email.trim() && email.includes('@')) {
-        setCheckingEmail(true);
-        const exists = await checkEmailExists(email.trim());
-        setEmailExists(exists);
-        setCheckingEmail(false);
-        setInvitationSent(false); // Reset invitation status when email changes
-      } else {
-        setEmailExists(null);
-        setInvitationSent(false);
-      }
-    };
-
-    const timeoutId = setTimeout(checkEmail, 500); // Debounce email checking
-    return () => clearTimeout(timeoutId);
+    setInvitationSent(false);
   }, [email]);
 
   const handleSendInvitation = async () => {
@@ -81,7 +65,8 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
       // Create the student document
       const studentData: any = {
         name,
-        role: 'student'
+        role: 'student',
+        homeschoolId
       };
       
       // Only add optional fields if they have values
@@ -184,44 +169,31 @@ const StudentForm: React.FC<StudentFormProps> = ({ homeschoolId, homeschool, inv
             {/* Email Status and Invitation */}
             {email.trim() && email.includes('@') && (
               <div style={{ marginTop: '8px' }}>
-                {checkingEmail ? (
-                  <div style={{ fontSize: '12px', color: '#666' }}>
-                    🔍 Checking if account exists...
-                  </div>
-                ) : emailExists === true ? (
-                  <div style={{ fontSize: '12px', color: '#2e7d32' }}>
-                    ✅ Account already exists! Student can sign in with this email.
-                  </div>
-                ) : emailExists === false ? (
-                  <div style={{ fontSize: '12px' }}>
-                    <div style={{ color: '#ff6f00', marginBottom: '8px' }}>
-                      ⚠️ No account found with this email
+                <div style={{ fontSize: '12px' }}>
+                  {name.trim() && (
+                    <button
+                      type="button"
+                      onClick={handleSendInvitation}
+                      disabled={invitationSent}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        backgroundColor: invitationSent ? '#4caf50' : '#ff9800',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: invitationSent ? 'default' : 'pointer'
+                      }}
+                    >
+                      {invitationSent ? '📧 Invitation Sent' : '📧 Send Invitation'}
+                    </button>
+                  )}
+                  {!name.trim() && (
+                    <div style={{ color: '#666', fontSize: '11px' }}>
+                      Enter student name first to send invitation
                     </div>
-                    {name.trim() && (
-                      <button
-                        type="button"
-                        onClick={handleSendInvitation}
-                        disabled={invitationSent}
-                        style={{
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          backgroundColor: invitationSent ? '#4caf50' : '#ff9800',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: invitationSent ? 'default' : 'pointer'
-                        }}
-                      >
-                        {invitationSent ? '📧 Invitation Sent' : '📧 Send Invitation'}
-                      </button>
-                    )}
-                    {!name.trim() && (
-                      <div style={{ color: '#666', fontSize: '11px' }}>
-                        Enter student name first to send invitation
-                      </div>
-                    )}
-                  </div>
-                ) : null}
+                  )}
+                </div>
               </div>
             )}
           </div>

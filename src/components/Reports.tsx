@@ -221,15 +221,16 @@ const Reports: React.FC<ReportsProps> = ({
 
       const q = query(
         collection(db, 'activityInstances'),
-        where('goalId', 'in', goalIds)
+        where('homeschoolId', '==', homeschoolId)
       );
 
       const snapshot = await getDocs(q);
+      const goalIdSet = new Set(goalIds);
       const instances = snapshot.docs.map(doc => ({
         ...doc.data(),
         id: doc.id,
         date: doc.data().date?.toDate ? doc.data().date.toDate() : new Date(doc.data().date)
-      } as ActivityInstance));
+      } as ActivityInstance)).filter(instance => goalIdSet.has(instance.goalId));
 
       instances.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

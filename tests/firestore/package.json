@@ -1,0 +1,14 @@
+{
+  "name": "homeschooldone-firestore-tests",
+  "private": true,
+  "description": "Emulator-backed tests for firestore.rules, Cloud Function handlers and data migrations",
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --config ../../firebase.json --only firestore --project demo-homeschooldone \"node --test --test-concurrency=1 'test/*.test.mjs'\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.32.1"
+  }
+}

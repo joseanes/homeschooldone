@@ -14,6 +14,8 @@ interface DashboardViewProps {
   startOfWeek?: number; // 0 = Sunday, 1 = Monday, etc.
   timezone?: string;
   isPublic?: boolean; // Hide exit button for public dashboards
+  // Pre-fetched recent activity instances (public dashboards have no Firestore access)
+  activityInstances?: ActivityInstance[];
 }
 
 interface StudentProgress {
@@ -25,6 +27,10 @@ interface StudentProgress {
   todayCompletedGoalIds: Set<string>;
   todayMinutes: { [goalId: string]: number };
 }
+
+// Instance dates arrive as Firestore Timestamps, Dates or ISO strings
+const toDate = (value: any): Date =>
+  value instanceof Date ? value : value?.toDate ? value.toDate() : new Date(value);
 
 // Map activity name to emoji icon (matches tvOS SF Symbol mapping)
 const activityIcon = (activityName: string): string => {
@@ -52,7 +58,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   cycleSeconds = 10,
   startOfWeek = 1, // Monday default
   timezone = 'America/New_York', // EST default
-  isPublic = false
+  isPublic = false,
+  activityInstances
 }) => {
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [studentsProgress, setStudentsProgress] = useState<StudentProgress[]>([]);
@@ -142,44 +149,48 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
 
-        const progressPromises = students.map(async (student) => {
+        // Last 5 weeks of instances: covers today, this week and the charts
+        // (Last 7 Days + Weekly Completion)
+        const fiveWeeksAgo = new Date(weekStart);
+        fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 28); // 4 additional weeks back
+        let instances: ActivityInstance[];
+        if (activityInstances) {
+          instances = activityInstances;
+        } else {
+          const allInstancesSnap = await getDocs(query(
+            collection(db, 'activityInstances'),
+            where('homeschoolId', '==', homeschool.id),
+            where('date', '>=', fiveWeeksAgo),
+            where('date', '<=', weekEnd)
+          ));
+          instances = allInstancesSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ActivityInstance));
+        }
+        instances = instances
+          .map(inst => ({ ...inst, date: toDate(inst.date) }))
+          .filter(inst => inst.date >= fiveWeeksAgo && inst.date <= weekEnd);
+
+        const progress = students.map((student) => {
           // Get goals for this student that are active (considering start date and completion date)
           const studentGoals = goals.filter(goal => goal.studentIds?.includes(student.id) && isGoalActiveForStudent(goal, student.id));
-          
-          // Get today's activity instances for this student
-          const instancesQuery = query(
-            collection(db, 'activityInstances'),
-            where('studentId', '==', student.id),
-            where('date', '>=', today),
-            where('date', '<', tomorrow)
-          );
-          const todayInstances = await getDocs(instancesQuery);
-          const todayGoalIds = new Set(todayInstances.docs.map(doc => doc.data().goalId));
+          const studentInstances = instances.filter(inst => inst.studentId === student.id);
+
+          // Today's activity instances for this student
+          const todayInstances = studentInstances.filter(inst => inst.date >= today && inst.date < tomorrow);
+          const todayGoalIds = new Set(todayInstances.map(inst => inst.goalId));
           
           // Calculate today's minutes per goal
           const todayMinutes: { [goalId: string]: number } = {};
-          todayInstances.docs.forEach(doc => {
-            const data = doc.data();
-            const goalId = data.goalId;
-            const duration = data.duration || 0;
-            todayMinutes[goalId] = (todayMinutes[goalId] || 0) + duration;
+          todayInstances.forEach(inst => {
+            todayMinutes[inst.goalId] = (todayMinutes[inst.goalId] || 0) + (inst.duration || 0);
           });
 
-          // Get week's activity instances for weekly progress
-          const weekInstancesQuery = query(
-            collection(db, 'activityInstances'),
-            where('studentId', '==', student.id),
-            where('date', '>=', weekStart),
-            where('date', '<=', weekEnd)
-          );
-          const weekInstances = await getDocs(weekInstancesQuery);
+          // Week's activity instances for weekly progress
           const weeklyProgress: { [goalId: string]: number } = {};
-          
-          weekInstances.docs.forEach(doc => {
-            const data = doc.data();
-            const goalId = data.goalId;
-            weeklyProgress[goalId] = (weeklyProgress[goalId] || 0) + 1;
-          });
+          studentInstances
+            .filter(inst => inst.date >= weekStart && inst.date <= weekEnd)
+            .forEach(inst => {
+              weeklyProgress[inst.goalId] = (weeklyProgress[inst.goalId] || 0) + 1;
+            });
 
           // Calculate weekly completion for each goal
           const completedThisWeek = studentGoals.filter(goal => {
@@ -210,19 +221,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           };
         });
 
-        const progress = await Promise.all(progressPromises);
         setStudentsProgress(progress);
-
-        // Fetch last 5 weeks of instances for charts (Last 7 Days + Weekly Completion)
-        const fiveWeeksAgo = new Date(weekStart);
-        fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 28); // 4 additional weeks back
-        const allInstancesQuery = query(
-          collection(db, 'activityInstances'),
-          where('date', '>=', fiveWeeksAgo),
-          where('date', '<=', weekEnd)
-        );
-        const allInstancesSnap = await getDocs(allInstancesQuery);
-        const instances = allInstancesSnap.docs.map(doc => ({ ...doc.data(), id: doc.id } as ActivityInstance));
         setAllWeekInstances(instances);
       } catch (error) {
         console.error('Error fetching dashboard progress:', error);
@@ -232,7 +231,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     };
 
     fetchProgress();
-  }, [students, goals, startOfWeek, timezone]);
+  }, [homeschool.id, students, goals, startOfWeek, timezone, activityInstances]);
 
   if (loading) {
     return (

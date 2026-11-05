@@ -1,8 +1,10 @@
 const {setGlobalOptions} = require("firebase-functions");
-const {onCall} = require("firebase-functions/v2/https");
+const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore} = require("firebase-admin/firestore");
 const logger = require("firebase-functions/logger");
+const {buildPublicDashboard} = require("./src/publicDashboard");
+const {acceptInvitations} = require("./src/invitations");
 
 // Initialize Firebase Admin
 initializeApp();
@@ -10,82 +12,42 @@ const db = getFirestore();
 
 setGlobalOptions({maxInstances: 10});
 
+// Browsers may only call these functions from the app's own origins.
+const ALLOWED_ORIGINS = [
+  "https://homeschooldone.web.app",
+  "https://homeschooldone.firebaseapp.com",
+  "https://homeschooldone.com",
+  "https://www.homeschooldone.com",
+  /^http:\/\/localhost:\d+$/,
+];
+const callableOptions = {cors: ALLOWED_ORIGINS};
+
 /**
- * Cloud Function to serve public dashboard data securely
+ * Serves the read-only data for a shared dashboard without authentication.
+ * Firestore rules deny all unauthenticated reads, so this is the only way
+ * the public dashboard can load.
  */
-exports.getPublicDashboard = onCall({cors: true}, async (request) => {
+exports.getPublicDashboard = onCall(callableOptions, async (request) => {
+  const publicId = request.data && request.data.publicId;
   try {
-    const authStatus = request.auth ? "authenticated" : "unauthenticated";
-    logger.info("Public dashboard request received:", authStatus);
-
-    const {publicId} = request.data;
-
-    if (!publicId || typeof publicId !== "string" || publicId.length !== 8) {
-      throw new Error("Invalid public dashboard ID");
-    }
-
-    logger.info("Fetching public dashboard for ID:", publicId);
-
-    // Find homeschool with matching public dashboard ID
-    const homeschoolQuery = db.collection("homeschools")
-        .where("publicDashboardId", "==", publicId);
-
-    const homeschoolSnapshot = await homeschoolQuery.get();
-
-    if (homeschoolSnapshot.empty) {
-      throw new Error("Public dashboard not found or has been disabled");
-    }
-
-    const homeschoolDoc = homeschoolSnapshot.docs[0];
-    const homeschoolRaw = homeschoolDoc.data();
-    const homeschoolId = homeschoolDoc.id;
-
-    // Fetch students
-    let students = [];
-    if (homeschoolRaw.studentIds && homeschoolRaw.studentIds.length > 0) {
-      const studentsSnapshot = await db.collection("people")
-          .where("__name__", "in", homeschoolRaw.studentIds)
-          .get();
-
-      students = studentsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name,
-      }));
-    }
-
-    // Fetch activities
-    const activitiesSnapshot = await db.collection("activities")
-        .where("homeschoolId", "==", homeschoolId)
-        .get();
-
-    const activities = activitiesSnapshot.docs.map((doc) => ({
-      ...doc.data(),
-      id: doc.id,
-    }));
-
-    // Fetch goals
-    const goalsSnapshot = await db.collection("goals")
-        .where("homeschoolId", "==", homeschoolId)
-        .get();
-
-    const goals = goalsSnapshot.docs.map((doc) => ({
-      ...doc.data(),
-      id: doc.id,
-    }));
-
-    // Return only display-safe fields — no UIDs, emails, or role arrays
-    return {
-      homeschool: {
-        id: homeschoolId,
-        name: homeschoolRaw.name,
-        dashboardSettings: homeschoolRaw.dashboardSettings,
-      },
-      students,
-      activities,
-      goals,
-    };
+    return await buildPublicDashboard(db, publicId);
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
     logger.error("Error fetching public dashboard:", error);
     throw new Error("Failed to load dashboard. Please try again later.");
+  }
+});
+
+/**
+ * Accepts pending homeschool invitations and links student records for the
+ * signed-in user's verified email. Called by the clients after sign-in.
+ */
+exports.acceptInvitations = onCall(callableOptions, async (request) => {
+  try {
+    return await acceptInvitations(db, request.auth);
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    logger.error("Error accepting invitations:", error);
+    throw new Error("Failed to accept invitations.");
   }
 });

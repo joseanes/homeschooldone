@@ -91,6 +91,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
         try {
           const q = query(
             collection(db, 'activityInstances'),
+            where('homeschoolId', '==', homeschoolId),
             where('goalId', '==', selectedGoal),
             where('studentId', '==', selectedStudent)
           );
@@ -149,7 +150,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
     };
     
     fetchLastProgress();
-  }, [selectedGoal, selectedStudent, selectedActivity, existingInstance, loadedExistingInstance]);
+  }, [homeschoolId, selectedGoal, selectedStudent, selectedActivity, existingInstance, loadedExistingInstance]);
 
   // Populate form fields when editing existing instance
   useEffect(() => {
@@ -191,6 +192,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
         try {
           const instancesSnapshot = await getDocs(query(
             collection(db, 'activityInstances'),
+            where('homeschoolId', '==', homeschoolId),
             where('goalId', '==', selectedGoal),
             where('studentId', '==', selectedStudent)
           ));
@@ -274,7 +276,7 @@ const ActivityInstanceForm: React.FC<ActivityInstanceFormProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [selectedGoal, selectedStudent, date, allowMultipleRecordsPerDay, existingInstance]);
+  }, [homeschoolId, selectedGoal, selectedStudent, date, allowMultipleRecordsPerDay, existingInstance]);
 
   // Timer functionality
   useEffect(() => {

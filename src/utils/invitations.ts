@@ -1,23 +1,3 @@
-// import { getFunctions, httpsCallable } from 'firebase/functions';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
-
-// Initialize Firebase Functions
-// const functions = getFunctions();
-
-// Check if an email address is already registered
-export const checkEmailExists = async (email: string): Promise<boolean> => {
-  try {
-    // Query the people collection to see if this email exists
-    const q = query(collection(db, 'people'), where('email', '==', email));
-    const snapshot = await getDocs(q);
-    return !snapshot.empty;
-  } catch (error) {
-    console.error('Error checking email existence:', error);
-    return false;
-  }
-};
-
 // Send an invitation email to a student
 export const sendStudentInvitation = async (
   studentEmail: string, 

@@ -47,11 +47,20 @@ public struct DashboardSettings: Codable {
     public let cycleSeconds: Int
     public let startOfWeek: Int // 0 = Sunday, 1 = Monday, etc.
     public let timezone: String
+    /// "daily" or "weekly". Nil on homeschools saved before the setting existed;
+    /// those keep the historical week-target board.
+    public let progressMode: String?
 
     enum CodingKeys: String, CodingKey {
         case cycleSeconds
         case startOfWeek
         case timezone
+        case progressMode
+    }
+
+    /// Weekly when the field is missing or unrecognized, matching the web client.
+    public var resolvedProgressMode: String {
+        progressMode == "daily" ? "daily" : "weekly"
     }
 }
 
@@ -178,8 +187,11 @@ public struct StudentProgress {
 // MARK: - Goal Status (Computed)
 public struct GoalStatus {
     public let status: GoalStatusType
+    public let label: String
     public let weeklyCount: Int
     public let weeklyTarget: Int
+    /// True when this card counts toward the header ring for the active mode.
+    public let countsTowardSummary: Bool
 }
 
 // Matches web app conventions: gray/yellow/blue/green

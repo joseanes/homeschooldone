@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Homeschool, Person, Goal, Activity, ActivityInstance } from '../types';
+import { Homeschool, Person, Goal, Activity, ActivityInstance, DashboardProgressMode } from '../types';
 import { isGoalActiveForStudent } from '../utils/goalUtils';
+import {
+  CARD_COLORS,
+  ClassroomCardView,
+  STATUS_SORT_ORDER,
+  classroomSummary,
+  presentClassroomCard,
+  resolveProgressMode
+} from '../utils/dashboardProgress';
 
 interface DashboardViewProps {
   homeschool: Homeschool;
@@ -16,16 +24,17 @@ interface DashboardViewProps {
   isPublic?: boolean; // Hide exit button for public dashboards
   // Pre-fetched recent activity instances (public dashboards have no Firestore access)
   activityInstances?: ActivityInstance[];
+  /** Saved TV / public board mode. Missing values render as weekly. */
+  progressMode?: DashboardProgressMode;
 }
 
 interface StudentProgress {
   student: Person;
-  todayGoals: Goal[];
-  completedToday: number;
-  totalGoals: number;
+  goals: Goal[];
   weeklyProgress: { [goalId: string]: number };
   todayCompletedGoalIds: Set<string>;
   todayMinutes: { [goalId: string]: number };
+  latestPercentage: { [goalId: string]: number };
 }
 
 // Instance dates arrive as Firestore Timestamps, Dates or ISO strings
@@ -35,15 +44,20 @@ const toDate = (value: any): Date =>
 // Map activity name to emoji icon (matches tvOS SF Symbol mapping)
 const activityIcon = (activityName: string): string => {
   const name = activityName.toLowerCase();
-  if (name.includes('math') || name.includes('khan')) return 'ƒ';
-  if (name.includes('english') || name.includes('ela') || name.includes('reading') || name.includes('book')) return '📖';
-  if (name.includes('piano') || name.includes('music')) return '♪';
-  if (name.includes('tennis') || name.includes('soccer') || name.includes('sport')) return '🏃';
-  if (name.includes('robot') || name.includes('first') || name.includes('coding')) return '⚙';
+  if (name.includes('algebra') || name.includes('math') || name.includes('khan')) return '∑';
+  if (name.includes('chem')) return '🧪';
+  if (name.includes('physics')) return '💧';
+  if (name.includes('english') || name.includes('ela')) return '📘';
+  if (name.includes('reading') || name.includes('book')) return '📖';
+  if (name.includes('piano') || name.includes('music')) return '🎹';
+  if (name.includes('horse')) return '🐴';
+  if (name.includes('soccer')) return '⚽';
+  if (name.includes('tennis') || name.includes('pickle')) return '🎾';
+  if (name.includes('robot') || name.includes('first') || name.includes('coding')) return '🏆';
   if (name.includes('geography') || name.includes('map')) return '🌎';
-  if (name.includes('duolingo') || name.includes('language') || name.includes('spanish') || name.includes('french')) return '🌐';
+  if (name.includes('duolingo') || name.includes('language') || name.includes('spanish') || name.includes('french')) return '◐';
   if (name.includes('radio') || name.includes('ham')) return '📡';
-  if (name.includes('science') || name.includes('chemistry')) return '🧪';
+  if (name.includes('science')) return '🔬';
   if (name.includes('art') || name.includes('draw') || name.includes('paint')) return '🎨';
   if (name.includes('history')) return '🕰';
   return '⭐';
@@ -59,19 +73,18 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   startOfWeek = 1, // Monday default
   timezone = 'America/New_York', // EST default
   isPublic = false,
-  activityInstances
+  activityInstances,
+  progressMode
 }) => {
+  const mode = resolveProgressMode(progressMode ?? homeschool.dashboardSettings?.progressMode);
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
   const [studentsProgress, setStudentsProgress] = useState<StudentProgress[]>([]);
-  const [allWeekInstances, setAllWeekInstances] = useState<ActivityInstance[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Note: isGoalActiveForStudent is now imported from utils/goalUtils
 
   // Handle ESC key (disabled for public dashboards)
   useEffect(() => {
     if (isPublic) return; // Don't allow ESC to close public dashboards
-    
+
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
@@ -82,7 +95,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [onClose]);
+  }, [onClose, isPublic]);
 
   // Cycle through students
   useEffect(() => {
@@ -99,29 +112,29 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const getWeekDates = () => {
     // Get current date in the specified timezone properly
     const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-CA', { 
+    const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone: timezone,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
     });
-    
+
     const parts = formatter.formatToParts(now);
     const year = parseInt(parts.find(part => part.type === 'year')?.value || '2024');
     const month = parseInt(parts.find(part => part.type === 'month')?.value || '1') - 1;
     const day = parseInt(parts.find(part => part.type === 'day')?.value || '1');
-    
+
     const currentDate = new Date(year, month, day);
     const currentDay = currentDate.getDay(); // 0 = Sunday
     const daysFromStartOfWeek = (currentDay - startOfWeek + 7) % 7;
     const startOfCurrentWeek = new Date(currentDate);
     startOfCurrentWeek.setDate(currentDate.getDate() - daysFromStartOfWeek);
     startOfCurrentWeek.setHours(0, 0, 0, 0);
-    
+
     const endOfCurrentWeek = new Date(startOfCurrentWeek);
     endOfCurrentWeek.setDate(startOfCurrentWeek.getDate() + 6);
     endOfCurrentWeek.setHours(23, 59, 59, 999);
-    
+
     return { startOfWeek: startOfCurrentWeek, endOfWeek: endOfCurrentWeek };
   };
 
@@ -132,25 +145,24 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         const { startOfWeek: weekStart, endOfWeek: weekEnd } = getWeekDates();
         // Get today's date in the specified timezone properly
         const now = new Date();
-        const formatter = new Intl.DateTimeFormat('en-CA', { 
+        const formatter = new Intl.DateTimeFormat('en-CA', {
           timeZone: timezone,
           year: 'numeric',
           month: '2-digit',
           day: '2-digit'
         });
-        
+
         const parts = formatter.formatToParts(now);
         const year = parseInt(parts.find(part => part.type === 'year')?.value || '2024');
         const month = parseInt(parts.find(part => part.type === 'month')?.value || '1') - 1;
         const day = parseInt(parts.find(part => part.type === 'day')?.value || '1');
-        
+
         const today = new Date(year, month, day);
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
 
-        // Last 5 weeks of instances: covers today, this week and the charts
-        // (Last 7 Days + Weekly Completion)
+        // Last 5 weeks of instances covers today and this week.
         const fiveWeeksAgo = new Date(weekStart);
         fiveWeeksAgo.setDate(fiveWeeksAgo.getDate() - 28); // 4 additional weeks back
         let instances: ActivityInstance[];
@@ -170,59 +182,43 @@ const DashboardView: React.FC<DashboardViewProps> = ({
           .filter(inst => inst.date >= fiveWeeksAgo && inst.date <= weekEnd);
 
         const progress = students.map((student) => {
-          // Get goals for this student that are active (considering start date and completion date)
+          // Active goals stay on the board in both modes, including ones whose
+          // week target is already met. Hiding them collapsed the grid.
           const studentGoals = goals.filter(goal => goal.studentIds?.includes(student.id) && isGoalActiveForStudent(goal, student.id));
           const studentInstances = instances.filter(inst => inst.studentId === student.id);
 
-          // Today's activity instances for this student
           const todayInstances = studentInstances.filter(inst => inst.date >= today && inst.date < tomorrow);
           const todayGoalIds = new Set(todayInstances.map(inst => inst.goalId));
-          
-          // Calculate today's minutes per goal
+
           const todayMinutes: { [goalId: string]: number } = {};
           todayInstances.forEach(inst => {
             todayMinutes[inst.goalId] = (todayMinutes[inst.goalId] || 0) + (inst.duration || 0);
           });
 
-          // Week's activity instances for weekly progress
           const weeklyProgress: { [goalId: string]: number } = {};
+          const latestPercentage: { [goalId: string]: number } = {};
           studentInstances
             .filter(inst => inst.date >= weekStart && inst.date <= weekEnd)
+            .sort((a, b) => a.date.getTime() - b.date.getTime())
             .forEach(inst => {
               weeklyProgress[inst.goalId] = (weeklyProgress[inst.goalId] || 0) + 1;
+              const pct = inst.percentageCompleted ?? inst.endingPercentage;
+              if (pct !== undefined && pct !== null) {
+                latestPercentage[inst.goalId] = pct;
+              }
             });
-
-          // Calculate weekly completion for each goal
-          const completedThisWeek = studentGoals.filter(goal => {
-            const weeklyCount = weeklyProgress[goal.id] || 0;
-            if (goal.timesPerWeek && weeklyCount >= goal.timesPerWeek) {
-              return true; // Weekly requirement met
-            }
-            return false;
-          }).length;
-
-          // Filter out goals that are completed for the week - only show pending
-          const pendingGoals = studentGoals.filter(goal => {
-            const weeklyCount = weeklyProgress[goal.id] || 0;
-            if (goal.timesPerWeek && weeklyCount >= goal.timesPerWeek) {
-              return false; // Don't show weekly complete goals
-            }
-            return true; // Show pending goals
-          });
 
           return {
             student,
-            todayGoals: pendingGoals, // Now contains only pending goals
-            completedToday: completedThisWeek, // Now represents weekly completion
-            totalGoals: studentGoals.length,
+            goals: studentGoals,
             weeklyProgress,
             todayCompletedGoalIds: todayGoalIds,
-            todayMinutes
+            todayMinutes,
+            latestPercentage
           };
         });
 
         setStudentsProgress(progress);
-        setAllWeekInstances(instances);
       } catch (error) {
         console.error('Error fetching dashboard progress:', error);
       } finally {
@@ -241,7 +237,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: '#1a1a2e',
+        backgroundColor: '#07111f',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -261,7 +257,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: '#1a1a2e',
+        backgroundColor: '#07111f',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -271,20 +267,22 @@ const DashboardView: React.FC<DashboardViewProps> = ({
       }}>
         <h1 style={{ marginBottom: '20px' }}>No Students Found</h1>
         <p style={{ marginBottom: '30px' }}>Add some students to see their progress on the dashboard.</p>
-        <button
-          onClick={onClose}
-          style={{
-            padding: '15px 30px',
-            fontSize: '18px',
-            backgroundColor: '#ff5722',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer'
-          }}
-        >
-          Back to Main
-        </button>
+        {!isPublic && (
+          <button
+            onClick={onClose}
+            style={{
+              padding: '15px 30px',
+              fontSize: '18px',
+              backgroundColor: '#ff5722',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            Back to Main
+          </button>
+        )}
       </div>
     );
   }
@@ -292,401 +290,324 @@ const DashboardView: React.FC<DashboardViewProps> = ({
   const currentProgress = studentsProgress[currentStudentIndex];
   if (!currentProgress) return null;
 
-  const progressPercentage = currentProgress.totalGoals > 0
-    ? (currentProgress.completedToday / currentProgress.totalGoals) * 100
-    : 0;
+  const cards = currentProgress.goals.map(goal => {
+    const view = presentClassroomCard(mode, {
+      timesPerWeek: goal.timesPerWeek,
+      minutesPerSession: goal.minutesPerSession,
+      weeklyCount: currentProgress.weeklyProgress[goal.id] || 0,
+      todayCount: currentProgress.todayCompletedGoalIds.has(goal.id) ? 1 : 0,
+      todayMinutes: currentProgress.todayMinutes[goal.id] || 0
+    });
+    const pct = currentProgress.latestPercentage[goal.id];
+    const detail = [
+      view.weekDetail,
+      pct !== undefined ? `${Math.round(pct)}%` : null
+    ].filter(Boolean).join(' · ');
+    return { goal, view, detail };
+  }).sort((a, b) => {
+    const priority = STATUS_SORT_ORDER[a.view.status] - STATUS_SORT_ORDER[b.view.status];
+    if (priority !== 0) return priority;
+    const activityA = activities.find(act => act.id === a.goal.activityId);
+    const activityB = activities.find(act => act.id === b.goal.activityId);
+    const nameA = a.goal.name || activityA?.name || '';
+    const nameB = b.goal.name || activityB?.name || '';
+    return nameA.localeCompare(nameB);
+  });
 
-  // Dynamic grid and text scaling based on card count
-  const goalCount = currentProgress.todayGoals.length;
-  const cols = goalCount <= 2 ? 1 : goalCount <= 6 ? 2 : goalCount <= 9 ? 3 : 4;
-  // Scale: fewer cards = bigger text (1.6x for 1-2, down to 0.85x for 10+)
-  const scale = goalCount <= 2 ? 1.6 : goalCount <= 4 ? 1.3 : goalCount <= 6 ? 1.1 : goalCount <= 9 ? 1.0 : 0.85;
+  const summary = classroomSummary(mode, cards.map(card => card.view));
+  const goalCount = cards.length;
+  const cols = goalCount <= 1 ? 1 : goalCount <= 4 ? 2 : 3;
+  const rows = Math.max(1, Math.ceil(goalCount / cols));
+  const ringColor = mode === 'daily' ? '#2196f3' : '#4caf50';
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: '#1a1a2e',
-      color: 'white',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '40px'
-    }}>
-      {/* Header */}
-      <div style={{
+    <div
+      data-testid="classroom-board"
+      data-progress-mode={mode}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'radial-gradient(1000px 480px at 0% -10%, rgba(33,150,243,0.18), transparent 55%), radial-gradient(800px 420px at 100% 110%, rgba(76,175,80,0.10), transparent 50%), #07111f',
+        color: 'white',
         display: 'flex',
-        justifyContent: 'space-between',
+        flexDirection: 'column',
+        padding: '28px 36px 32px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+      }}
+    >
+      <header style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto 1fr',
         alignItems: 'center',
-        marginBottom: '2vh'
+        gap: '24px',
+        marginBottom: '22px',
+        flexShrink: 0
       }}>
-        <h1 style={{ margin: 0, fontSize: '2.2vw' }}>{homeschool.name} Dashboard</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ fontSize: '1.1vw', opacity: 0.8 }}>
-            Student {currentStudentIndex + 1} of {students.length} • Auto-cycling every {cycleSeconds}s
-          </div>
-          {!isPublic && (
-            <button
-              onClick={onClose}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#ff5722',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              ✕ Exit Dashboard
-            </button>
-          )}
-        </div>
-      </div>
+        <h1 style={{ margin: 0, fontSize: 'clamp(28px, 2.4vw, 44px)', fontWeight: 750, letterSpacing: '-0.02em' }}>
+          {homeschool.name}
+        </h1>
 
-      {/* Student Progress - Horizontal Layout */}
+        <div
+          data-testid="progress-mode-switch"
+          role="group"
+          aria-label="Progress mode"
+          style={{
+            display: 'inline-flex',
+            background: 'rgba(255,255,255,0.08)',
+            borderRadius: '999px',
+            padding: '4px',
+            gap: '4px'
+          }}
+        >
+          {(['daily', 'weekly'] as DashboardProgressMode[]).map(option => {
+            const selected = mode === option;
+            const activeColor = option === 'daily' ? '#2196f3' : '#22c55e';
+            return (
+              <span
+                key={option}
+                data-mode={option}
+                aria-current={selected ? 'true' : undefined}
+                style={{
+                  minWidth: '92px',
+                  textAlign: 'center',
+                  padding: '8px 18px',
+                  borderRadius: '999px',
+                  background: selected ? activeColor : 'transparent',
+                  color: selected ? '#fff' : 'rgba(255,255,255,0.72)',
+                  fontWeight: 700,
+                  fontSize: '16px',
+                  letterSpacing: '0.01em'
+                }}
+              >
+                {option === 'daily' ? 'Daily' : 'Weekly'}
+              </span>
+            );
+          })}
+        </div>
+
+        <div style={{ justifySelf: 'end', textAlign: 'right' }}>
+          <div style={{ fontSize: 'clamp(26px, 2vw, 36px)', fontWeight: 750, lineHeight: 1.1 }}>
+            {currentProgress.student.name}
+          </div>
+          <div
+            data-testid="progress-summary"
+            style={{ marginTop: '4px', fontSize: 'clamp(14px, 1.1vw, 18px)', color: 'rgba(255,255,255,0.78)' }}
+          >
+            {summary.label}
+          </div>
+          <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px' }}>
+            {students.length > 1 && (
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>
+                Student {currentStudentIndex + 1} of {students.length} · {cycleSeconds}s
+              </span>
+            )}
+            {!isPublic && (
+              <button
+                onClick={onClose}
+                style={{
+                  padding: '6px 12px',
+                  fontSize: '14px',
+                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  color: 'white',
+                  border: '1px solid rgba(255,255,255,0.16)',
+                  borderRadius: '999px',
+                  cursor: 'pointer'
+                }}
+              >
+                Exit
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
       <div style={{
-        flex: 1,
+        flex: '1 1 auto',
         display: 'flex',
         alignItems: 'stretch',
-        gap: '30px',
-        height: 'calc(100vh - 140px)',
-        overflow: 'hidden'
+        gap: '28px',
+        minHeight: 0
       }}>
-        {/* Left Side - Student Name and Progress Circle */}
-        <div style={{
-          backgroundColor: '#16213e',
-          borderRadius: '20px',
-          padding: '30px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '280px',
-          flexShrink: 0,
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
-        }}>
-          {/* Student Name */}
-          <h2 style={{
-            margin: '0 0 2vh 0',
-            fontSize: '2.8vw',
-            textAlign: 'center',
-            background: 'linear-gradient(45deg, #4caf50, #2196f3)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+        <aside
+          aria-label={summary.ringCaption}
+          style={{
+            width: '168px',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div style={{
+            width: '148px',
+            height: '148px',
+            borderRadius: '50%',
+            background: `conic-gradient(${ringColor} ${summary.percent * 3.6}deg, rgba(255,255,255,0.12) ${summary.percent * 3.6}deg)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: `0 0 24px ${ringColor}33`
           }}>
-            {currentProgress.student.name}
-          </h2>
-
-          {/* Progress Circle */}
-          <div style={{ marginBottom: '2vh' }}>
             <div style={{
-              width: '14vw',
-              height: '14vw',
+              width: '116px',
+              height: '116px',
               borderRadius: '50%',
-              background: `conic-gradient(#4caf50 ${progressPercentage * 3.6}deg, #333 ${progressPercentage * 3.6}deg)`,
+              backgroundColor: '#07111f',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              position: 'relative'
+              flexDirection: 'column'
             }}>
-              <div style={{
-                width: '11.5vw',
-                height: '11.5vw',
-                borderRadius: '50%',
-                backgroundColor: '#1a1a2e',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'column'
-              }}>
-                <div style={{ fontSize: '2.8vw', fontWeight: 'bold' }}>
-                  {currentProgress.completedToday}/{currentProgress.totalGoals}
-                </div>
-                <div style={{ fontSize: '1.1vw', fontWeight: '500', color: '#4caf50' }}>
-                  {Math.round(progressPercentage)}%
-                </div>
-                <div style={{ fontSize: '1vw', opacity: 0.8 }}>This Week</div>
+              <div style={{ fontSize: '13px', letterSpacing: '0.04em', color: 'rgba(255,255,255,0.7)' }}>
+                {summary.ringCaption}
+              </div>
+              <div data-testid="progress-percent" style={{ fontSize: '32px', fontWeight: 750, lineHeight: 1.1, color: ringColor }}>
+                {summary.percent}%
               </div>
             </div>
           </div>
+        </aside>
 
-          {/* Last 7 Days bar chart */}
-          <div style={{ width: '100%', marginTop: '2vh' }}>
-            <div style={{ fontSize: '0.9vw', opacity: 0.7, textAlign: 'center', marginBottom: '0.8vh' }}>Last 7 Days</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '6vh', justifyContent: 'center' }}>
-              {(() => {
-                const dayLetters = ['S','M','T','W','T','F','S'];
-                const studentId = currentProgress.student.id;
-                const days: { letter: string; count: number; isToday: boolean }[] = [];
-                const now = new Date();
-                for (let i = 6; i >= 0; i--) {
-                  const d = new Date(now);
-                  d.setDate(d.getDate() - i);
-                  const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-                  const dayEnd = new Date(dayStart);
-                  dayEnd.setDate(dayEnd.getDate() + 1);
-                  const count = allWeekInstances.filter(inst => {
-                    const instDate = inst.date instanceof Date ? inst.date : new Date((inst.date as any).seconds ? (inst.date as any).seconds * 1000 : inst.date);
-                    return inst.studentId === studentId && instDate >= dayStart && instDate < dayEnd;
-                  }).length;
-                  days.push({ letter: dayLetters[dayStart.getDay()], count, isToday: i === 0 });
-                }
-                const maxCount = Math.max(1, ...days.map(d => d.count));
-                return days.map((day, idx) => (
-                  <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', maxWidth: '24px' }}>
-                    {day.count > 0 && <span style={{ fontSize: '0.7vw', opacity: 0.8 }}>{day.count}</span>}
-                    <div style={{
-                      width: '100%',
-                      height: day.count > 0 ? Math.max(4, (day.count / maxCount) * 40) : 4,
-                      backgroundColor: day.count > 0 ? (day.isToday ? '#2196f3' : '#4caf50') : 'rgba(255,255,255,0.1)',
-                      borderRadius: '2px'
-                    }} />
-                    <span style={{ fontSize: '0.65vw', opacity: day.isToday ? 1 : 0.5, color: day.isToday ? '#2196f3' : 'white' }}>{day.letter}</span>
-                  </div>
-                ));
-              })()}
-            </div>
-          </div>
-
-          {/* Weekly Completion chart - last 5 weeks */}
-          <div style={{ width: '100%', marginTop: '1.5vh' }}>
-            <div style={{ fontSize: '0.9vw', opacity: 0.7, textAlign: 'center', marginBottom: '0.8vh' }}>Weekly Completion</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '6vh', justifyContent: 'center' }}>
-              {(() => {
-                const studentId = currentProgress.student.id;
-                const studentGoals = goals.filter(g => g.studentIds?.includes(studentId) && isGoalActiveForStudent(g, studentId));
-                const weeks: { weekNum: number; pct: number; isCurrent: boolean }[] = [];
-                const now = new Date();
-
-                for (let w = 4; w >= 0; w--) {
-                  const wStart = new Date(now);
-                  // Go back to start of current week, then subtract w weeks
-                  const currentDay = wStart.getDay();
-                  const daysFromStart = (currentDay - startOfWeek + 7) % 7;
-                  wStart.setDate(wStart.getDate() - daysFromStart - (w * 7));
-                  wStart.setHours(0, 0, 0, 0);
-                  const wEnd = new Date(wStart);
-                  wEnd.setDate(wStart.getDate() + 6);
-                  wEnd.setHours(23, 59, 59, 999);
-
-                  // Count completed goals this week
-                  let completed = 0;
-                  studentGoals.forEach(goal => {
-                    const weeklyTarget = goal.timesPerWeek || 1;
-                    const count = allWeekInstances.filter(inst => {
-                      const instDate = inst.date instanceof Date ? inst.date : new Date((inst.date as any).seconds ? (inst.date as any).seconds * 1000 : inst.date);
-                      return inst.studentId === studentId && inst.goalId === goal.id && instDate >= wStart && instDate <= wEnd;
-                    }).length;
-                    if (count >= weeklyTarget) completed++;
-                  });
-
-                  const pct = studentGoals.length > 0 ? (completed / studentGoals.length) * 100 : 0;
-                  const jan1 = new Date(wStart.getFullYear(), 0, 1);
-                  const weekNum = Math.ceil(((wStart.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
-                  weeks.push({ weekNum, pct, isCurrent: w === 0 });
-                }
-
-                return weeks.map((week, idx) => (
-                  <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', maxWidth: '36px' }}>
-                    {week.pct > 0 && <span style={{ fontSize: '0.7vw', opacity: 0.8 }}>{Math.round(week.pct)}%</span>}
-                    <div style={{
-                      width: '100%',
-                      height: week.pct > 0 ? Math.max(4, (week.pct / 100) * 40) : 4,
-                      backgroundColor: week.pct >= 100 ? '#4caf50' : week.pct > 0 ? '#2196f3' : 'rgba(255,255,255,0.1)',
-                      borderRadius: '2px'
-                    }} />
-                    <span style={{ fontSize: '0.65vw', color: week.isCurrent ? '#2196f3' : 'white', opacity: week.isCurrent ? 1 : 0.5 }}>W{week.weekNum}</span>
-                  </div>
-                ));
-              })()}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side - Today's Goals */}
-        <div style={{
-          backgroundColor: '#16213e',
-          borderRadius: '20px',
-          padding: '24px',
-          flex: 1,
-          boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          minWidth: 0
-        }}>
-          <h3 style={{
-            fontSize: '2vw',
-            marginBottom: '1.2vh',
-            textAlign: 'center',
-            background: 'linear-gradient(45deg, #4caf50, #2196f3)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            flexShrink: 0
-          }}>
-            Tasks and Goals
-          </h3>
-
-          <div style={{
-            display: 'grid',
-            gap: `${goalCount <= 4 ? 1.2 : 0.8}vw`,
-            gridTemplateColumns: `repeat(${cols}, 1fr)`,
-            gridAutoRows: '1fr',
+        <section
+          aria-label="Tasks"
+          style={{
             flex: 1,
-            overflow: 'hidden'
-          }}>
-            {/* Sort goals: gray (pending) first, then yellow (progress week), then blue (done today), then green (weekly complete) */}
-            {[...currentProgress.todayGoals].sort((a, b) => {
-              const activityA = activities.find(act => act.id === a.activityId);
-              const activityB = activities.find(act => act.id === b.activityId);
-              
-              // Get status for each goal
-              const weeklyCountA = currentProgress.weeklyProgress[a.id] || 0;
-              const weeklyCountB = currentProgress.weeklyProgress[b.id] || 0;
-              const hasActivityTodayA = currentProgress.todayCompletedGoalIds.has(a.id);
-              const hasActivityTodayB = currentProgress.todayCompletedGoalIds.has(b.id);
-              const weeklyCompleteA = !!(a.timesPerWeek && weeklyCountA >= a.timesPerWeek);
-              const weeklyCompleteB = !!(b.timesPerWeek && weeklyCountB >= b.timesPerWeek);
-              
-              // Determine status priority
-              const getStatusPriority = (goal: Goal, weeklyCount: number, hasToday: boolean, weeklyComplete: boolean) => {
-                if (weeklyComplete) return 4; // Green - show last
-                if (hasToday) return 3; // Blue - show third
-                if (weeklyCount > 0) return 2; // Yellow - show second
-                return 1; // Gray - show first
-              };
-              
-              const priorityA = getStatusPriority(a, weeklyCountA, hasActivityTodayA, weeklyCompleteA);
-              const priorityB = getStatusPriority(b, weeklyCountB, hasActivityTodayB, weeklyCompleteB);
-              
-              // Sort by status priority first
-              if (priorityA !== priorityB) {
-                return priorityA - priorityB;
-              }
-              
-              // Within same status, sort alphabetically by goal name (or activity name if no goal name)
-              const nameA = a.name || activityA?.name || '';
-              const nameB = b.name || activityB?.name || '';
-              return nameA.localeCompare(nameB);
-            }).map(goal => {
-              const activity = activities.find(a => a.id === goal.activityId);
-              const weeklyCount = currentProgress.weeklyProgress[goal.id] || 0;
-              const hasActivityToday = currentProgress.todayCompletedGoalIds.has(goal.id);
-              
-              // Check actual completion for time-based goals
-              let isActuallyCompleted = hasActivityToday;
-              const todayMinutesForGoal = currentProgress.todayMinutes[goal.id] || 0;
-              
-              if (hasActivityToday && goal.minutesPerSession) {
-                // Check if today's minutes meet the goal requirement
-                isActuallyCompleted = todayMinutesForGoal >= goal.minutesPerSession;
-              }
-              
-              // Dark-themed status colors
-              let cardBg, cardBorder, statusIcon, statusText, cardTextColor;
-
-              const weeklyComplete = goal.timesPerWeek && weeklyCount >= goal.timesPerWeek;
-
-              if (weeklyComplete) {
-                cardBg = 'rgba(76, 175, 80, 0.15)';
-                cardBorder = 'rgba(76, 175, 80, 0.4)';
-                cardTextColor = '#a5d6a7';
-                statusIcon = '✓';
-                statusText = 'Complete';
-              } else if (hasActivityToday) {
-                cardBg = 'rgba(33, 150, 243, 0.15)';
-                cardBorder = 'rgba(33, 150, 243, 0.4)';
-                cardTextColor = '#90caf9';
-                statusIcon = '✔';
-                statusText = 'Today';
-              } else if (weeklyCount > 0) {
-                cardBg = 'rgba(255, 193, 7, 0.12)';
-                cardBorder = 'rgba(255, 193, 7, 0.35)';
-                cardTextColor = '#ffe082';
-                statusIcon = '◐';
-                statusText = 'Progress';
-              } else {
-                cardBg = 'rgba(255, 255, 255, 0.06)';
-                cardBorder = 'rgba(255, 255, 255, 0.12)';
-                cardTextColor = 'rgba(255, 255, 255, 0.6)';
-                statusIcon = '○';
-                statusText = 'Pending';
-              }
-
-              const icon = activityIcon(activity?.name || goal.name || '');
-
-              return (
-                <div
-                  key={goal.id}
-                  style={{
-                    padding: `${1.5 * scale}vh ${1.0 * scale}vw`,
-                    backgroundColor: cardBg,
-                    borderRadius: '0.6vw',
-                    border: `1px solid ${cardBorder}`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: `${0.5 * scale}vh`,
-                    color: cardTextColor,
-                    minWidth: 0,
-                    textAlign: 'center'
-                  }}
-                >
-                  <div style={{ fontSize: `${2.2 * scale}vw`, lineHeight: 1 }}>
-                    {icon}
-                  </div>
-                  <div style={{
-                    fontSize: `${1.2 * scale}vw`,
-                    fontWeight: '600',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    width: '100%'
-                  }}>
-                    {goal.name || activity?.name}
-                  </div>
-                  <div style={{ fontSize: `${0.9 * scale}vw`, opacity: 0.7 }}>
-                    {goal.timesPerWeek && `${weeklyCount}/${goal.timesPerWeek} wk`}
-                    {goal.minutesPerSession && `${goal.timesPerWeek ? ' · ' : ''}${goal.minutesPerSession} min`}
-                  </div>
-                  <div style={{
-                    fontSize: `${0.85 * scale}vw`,
-                    fontWeight: '500',
-                    opacity: 0.9
-                  }}>
-                    {statusIcon} {statusText}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          
-          {currentProgress.todayGoals.length === 0 && (
-            <div style={{ 
-              textAlign: 'center',
-              fontSize: '24px',
+            minWidth: 0,
+            minHeight: 0,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
+          {goalCount === 0 ? (
+            <div style={{
               flex: 1,
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '20px'
+              fontSize: '28px',
+              color: 'rgba(255,255,255,0.75)'
             }}>
-              <div style={{ fontSize: '80px' }}>🏆</div>
-              <div style={{ color: '#4caf50', fontWeight: 'bold' }}>
-                All done for the week!
-              </div>
+              No active tasks for {currentProgress.student.name}.
+            </div>
+          ) : (
+            <div
+              data-testid="task-grid"
+              style={{
+                flex: 1,
+                height: '100%',
+                minHeight: 0,
+                display: 'grid',
+                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+                gap: '14px'
+              }}
+            >
+              {cards.map(({ goal, view, detail }) => (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  activityName={activities.find(activity => activity.id === goal.activityId)?.name}
+                  view={view}
+                  detail={detail}
+                  emphasizeWeek={mode === 'weekly'}
+                />
+              ))}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
+  );
+};
+
+const GoalCard: React.FC<{
+  goal: Goal;
+  activityName?: string;
+  view: ClassroomCardView;
+  detail: string;
+  emphasizeWeek: boolean;
+}> = ({ goal, activityName, view, detail, emphasizeWeek }) => {
+  const colors = CARD_COLORS[view.status];
+  const name = goal.name || activityName || 'Task';
+  const icon = activityIcon(activityName || goal.name || '');
+  const primaryLine = emphasizeWeek && detail ? detail : view.label;
+  const secondaryLine = emphasizeWeek ? view.label : detail;
+
+  return (
+    <article
+      data-testid="goal-card"
+      data-goal-id={goal.id}
+      data-status={view.status}
+      aria-label={`${name}. ${view.label}${detail ? `. ${detail}` : ''}`}
+      style={{
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        borderRadius: '18px',
+        padding: '14px 16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '14px',
+        minWidth: 0,
+        color: colors.text
+      }}
+    >
+      <div aria-hidden="true" style={{ fontSize: '30px', lineHeight: 1, width: '40px', textAlign: 'center', flexShrink: 0 }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 'clamp(16px, 1.35vw, 22px)',
+          fontWeight: 750,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>
+          {name}
+        </div>
+        <div style={{ marginTop: '3px', fontSize: 'clamp(13px, 1vw, 16px)', fontWeight: 650 }}>
+          {primaryLine}
+        </div>
+        {secondaryLine && (
+          <div style={{ marginTop: '1px', fontSize: 'clamp(12px, 0.9vw, 14px)', opacity: 0.75 }}>
+            {secondaryLine}
+          </div>
+        )}
+      </div>
+      <StatusMark status={view.status} accent={colors.accent} label={view.label} />
+    </article>
+  );
+};
+
+const StatusMark: React.FC<{ status: ClassroomCardView['status']; accent: string; label: string }> = ({
+  status,
+  accent,
+  label
+}) => {
+  const filled = status === 'done-today' || status === 'week-complete';
+  return (
+    <span
+      title={label}
+      style={{
+        width: '34px',
+        height: '34px',
+        borderRadius: '50%',
+        border: `2.5px solid ${accent}`,
+        background: filled ? accent : 'transparent',
+        color: filled ? '#07111f' : accent,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        fontSize: status === 'in-progress' ? '20px' : '16px',
+        fontWeight: 800
+      }}
+    >
+      <span aria-hidden="true">{status === 'pending' ? '' : status === 'in-progress' ? '◐' : '✓'}</span>
+    </span>
   );
 };
 

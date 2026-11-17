@@ -373,10 +373,11 @@ public class FirebaseService: ObservableObject {
                 goal.studentIds.contains(studentId) && !goal.isCompletedForStudent(studentId)
             }
 
-            // Count goals with weekly-complete status (matches web badge)
+            // Count whatever the saved progress mode puts on the ring:
+            // done today in daily mode, week targets met in weekly mode.
             let completedGoals = studentGoals.filter { goal in
                 let status = getGoalStatus(goalId: goal.id ?? "", studentId: student.id ?? "")
-                return status.status == .weeklyComplete
+                return status.countsTowardSummary
             }.count
 
             return StudentProgress(
@@ -391,49 +392,59 @@ public class FirebaseService: ObservableObject {
         }
     }
 
-    /// Goal status matching web app conventions:
-    /// - Green: weekly goal met (weeklyCount >= weeklyTarget)
-    /// - Blue: done today (has instance today)
-    /// - Yellow: progress this week (has instances this week but not today)
-    /// - Gray: pending (no instances this week)
+    /// Goal status matching the web classroom board.
+    /// Weekly (the default) keeps the historical priority: green week complete,
+    /// then blue done today, then yellow week progress, then gray.
+    /// Daily is day-scoped: blue Done today, yellow when today's session is
+    /// started but short of its minutes, gray Not yet otherwise. The week
+    /// fraction still rides along on the card.
     public func getGoalStatus(goalId: String, studentId: String) -> GoalStatus {
+        let mode = homeschool?.dashboardSettings?.resolvedProgressMode ?? "weekly"
         guard let goal = goals.first(where: { $0.id == goalId }) else {
-            return GoalStatus(status: .pending, weeklyCount: 0, weeklyTarget: 0)
+            return GoalStatus(status: .pending, label: mode == "daily" ? "Not yet" : "Pending", weeklyCount: 0, weeklyTarget: 0, countsTowardSummary: false)
         }
 
         let target = goal.weeklyTarget ?? 0
 
         // Count instances this week for this student and goal
-        let weeklyCount = weekInstances.filter {
+        let weeklyInstances = weekInstances.filter {
             $0.goalId == goalId && $0.studentId == studentId
-        }.count
-
-        // Check if weekly requirement is met
-        if target > 0 && weeklyCount >= target {
-            return GoalStatus(status: .weeklyComplete, weeklyCount: weeklyCount, weeklyTarget: target)
         }
+        let weeklyCount = weeklyInstances.count
 
-        // Check if done today
         let settings = homeschool?.dashboardSettings
         let tz = TimeZone(identifier: settings?.timezone ?? "America/New_York") ?? .current
         var calendar = Calendar.current
         calendar.timeZone = tz
         let todayStart = calendar.startOfDay(for: Date())
 
-        let todayCount = weekInstances.filter {
-            $0.goalId == goalId && $0.studentId == studentId &&
-            $0.date.dateValue() >= todayStart
-        }.count
+        let todayInstances = weeklyInstances.filter { $0.date.dateValue() >= todayStart }
+        let todayCount = todayInstances.count
+        let todayMinutes = todayInstances.reduce(0) { $0 + ($1.duration ?? 0) }
+        let touchedToday = todayCount > 0 || todayMinutes > 0
+        let minutesTarget = goal.minutesPerSession ?? 0
+        let meetsTodayBar = touchedToday && (minutesTarget > 0 ? todayMinutes >= minutesTarget : true)
+        let weekComplete = target > 0 && weeklyCount >= target
 
-        if todayCount > 0 {
-            return GoalStatus(status: .doneToday, weeklyCount: weeklyCount, weeklyTarget: target)
+        if mode == "daily" {
+            if meetsTodayBar {
+                return GoalStatus(status: .doneToday, label: "Done today", weeklyCount: weeklyCount, weeklyTarget: target, countsTowardSummary: true)
+            }
+            if touchedToday {
+                return GoalStatus(status: .progressWeek, label: "In progress", weeklyCount: weeklyCount, weeklyTarget: target, countsTowardSummary: false)
+            }
+            return GoalStatus(status: .pending, label: "Not yet", weeklyCount: weeklyCount, weeklyTarget: target, countsTowardSummary: false)
         }
 
-        // Check if any progress this week
+        if weekComplete {
+            return GoalStatus(status: .weeklyComplete, label: "Complete", weeklyCount: weeklyCount, weeklyTarget: target, countsTowardSummary: true)
+        }
+        if touchedToday {
+            return GoalStatus(status: .doneToday, label: "Done today", weeklyCount: weeklyCount, weeklyTarget: target, countsTowardSummary: false)
+        }
         if weeklyCount > 0 {
-            return GoalStatus(status: .progressWeek, weeklyCount: weeklyCount, weeklyTarget: target)
+            return GoalStatus(status: .progressWeek, label: "Progress", weeklyCount: weeklyCount, weeklyTarget: target, countsTowardSummary: false)
         }
-
-        return GoalStatus(status: .pending, weeklyCount: weeklyCount, weeklyTarget: target)
+        return GoalStatus(status: .pending, label: "Pending", weeklyCount: weeklyCount, weeklyTarget: target, countsTowardSummary: false)
     }
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
 import { Homeschool, Person, Goal, Activity, ActivityInstance } from '../types';
+import { resolveProgressMode } from '../utils/dashboardProgress';
 import DashboardView from './DashboardView';
 
 interface PublicDashboardProps {
@@ -102,6 +103,7 @@ const PublicDashboard: React.FC<PublicDashboardProps> = ({ publicId }) => {
       cycleSeconds={data.homeschool.dashboardSettings?.cycleSeconds || 10}
       startOfWeek={data.homeschool.dashboardSettings?.startOfWeek ?? 1}
       timezone={data.homeschool.dashboardSettings?.timezone || 'America/New_York'}
+      progressMode={resolveProgressMode(data.homeschool.dashboardSettings?.progressMode)}
       isPublic={true}
       onClose={() => {
         // For public dashboard, we can't really "close" - just reload to show error

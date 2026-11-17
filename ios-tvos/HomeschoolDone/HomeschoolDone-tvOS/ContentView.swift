@@ -160,13 +160,28 @@ struct HeaderView: View {
     @State private var timeRemaining = 0
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
+    private var progressMode: String {
+        firebaseService.homeschool?.dashboardSettings?.resolvedProgressMode ?? "weekly"
+    }
+
     var body: some View {
-        HStack {
+        HStack(spacing: 28) {
             Text(homeschoolName)
                 .font(.system(size: 48, weight: .bold))
                 .foregroundColor(.white)
+                .lineLimit(1)
 
-            Spacer()
+            Spacer(minLength: 12)
+
+            HStack(spacing: 4) {
+                modePill("Daily", selected: progressMode == "daily", color: Color(red: 0.13, green: 0.59, blue: 0.95))
+                modePill("Weekly", selected: progressMode == "weekly", color: Color(red: 0.13, green: 0.77, blue: 0.37))
+            }
+            .padding(4)
+            .background(Color.white.opacity(0.08))
+            .clipShape(Capsule())
+
+            Spacer(minLength: 12)
 
             VStack(alignment: .trailing, spacing: 8) {
                 Text("Student \(studentIndex + 1) of \(totalStudents)")
@@ -209,6 +224,16 @@ struct HeaderView: View {
             timeRemaining = max(0, cycleSeconds - Int(elapsed))
         }
     }
+
+    private func modePill(_ title: String, selected: Bool, color: Color) -> some View {
+        Text(title)
+            .font(.system(size: 22, weight: .bold))
+            .foregroundColor(selected ? .white : .white.opacity(0.7))
+            .padding(.horizontal, 22)
+            .padding(.vertical, 8)
+            .background(selected ? color : Color.clear)
+            .clipShape(Capsule())
+    }
 }
 
 struct StudentProgressView: View {
@@ -218,6 +243,10 @@ struct StudentProgressView: View {
     let goals: [Goal]
 
     @EnvironmentObject var firebaseService: FirebaseService
+
+    private var progressMode: String {
+        firebaseService.homeschool?.dashboardSettings?.resolvedProgressMode ?? "weekly"
+    }
 
     var completionPercentage: Double {
         guard progress.totalGoals > 0 else { return 0.0 }
@@ -240,7 +269,10 @@ struct StudentProgressView: View {
 
                     Spacer()
 
-                    // Circular progress chart
+                    // Circular progress chart. Secondary to the task grid.
+                    let ringColor = progressMode == "daily"
+                        ? Color(red: 0.13, green: 0.59, blue: 0.95)
+                        : Color(red: 0.3, green: 0.69, blue: 0.31)
                     ZStack {
                         Circle()
                             .stroke(Color.gray.opacity(0.3), lineWidth: 16)
@@ -248,7 +280,7 @@ struct StudentProgressView: View {
 
                         Circle()
                             .trim(from: 0, to: completionPercentage)
-                            .stroke(Color(red: 0.3, green: 0.69, blue: 0.31), style: StrokeStyle(lineWidth: 16, lineCap: .round))
+                            .stroke(ringColor, style: StrokeStyle(lineWidth: 16, lineCap: .round))
                             .frame(width: 220, height: 220)
                             .rotationEffect(.degrees(-90))
                             .animation(.easeInOut(duration: 1.0), value: completionPercentage)
@@ -259,8 +291,8 @@ struct StudentProgressView: View {
                                 .foregroundColor(.white)
                             Text("\(Int(completionPercentage * 100))%")
                                 .font(.system(size: 22, weight: .semibold))
-                                .foregroundColor(Color(red: 0.3, green: 0.69, blue: 0.31))
-                            Text("This Week")
+                                .foregroundColor(ringColor)
+                            Text(progressMode == "daily" ? "Today" : "This week")
                                 .font(.system(size: 18))
                                 .foregroundColor(.gray)
                         }
@@ -491,9 +523,13 @@ struct GoalsGridView: View {
         }
     }
 
+    private var progressMode: String {
+        firebaseService.homeschool?.dashboardSettings?.resolvedProgressMode ?? "weekly"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Weekly Goals")
+            Text(progressMode == "daily" ? "Today’s tasks" : "This week’s tasks")
                 .font(.system(size: 36, weight: .bold))
                 .foregroundColor(Color(red: 0.4, green: 0.8, blue: 0.6))
 
@@ -557,17 +593,22 @@ struct GoalCardView: View {
 
                 Spacer(minLength: 6)
 
-                // Weekly progress
-                if let target = goal.weeklyTarget, target > 0 {
-                    Text("\(status.weeklyCount)/\(target) wk")
-                        .font(.system(size: 16 * scale, weight: .medium))
-                        .foregroundColor(.gray)
+                let mode = firebaseService.homeschool?.dashboardSettings?.resolvedProgressMode ?? "weekly"
+                let weekLine: String? = {
+                    guard let target = goal.weeklyTarget, target > 0 else { return nil }
+                    return "\(status.weeklyCount)/\(target) wk"
+                }()
+                // Daily leads with the day status. Weekly leads with the week fraction.
+                if mode == "weekly", let weekLine {
+                    Text(weekLine)
+                        .font(.system(size: 18 * scale, weight: .semibold))
+                        .foregroundColor(statusTextColor(for: status.status))
                 }
 
                 Spacer(minLength: 6)
 
                 // Status badge
-                Text(statusText(for: status.status))
+                Text(status.label)
                     .font(.system(size: 16 * scale, weight: .semibold))
                     .foregroundColor(statusTextColor(for: status.status))
                     .padding(.horizontal, 12)
@@ -576,6 +617,13 @@ struct GoalCardView: View {
                         Capsule()
                             .fill(statusBadgeBackground(for: status.status))
                     )
+
+                if mode == "daily", let weekLine {
+                    Text(weekLine)
+                        .font(.system(size: 15 * scale, weight: .medium))
+                        .foregroundColor(.gray)
+                        .padding(.top, 4)
+                }
 
                 Spacer(minLength: 8)
             }
@@ -668,14 +716,6 @@ struct GoalCardView: View {
         }
     }
 
-    private func statusText(for status: GoalStatusType) -> String {
-        switch status {
-        case .weeklyComplete: return "Weekly Complete"
-        case .doneToday:      return "Done Today"
-        case .progressWeek:   return "Progress This Week"
-        case .pending:        return "Pending"
-        }
-    }
 }
 
 #Preview {
